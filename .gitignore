@@ -1,0 +1,75 @@
+# Ambiente
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Banco de dados local
+*.db
+*.sqlite
+*.sqlite3
+
+# Build / dist
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Ruff
+.ruff_cache/
+
+# Mypy
+.mypy_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Logs e arquivos temporários
+*.log
+*.tmp
+*.bak
+*.orig
+
+# ---------------------------------------------------------------------------
+# Documentos operacionais REAIS da serventia (sensíveis — NUNCA versionar)
+# A documentação técnica do projeto fica em docs/*.md (fora destas pastas).
+# ---------------------------------------------------------------------------
+docs/Calculo de Documentos/
+docs/Código de Normas/
+docs/Estrutura tecnica/
+docs/Gerenciamento_financeiro/
+docs/LGPD/
+docs/Planos de ação e adequação/
+docs/Politicas, manuais e procedimentos/
+docs/Procedimentos Operacionais Padrão/
+docs/SGCN/
+
+# ---------------------------------------------------------------------------
+# Exports (dados gerados — não versionar conteúdo, manter a pasta)
+# ---------------------------------------------------------------------------
+exports/atlas/*
+!exports/atlas/.gitkeep
