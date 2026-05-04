@@ -34,6 +34,7 @@ projetado para ser portável a Postgres sem mudança de modelos.
 
 **Por quê.** SQLite zero-config para o gestor rodar localmente. Postgres é
 o destino quando o sistema sair do laptop. Implicações:
+
 - Enums sempre `native_enum=False` (armazenados como `VARCHAR`).
 - `CheckConstraint` evitada para regras dialeto-específicas (ver D-09).
 - `Numeric(14, 2)` e `DateTime(timezone=True)` portáveis.
@@ -116,6 +117,7 @@ universais (`amount > 0`). Regras de formato (`competence_month` em
 `app/modules/finance/rules.py`.
 
 **Por quê.**
+
 1. Erros de regra sobem como **422 com mensagem clara** em vez de erro
    genérico de banco.
 2. Permite Postgres futuro sem reescrever CHECKs em sintaxe específica
@@ -157,6 +159,7 @@ amigável. A regra elimina a borda silenciosa.
 ## D-12 · `payment_date × status` é regra dura
 
 **Decisão.**
+
 - `PAID` ou `RECEIVED` ⇒ `payment_date` obrigatório.
 - `PENDING`, `TO_REVIEW`, `CANCELLED` ⇒ `payment_date` deve ser nulo.
 
@@ -191,8 +194,7 @@ introduzir `realized_result` e `projected_result` no snapshot.
 
 ---
 
-## D-15 · Direction obrigatória; rígida em RECEITA/DESPESA/REPASSE,
-livre em AJUSTE
+## D-15 · Direction obrigatória — rígida em RECEITA/DESPESA/REPASSE, livre em AJUSTE
 
 **Decisão.** `EntryDirection` é obrigatório no banco. Para `RECEITA` é
 forçado `INFLOW`, para `DESPESA` e `REPASSE` é forçado `OUTFLOW`. Para
@@ -260,6 +262,41 @@ ISS, etc.).
 
 ---
 
+## D-22 · Adequação ao Provimento CNJ nº 213/2026 como eixo paralelo ao desenvolvimento
+
+**Decisão.** O projeto passa a ter dois eixos simultâneos: (1) desenvolvimento do
+Cartório System e (2) adequação técnica e regulatória da serventia Classe 3. As
+prioridades do sistema próprio são ajustadas para refletir os requisitos do Provimento:
+autenticação multiusuário e trilha de auditoria deixam de ser "etapas muito depois" e
+passam a ser pré-requisitos para uso por colaboradores. Exports ganham rastreabilidade
+obrigatória (checksum, timestamp, usuário). O banco de produção entra explicitamente
+no PRD com RPO ≤4h.
+
+**Por quê.** A serventia foi classificada como Classe 3 e será vistoriada. Implantar
+novos módulos sem autenticação individualizada e sem trilha de auditoria seria
+incompatível com os requisitos de rastreabilidade, responsabilização e proteção de dados
+pessoais exigidos pelo Provimento.
+
+---
+
+## D-21 · Módulo de auditoria interna antes da expansão operacional
+
+**Decisão.** Antes de implementar novos módulos operacionais (Monthly Closing,
+Obrigações, Exports etc.), será criado gradualmente um módulo de auditoria interna
+(`app/modules/audit/`). A expansão operacional só avança após a Etapa B do módulo
+de auditoria estar com testes passando e ruff limpo.
+
+**Por quê.** O diagnóstico técnico de infraestrutura (Maio/2026) identificou riscos
+críticos: backup sem dump consistente do banco do Engegraph, dependência de sistema
+de terceiro sem plano de contingência, ausência de VPN e controle de acesso formal,
+discos com pouco espaço. Implantar novos módulos em ambiente com esses riscos não
+tratados exporia o sistema a falhas de integridade e continuidade operacional.
+O módulo de auditoria não automatiza coleta — começa por CRUD manual de achados,
+evidências e ações corretivas, crescendo em etapas conforme documentado em
+[docs/modules/audit.md](modules/audit.md).
+
+---
+
 ## D-20 · Testes em SQLite in-memory + StaticPool
 
 **Decisão.** `tests/conftest.py` cria engine `sqlite:///:memory:` com
@@ -267,6 +304,37 @@ ISS, etc.).
 e injeta como override de `get_db`.
 
 **Por quê.** Function-scope garante isolamento entre testes. `StaticPool`
-+ in-memory garante que o mesmo "banco" sobreviva às múltiplas conexões
+com in-memory garante que o mesmo "banco" sobreviva às múltiplas conexões
 dentro de uma requisição. `Base.metadata.create_all` no fixture é seguro
 porque o engine é descartado ao fim do teste.
+
+---
+
+## D-23 · DocumentDiagnosis analisa artefatos do scanner, não o servidor diretamente
+
+**Decisão.** O módulo `diagnosis/` (Sprint 3) recebe como entrada o
+`file_inventory.json` gerado pelo scanner — nunca um caminho de disco ou servidor
+diretamente. A assinatura é:
+
+```python
+diagnosis = DocumentDiagnosis.from_inventory("exports/audit/<run>/file_inventory.json")
+```
+
+O diagnóstico valida o hash do inventory via `scan_manifest.json` antes de processar.
+
+**Por quê.**
+
+1. **Separação de responsabilidades:** scanner acessa o servidor; diagnóstico
+   analisa dados já coletados. São fases distintas e independentes.
+2. **Rastreabilidade:** o inventory tem hash no manifest. O diagnóstico de um
+   inventory específico é reproduzível e auditável.
+3. **Segurança:** o diagnóstico nunca precisa de permissão de rede ou disco do
+   servidor. Pode rodar offline com o inventory copiado.
+4. **Testabilidade:** testes do `diagnosis/` usam inventories sintéticos em
+   memória — sem caminhos reais, sem fixtures de disco.
+5. **Princípio do módulo:** `scanner → artefatos → diagnosis → findings`.
+   Cada fase consome apenas a saída da anterior, nunca a fonte primária.
+
+Ver procedimento completo em
+[`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](AUDIT_DEPLOYMENT_AND_OPERATION.md),
+seção 12.

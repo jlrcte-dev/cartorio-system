@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.core.config import get_settings
+from app.modules.audit.findings.router import router as audit_findings_router
 from app.modules.finance.router import router as finance_router
 
 settings = get_settings()
@@ -18,3 +19,4 @@ async def health_check() -> dict[str, str]:
 
 
 router.include_router(finance_router)
+router.include_router(audit_findings_router)

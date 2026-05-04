@@ -55,21 +55,28 @@ desktop.ini
 *.orig
 
 # ---------------------------------------------------------------------------
-# Documentos operacionais REAIS da serventia (sensíveis — NUNCA versionar)
-# A documentação técnica do projeto fica em docs/*.md (fora destas pastas).
+# Dados locais sensíveis da serventia — NUNCA versionar
+# Todos os documentos reais ficam em _local_data/ (fora do repositório).
 # ---------------------------------------------------------------------------
-docs/Calculo de Documentos/
-docs/Código de Normas/
-docs/Estrutura tecnica/
-docs/Gerenciamento_financeiro/
-docs/LGPD/
-docs/Planos de ação e adequação/
-docs/Politicas, manuais e procedimentos/
-docs/Procedimentos Operacionais Padrão/
-docs/SGCN/
+_local_data/
+Audit_Reports/
+audit_reports/
 
 # ---------------------------------------------------------------------------
 # Exports (dados gerados — não versionar conteúdo, manter a pasta)
 # ---------------------------------------------------------------------------
 exports/atlas/*
 !exports/atlas/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Exports do módulo de auditoria e artefatos gerados — nunca versionar
+# ---------------------------------------------------------------------------
+exports/audit/
+**/file_inventory.json
+**/file_inventory.csv
+**/scan_manifest.json
+**/scan_summary.md
+**/document_diagnosis.json
+**/document_diagnosis.csv
+**/document_diagnosis.md
+**/diagnosis_manifest.json

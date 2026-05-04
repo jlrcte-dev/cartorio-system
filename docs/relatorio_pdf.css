@@ -1,0 +1,371 @@
+/* ================================================================
+   CARTÓRIO COSTA TEIXEIRA — PDF STYLESHEET
+   Para uso com a extensão Markdown PDF (yzane.markdown-pdf)
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* ===== PAGE ===== */
+@page {
+  size: A4;
+  margin: 18mm 20mm 22mm 20mm;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-size: 10.5pt;
+  color: #1e2635;
+  line-height: 1.65;
+  background: #fff;
+}
+
+/* ===== PAGE BREAK ===== */
+.page-break {
+  page-break-after: always;
+  margin: 0; padding: 0; height: 0;
+}
+.no-break { page-break-inside: avoid; }
+
+/* ===== COVER PAGE ===== */
+.cover {
+  page-break-after: always;
+  background: linear-gradient(155deg, #0a2240 0%, #123358 50%, #1a4472 100%);
+  color: #fff;
+  padding: 32mm 24mm 20mm;
+  min-height: 257mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: -18mm -20mm -22mm -20mm;
+}
+.cover-org {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18mm;
+}
+.cover-org-icon {
+  width: 50px; height: 50px;
+  background: rgba(255,255,255,0.10);
+  border: 1.5px solid rgba(255,255,255,0.28);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.cover-org-name {
+  font-size: 13pt;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  opacity: 0.88;
+}
+.cover-eyebrow {
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+  margin-bottom: 12px;
+}
+.cover-title {
+  font-size: 23pt;
+  font-weight: 700;
+  line-height: 1.22;
+  margin-bottom: 14px;
+  color: #fff;
+}
+.cover-subtitle {
+  font-size: 11.5pt;
+  font-weight: 400;
+  color: rgba(255,255,255,0.78);
+  line-height: 1.5;
+  max-width: 500px;
+  margin-bottom: 24px;
+}
+.cover-rule {
+  width: 56px; height: 3px;
+  background: #e67e22;
+  margin-bottom: 28px;
+  border-radius: 2px;
+}
+.cover-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 36px;
+}
+.cover-meta-item {}
+.cover-meta-item label {
+  display: block;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.38);
+  margin-bottom: 3px;
+}
+.cover-meta-item span {
+  font-size: 9.5pt;
+  color: rgba(255,255,255,0.85);
+  font-weight: 500;
+}
+.cover-conf-badge {
+  display: inline-block;
+  background: rgba(220,38,38,0.20);
+  border: 1px solid rgba(220,38,38,0.40);
+  color: #fca5a5;
+  padding: 3px 11px;
+  border-radius: 4px;
+  font-size: 7.5pt;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.cover-footer-bar {
+  margin-top: 18mm;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.13);
+  display: flex;
+  justify-content: space-between;
+  font-size: 7.5pt;
+  color: rgba(255,255,255,0.35);
+}
+
+/* ===== TYPOGRAPHY ===== */
+h1 {
+  font-size: 18pt;
+  color: #0a2240;
+  font-weight: 700;
+  margin: 0 0 14px;
+  line-height: 1.2;
+}
+h2 {
+  font-size: 13pt;
+  color: #0a2240;
+  font-weight: 700;
+  margin: 28px 0 10px;
+  padding-bottom: 7px;
+  border-bottom: 2.5px solid #e2e8f0;
+  page-break-after: avoid;
+}
+h3 {
+  font-size: 11pt;
+  color: #123358;
+  font-weight: 600;
+  margin: 18px 0 7px;
+  page-break-after: avoid;
+}
+h4 {
+  font-size: 10pt;
+  color: #123358;
+  font-weight: 600;
+  margin: 14px 0 5px;
+}
+p { margin-bottom: 10px; }
+ul, ol { margin: 8px 0 12px 22px; }
+li { margin-bottom: 5px; }
+strong { color: #0a2240; }
+em { font-style: italic; color: #374151; }
+a { color: #1d4ed8; text-decoration: none; }
+
+/* ===== SECTION HEADER PILL ===== */
+.section-num {
+  display: inline-block;
+  background: #0a2240;
+  color: #fff;
+  font-size: 7.5pt;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 3px;
+  margin-right: 8px;
+  letter-spacing: 0.4px;
+  vertical-align: middle;
+}
+
+/* ===== TABLES ===== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 18px;
+  font-size: 9pt;
+  page-break-inside: avoid;
+}
+thead tr { background: #0a2240; }
+thead th {
+  color: #fff;
+  padding: 9px 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 8.5pt;
+  letter-spacing: 0.2px;
+}
+tbody tr:nth-child(even) { background: #f8fafc; }
+tbody tr:nth-child(odd)  { background: #fff; }
+tbody td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
+  font-size: 9pt;
+}
+/* Risk-level row left border */
+.row-critico td:first-child { border-left: 4px solid #dc2626 !important; }
+.row-alto    td:first-child { border-left: 4px solid #ea580c !important; }
+.row-medio   td:first-child { border-left: 4px solid #ca8a04 !important; }
+.row-baixo   td:first-child { border-left: 4px solid #16a34a !important; }
+
+/* ===== BADGES ===== */
+.badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 4px;
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.badge-critico  { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; }
+.badge-alto     { background:#fff7ed; color:#9a3412; border:1px solid #fdba74; }
+.badge-medio    { background:#fffbeb; color:#78350f; border:1px solid #fcd34d; }
+.badge-baixo    { background:#f0fdf4; color:#166534; border:1px solid #86efac; }
+.badge-ok       { background:#f0fdf4; color:#166534; border:1px solid #86efac; }
+.badge-atencao  { background:#fffbeb; color:#78350f; border:1px solid #fcd34d; }
+.badge-imediata { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; }
+.badge-30d      { background:#fff7ed; color:#9a3412; border:1px solid #fdba74; }
+.badge-90d      { background:#fffbeb; color:#78350f; border:1px solid #fcd34d; }
+.badge-pendente { background:#f5f3ff; color:#5b21b6; border:1px solid #c4b5fd; }
+.badge-verificar{ background:#eff6ff; color:#1e40af; border:1px solid #93c5fd; }
+.badge-ausente  { background:#fef2f2; color:#991b1b; border:1px solid #fca5a5; }
+
+/* ===== STATUS TEXT ===== */
+.st-ok      { color:#15803d; font-weight:700; }
+.st-critico { color:#b91c1c; font-weight:700; }
+.st-atencao { color:#92400e; font-weight:700; }
+.st-pendente{ color:#6d28d9; font-weight:700; }
+.st-sub     { color:#1d4ed8; font-weight:600; font-size:8.5pt; }
+
+/* ===== CALLOUT BOXES ===== */
+.callout {
+  border-left: 4px solid #0a2240;
+  background: #eff6ff;
+  padding: 11px 15px;
+  margin: 13px 0;
+  border-radius: 0 6px 6px 0;
+  font-size: 9.5pt;
+  page-break-inside: avoid;
+}
+.callout.critical { border-left-color: #dc2626; background: #fef2f2; }
+.callout.warning  { border-left-color: #ea580c; background: #fff7ed; }
+.callout.info     { border-left-color: #0a2240; background: #eff6ff; }
+.callout.success  { border-left-color: #16a34a; background: #f0fdf4; }
+.callout strong   { display: block; margin-bottom: 5px; font-size: 9pt; color: #0a2240; }
+
+/* ===== EXECUTIVE CONCLUSION BOX ===== */
+.exec-box {
+  background: #0a2240;
+  color: #fff;
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin: 16px 0;
+  font-size: 10pt;
+  line-height: 1.65;
+  page-break-inside: avoid;
+}
+.exec-box strong { color: #93c5fd; display: block; margin-bottom: 7px; font-size: 9.5pt; letter-spacing: 0.3px; }
+
+/* ===== RISK CARDS ===== */
+.risk-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin: 14px 0 20px;
+  overflow: hidden;
+  page-break-inside: avoid;
+}
+.risk-card-hdr {
+  padding: 10px 16px;
+  background: #7f1d1d;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.risk-card-hdr .title { font-weight: 700; font-size: 10pt; }
+.risk-card-body { padding: 13px 16px; }
+.risk-field { margin-bottom: 8px; font-size: 9.5pt; }
+.risk-field .lbl { font-weight: 600; color: #0a2240; display: inline-block; min-width: 170px; }
+
+/* ===== PHASE CARDS ===== */
+.phase-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  page-break-inside: avoid;
+}
+.phase-hdr {
+  padding: 9px 16px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 10pt;
+}
+.phase-body { padding: 12px 16px; font-size: 9.5pt; }
+.phase-body p { margin-bottom: 7px; }
+.phase-body ul { margin: 5px 0 0 18px; }
+
+/* ===== NUMBERED LIST WITH CIRCLES ===== */
+.rec-list { list-style: none; counter-reset: rc; margin: 8px 0 14px; padding: 0; }
+.rec-list li {
+  counter-increment: rc;
+  display: flex;
+  gap: 11px;
+  margin-bottom: 8px;
+  align-items: flex-start;
+  font-size: 9.5pt;
+}
+.rec-list li::before {
+  content: counter(rc);
+  display: inline-flex;
+  min-width: 23px; height: 23px;
+  background: #0a2240;
+  color: #fff;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 8pt;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ===== VERSION TABLE ===== */
+.version-table { font-size: 9pt; }
+
+/* ===== TOC ===== */
+.toc-h2 { font-weight: 600; color: #0a2240; margin-top: 6px; }
+.toc-h3 { padding-left: 16px; color: #4a5568; font-size: 9pt; }
+.toc-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dotted #d1d5db;
+  font-size: 9.5pt;
+}
+.toc-dots { flex: 1; border-bottom: 1px dotted #d1d5db; margin: 0 6px 2px; }
+.toc-pg { color: #9ca3af; font-size: 8.5pt; }
+
+/* ===== HR ===== */
+hr { border: none; border-top: 1px solid #e5e7eb; margin: 16px 0; }
+
+/* ===== DISCLAIMER ===== */
+.disclaimer {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 13px 16px;
+  font-size: 8.5pt;
+  color: #4b5563;
+  margin-top: 16px;
+  line-height: 1.55;
+}

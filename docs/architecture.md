@@ -49,6 +49,7 @@ cartorio-system/
 │   │   │   ├── schemas.py       # Pydantic Create/Update/Read + Summary
 │   │   │   ├── service.py       # CRUD + compute_monthly_summary
 │   │   │   └── router.py        # endpoints /api/v1/finance/*
+│   │   ├── audit/               # módulo de auditoria interna (Etapa B)
 │   │   └── (clients/, protocols/, documents/, tasks/, reports/, exports/)
 │   │                              # placeholders para etapas futuras
 │   ├── interfaces/
@@ -67,28 +68,33 @@ cartorio-system/
 ## Camadas
 
 ### Core (`app/core/`)
+
 Configuração transversal: `Settings` carregadas de `.env` via
 `pydantic-settings`; logging em `stdout`; classe de exceção
 `CartorioException` com `status_code`; handler 500 que **loga traceback**
 antes de devolver `{"detail": "Erro interno do servidor."}`.
 
 ### DB (`app/db/`)
+
 - `Base` (DeclarativeBase) registra modelos automaticamente via
   `_register_models()` no import.
 - `engine` é construído a partir de `settings.database_url` (lazy connect).
 - `get_db()` é a dependency injection do FastAPI (yield + close).
 
 ### Modules (`app/modules/`)
+
 Cada módulo de domínio é autocontido: `enums`, `models`, `rules`, `schemas`,
-`service`, `router`. Hoje apenas `finance` está implementado. As pastas
-`clients`, `protocols`, `documents`, `tasks`, `reports`, `exports` são
-placeholders intencionais para a evolução posterior.
+`service`, `router`. Hoje apenas `finance` está implementado. O módulo `audit`
+está em documentação (Etapa A) e será implementado na Etapa B. As demais pastas
+são placeholders intencionais para evolução posterior.
 
 ### Interfaces (`app/interfaces/api/v1/`)
+
 Roteador raiz da API v1. Expõe `/api/v1/health` e inclui o router de
 `finance`. Novos módulos devem ser plugados aqui.
 
 ### Main (`app/main.py`)
+
 Compõe a aplicação: chama `setup_logging()` no nível de módulo (antes do
 `FastAPI(...)`), instala os handlers de exceção e o lifespan (que
 **não** executa DDL — apenas log de start/stop).
@@ -137,3 +143,10 @@ O Engegraph é a fonte da verdade para atos, livros, folhas e selos. O Sistema
 do Cartório **não duplica** essas entidades. O escopo atual cobre apenas
 gestão financeira; a integração com o Engegraph (ex.: importar emolumentos
 diários) é uma etapa futura via `EntrySource = ENGEGRAPH_EXPORT`.
+
+O diagnóstico técnico de Maio/2026 identificou riscos críticos na infraestrutura
+da serventia — incluindo backup sem dump consistente do banco do Engegraph e
+ausência de plano de contingência documentado. Por isso, o módulo de auditoria
+interna (`app/modules/audit/`) precede a expansão de novos módulos operacionais.
+Ver [docs/operations/engegraph.md](operations/engegraph.md) para o contexto
+completo e pendências técnicas.
