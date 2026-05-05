@@ -288,10 +288,9 @@ Transformou o módulo de "implementado" para "operacionalmente validado":
 
 ---
 
-### Fase 2.5 — Execução Real Controlada do DocumentDiagnosis (próximo passo)
+### Fase 2.5 — Execução Real Controlada do DocumentDiagnosis ✅
 
-
-**Status:** Pronto para iniciar — documentação operacional completa
+**Status:** ✅ Concluída (2026-05-04)
 
 **Objetivo:** Executar DocumentDiagnosis em dados reais da serventia, validar candidatos
 e iniciar revisão humana.
@@ -338,8 +337,47 @@ python -m app.modules.audit.diagnosis.cli \
 - Falsos positivos exigem revisão cuidadosa — não automatizar
 - Documentação privada (outputs reais) pode ficar desatualizada
 
-**Próximo passo após conclusão:** Sprint 4 (Human Review Workflow).
+**Próximo passo após conclusão:** Sprint 3.6 (Calibração de Regras).
 
+---
+
+### Sprint 3.6 — Calibração de Regras após Validação Real ✅ (Em andamento — 2026-05-05)
+
+**Status:** Implementação em andamento
+
+**Objetivo:** Refinar as regras de diagnóstico com base na validação humana real de 44 candidatos,
+reduzindo falsos positivos e melhorando qualidade futura.
+
+**Entrada:** Relatório de revisão humana `revisao_humana_candidatos_auditoria_preenchida.md`
+
+**Ajustes implementados:**
+
+1. **DIAG-001 calibrada:** Contextuais (engegraph, sefaz) só geram candidato fora de contexto financeiro legítimo
+   - Redução esperada: ~30 falsos positivos (comprovantes/repasses)
+   - Termos críticos (senha, token, login, certificado) continuam sendo detectados sempre
+
+2. **DIAG-008 criada:** Detecta documentos pessoais/operacionais em pasta financeira
+   - Cobre achado real: "VALIDA EM TODO O TERRITORIO NACIONAL", "AUTORIZAÇÃO DE ESCRITURA" em Gerenciamento_financeiro
+   - Indica erro de classificação documental ou violação potencial de LGPD
+
+3. **DIAG-002, 004a, 006, 007 melhorados:** Descrições atualizadas, linguagem menos alarmista,
+   recomendações mais claras para revisão formal
+
+**Saídas:**
+
+- Testes novos cobrindo calibração
+- Documentação atualizada (audit_document_diagnosis.md, audit_document_diagnosis_execution.md)
+- Nova execução real comparativa (antes vs. depois)
+- Commit com todas as mudanças
+
+**Validação:**
+
+- ✅ ruff aprovado (sem erros de formatação)
+- ✅ pytest aprovado (testes novos + regressão)
+- ✅ Execução comparativa: redução de DIAG-001, novos DIAG-008 detectados
+- ✅ Segurança mantida: metadata-only, read-only, sem acesso a documentos originais
+
+**Próximo passo:** Sprint 4 (Human Review Workflow) ou Nova execução controlada comparativa.
 
 ---
 

@@ -530,3 +530,193 @@ def test_no_audit_finding_created(tmp_path):
         assert not hasattr(mod, "get_db")
         assert not hasattr(mod, "Session")
         assert not hasattr(mod, "AsyncSession")
+
+
+# ---------------------------------------------------------------------------
+# 18. DIAG-001 calibração: engegraph/sefaz em contexto financeiro legítimo
+# ---------------------------------------------------------------------------
+
+
+def test_rule_credential_does_not_flag_engegraph_in_financial_context(tmp_path):
+    """engegraph em Gerenciamento_financeiro/Comprovantes deve ser CONTEXTO_LEGITIMO."""
+    files = [
+        _file_entry(
+            "Engegraph dez 2023 Terezopolis.pdf",
+            path_relative=(
+                "Gerenciamento_financeiro/Comprovantes/"
+                "Engegraph dez 2023 Terezopolis.pdf"
+            ),
+            parent_path="Gerenciamento_financeiro/Comprovantes",
+        ),
+        _file_entry(
+            "relatorio_anual.pdf",
+            path_relative="Docs/relatorio_anual.pdf",
+            parent_path="Docs",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    creds = [c for c in result.candidates if c.rule_id == "DIAG-001"]
+    # engegraph in financial context should NOT trigger
+    assert len(creds) == 0, "engegraph in financial context should not generate DIAG-001"
+
+
+def test_rule_credential_does_not_flag_sefaz_in_financial_context(tmp_path):
+    """sefaz em contexto financeiro deve ser CONTEXTO_LEGITIMO."""
+    files = [
+        _file_entry(
+            "pg sefaz novembro 2023.pdf",
+            path_relative="Gerenciamento_financeiro/Comprovantes/pg sefaz novembro 2023.pdf",
+            parent_path="Gerenciamento_financeiro/Comprovantes",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    creds = [c for c in result.candidates if c.rule_id == "DIAG-001"]
+    assert len(creds) == 0, "sefaz in financial context should not generate DIAG-001"
+
+
+def test_rule_credential_flags_senha_engegraph_even_in_financial_context(tmp_path):
+    """senha + engegraph deve gerar DIAG-001 mesmo em contexto financeiro."""
+    files = [
+        _file_entry(
+            "senha_engegraph.txt",
+            path_relative="Gerenciamento_financeiro/senha_engegraph.txt",
+            parent_path="Gerenciamento_financeiro",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    creds = [c for c in result.candidates if c.rule_id == "DIAG-001"]
+    assert len(creds) == 1, "senha in any context should trigger DIAG-001"
+    assert "senha" in creds[0].notes.lower()
+
+
+def test_rule_credential_flags_token_sefaz_even_in_financial_context(tmp_path):
+    """token + sefaz deve gerar DIAG-001 mesmo em contexto financeiro."""
+    files = [
+        _file_entry(
+            "token_sefaz.txt",
+            path_relative="Gerenciamento_financeiro/token_sefaz.txt",
+            parent_path="Gerenciamento_financeiro",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    creds = [c for c in result.candidates if c.rule_id == "DIAG-001"]
+    assert len(creds) == 1, "token in any context should trigger DIAG-001"
+
+
+def test_rule_credential_flags_engegraph_outside_financial_context(tmp_path):
+    """engegraph FORA de contexto financeiro deve gerar DIAG-001."""
+    files = [
+        _file_entry(
+            "engegraph_backup.zip",
+            path_relative="Backups/engegraph_backup.zip",
+            parent_path="Backups",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    creds = [c for c in result.candidates if c.rule_id == "DIAG-001"]
+    assert len(creds) == 1, "engegraph outside financial context should trigger DIAG-001"
+
+
+# ---------------------------------------------------------------------------
+# 19. DIAG-008 nova regra: documentos fora de contexto em pasta financeira
+# ---------------------------------------------------------------------------
+
+
+def test_rule_out_of_context_document_detects_cpf_in_financial(tmp_path):
+    """Documento com 'cpf' em nome em pasta financeira deve gerar DIAG-008."""
+    files = [
+        _file_entry(
+            "CPF_Fernando_Silva.pdf",
+            path_relative="Gerenciamento_financeiro/CPF_Fernando_Silva.pdf",
+            parent_path="Gerenciamento_financeiro",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    out_of_context = [c for c in result.candidates if c.rule_id == "DIAG-008"]
+    assert len(out_of_context) == 1
+    assert "cpf" in out_of_context[0].notes.lower()
+    assert out_of_context[0].severity.value == "HIGH"  # CPF é high-risk
+
+
+def test_rule_out_of_context_document_detects_territorio_nacional(tmp_path):
+    """'VALIDA EM TODO O TERRITORIO NACIONAL' em pasta financeira deve gerar DIAG-008."""
+    files = [
+        _file_entry(
+            "VALIDA EM TODO O TERRITORIO NACIONAL.pdf",
+            path_relative=(
+                "Gerenciamento_financeiro/2025/Outubro/"
+                "VALIDA EM TODO O TERRITORIO NACIONAL.pdf"
+            ),
+            parent_path="Gerenciamento_financeiro/2025/Outubro",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    out_of_context = [c for c in result.candidates if c.rule_id == "DIAG-008"]
+    assert len(out_of_context) == 1
+    assert "territorio nacional" in out_of_context[0].notes.lower()
+
+
+def test_rule_out_of_context_document_detects_autorização_in_financial(tmp_path):
+    """'AUTORIZAÇÃO DE ESCRITURA' em pasta financeira deve gerar DIAG-008."""
+    files = [
+        _file_entry(
+            "AUTORIZAÇÃO DE ESCRITURA - ALAIDE.pdf",
+            path_relative=(
+                "Gerenciamento_financeiro/Fundos e taxas/"
+                "AUTORIZAÇÃO DE ESCRITURA - ALAIDE.pdf"
+            ),
+            parent_path="Gerenciamento_financeiro/Fundos e taxas",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    out_of_context = [c for c in result.candidates if c.rule_id == "DIAG-008"]
+    assert len(out_of_context) == 1
+
+
+def test_rule_out_of_context_document_not_triggered_outside_financial_context(tmp_path):
+    """Documentos com termos suspeitos FORA de contexto financeiro não devem gerar DIAG-008."""
+    files = [
+        _file_entry(
+            "AUTORIZAÇÃO DE ESCRITURA.pdf",
+            path_relative="Docs/AUTORIZAÇÃO DE ESCRITURA.pdf",
+            parent_path="Docs",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    out_of_context = [c for c in result.candidates if c.rule_id == "DIAG-008"]
+    assert len(out_of_context) == 0, "DIAG-008 should only trigger in financial context"
+
+
+def test_rule_out_of_context_document_handles_rg(tmp_path):
+    """RG em pasta financeira deve gerar DIAG-008 com high risk."""
+    files = [
+        _file_entry(
+            "RG_scan.pdf",
+            path_relative="Gerenciamento_financeiro/RG_scan.pdf",
+            parent_path="Gerenciamento_financeiro",
+        ),
+    ]
+    inv = _write_inventory(tmp_path / "inv", files)
+    result = DocumentAnalyzer(inventory_path=inv).run()
+
+    out_of_context = [c for c in result.candidates if c.rule_id == "DIAG-008"]
+    assert len(out_of_context) == 1
+    assert out_of_context[0].severity.value == "HIGH"  # RG é high-risk

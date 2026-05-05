@@ -84,7 +84,8 @@ def _examples_note(files: list[FileDict], label: str) -> str:
 # DIAG-001 — Possível credencial por nome
 # ---------------------------------------------------------------------------
 
-_CREDENTIAL_KEYWORDS = (
+# Termos CRÍTICOS que sempre indicam possível credencial
+_CRITICAL_CREDENTIAL_KEYWORDS = (
     "login",
     "senha",
     "password",
@@ -94,63 +95,145 @@ _CREDENTIAL_KEYWORDS = (
     "dados_conta",
     "dados conta",
     "onvio",
-    "engegraph",
-    "sefaz",
     "ecac",
     "e-cac",
     "onmicrosoft",
     "token",
     "certificado digital",
     "certificado_digital",
+    "secret",
+    "api_key",
+    "api key",
+    "chave",
+    "certificado",
+    "e-cpf",
+    "e-cnpj",
+    "usuario",
+    "usuário",
+    "conta",
+)
+
+# Termos CONTEXTUAIS que só indicam credencial fora de contexto financeiro legítimo
+_CONTEXTUAL_KEYWORDS = ("engegraph", "sefaz")
+
+# Contextos financeiros legítimos
+_FINANCIAL_CONTEXT_KEYWORDS = (
+    "gerenciamento_financeiro",
+    "gerenciamento financeiro",
+    "comprovantes",
+    "pagamentos",
+    "boletos",
+    "recibos",
+    "financeiro",
 )
 
 
+def _is_financial_context(path_lower: str) -> bool:
+    """Check if path indicates financial/payment context."""
+    return any(kw in path_lower for kw in _FINANCIAL_CONTEXT_KEYWORDS)
+
+
 def rule_credential_by_name(files: list[FileDict], scanner_run_id: str) -> list[DiagnosisCandidate]:
-    """DIAG-001: files whose name or path suggests stored credentials."""
+    """DIAG-001: files whose name or path suggests stored credentials.
+
+    Calibrated after real validation (2026-05-05):
+    - CRITICAL keywords always trigger candidate
+    - CONTEXTUAL keywords (engegraph, sefaz) only trigger if:
+      * NOT in financial context, OR
+      * also contain a critical keyword
+    """
     candidates: list[DiagnosisCandidate] = []
     for f in files:
         p = _path_lower(f)
         n = _name_lower(f)
-        matched_kw = next((kw for kw in _CREDENTIAL_KEYWORDS if kw in p or kw in n), None)
-        if matched_kw is None:
-            continue
-        candidates.append(
-            DiagnosisCandidate(
-                title="Possível arquivo de credenciais identificado por nome",
-                description=(
-                    f"Arquivo contendo '{matched_kw}' no nome/caminho. "
-                    "Pode indicar credenciais armazenadas. "
-                    "Conteúdo não foi lido — requer validação manual."
-                ),
-                category=AuditCategory.ACCESS_CONTROL,
-                severity=AuditSeverity.HIGH,
-                probability=AuditProbability.MEDIUM,
-                impact=AuditImpact.HIGH,
-                priority=AuditPriority.SEVEN_DAYS,
-                evidence_summary=(
-                    "Possível arquivo de credenciais por nome; "
-                    f"termo '{matched_kw}' em {f.get('path_relative', '?')}"
-                ),
-                evidence_reference=f.get("path_relative", ""),
-                scanner_run_id=scanner_run_id,
-                related_file_path=f.get("path_relative", ""),
-                related_parent_path=f.get("parent_path", ""),
-                related_extension=f.get("extension", ""),
-                related_size_bytes=f.get("size_bytes"),
-                related_modified_at=_iso_str(f.get("modified_at")),
-                recommended_action=(
-                    "Verificar manualmente se o arquivo contém credenciais. "
-                    "Se confirmado: mover para local seguro ou excluir. "
-                    "Nunca armazenar senhas em arquivos de texto."
-                ),
-                rule_id="DIAG-001",
-                rule_name="credential_by_name",
-                confidence=0.40,
-                notes=f"Termo: '{matched_kw}'. Baseado em nome/caminho.",
-            )
+
+        # Check for critical keywords first
+        matched_critical = next(
+            (kw for kw in _CRITICAL_CREDENTIAL_KEYWORDS if kw in p or kw in n), None
         )
-        if len(candidates) >= _MAX_PER_RULE:
-            break
+        if matched_critical is not None:
+            candidates.append(
+                DiagnosisCandidate(
+                    title="Possível arquivo de credenciais identificado por nome",
+                    description=(
+                        f"Arquivo contendo '{matched_critical}' no nome/caminho. "
+                        "Pode indicar credenciais armazenadas. "
+                        "Conteúdo não foi lido — requer validação manual."
+                    ),
+                    category=AuditCategory.ACCESS_CONTROL,
+                    severity=AuditSeverity.HIGH,
+                    probability=AuditProbability.MEDIUM,
+                    impact=AuditImpact.HIGH,
+                    priority=AuditPriority.SEVEN_DAYS,
+                    evidence_summary=(
+                        "Possível arquivo de credenciais por nome; "
+                        f"termo '{matched_critical}' em {f.get('path_relative', '?')}"
+                    ),
+                    evidence_reference=f.get("path_relative", ""),
+                    scanner_run_id=scanner_run_id,
+                    related_file_path=f.get("path_relative", ""),
+                    related_parent_path=f.get("parent_path", ""),
+                    related_extension=f.get("extension", ""),
+                    related_size_bytes=f.get("size_bytes"),
+                    related_modified_at=_iso_str(f.get("modified_at")),
+                    recommended_action=(
+                        "Verificar manualmente se o arquivo contém credenciais. "
+                        "Se confirmado: mover para local seguro ou excluir. "
+                        "Nunca armazenar senhas em arquivos de texto."
+                    ),
+                    rule_id="DIAG-001",
+                    rule_name="credential_by_name",
+                    confidence=0.75,
+                    notes=f"Termo crítico: '{matched_critical}'. Baseado em nome/caminho.",
+                )
+            )
+            if len(candidates) >= _MAX_PER_RULE:
+                break
+            continue
+
+        # Check for contextual keywords
+        matched_contextual = next(
+            (kw for kw in _CONTEXTUAL_KEYWORDS if kw in p or kw in n), None
+        )
+        if matched_contextual is not None and not _is_financial_context(p):
+            candidates.append(
+                DiagnosisCandidate(
+                    title="Possível arquivo de credenciais identificado por nome",
+                    description=(
+                        f"Arquivo contendo '{matched_contextual}' no nome/caminho. "
+                        "Requer revisão para confirmar se contém credenciais. "
+                        "Conteúdo não foi lido — requer validação manual."
+                    ),
+                    category=AuditCategory.ACCESS_CONTROL,
+                    severity=AuditSeverity.HIGH,
+                    probability=AuditProbability.LOW,
+                    impact=AuditImpact.MEDIUM,
+                    priority=AuditPriority.SEVEN_DAYS,
+                    evidence_summary=(
+                        "Possível arquivo por termo contextual; "
+                        f"termo '{matched_contextual}' em {f.get('path_relative', '?')}"
+                    ),
+                    evidence_reference=f.get("path_relative", ""),
+                    scanner_run_id=scanner_run_id,
+                    related_file_path=f.get("path_relative", ""),
+                    related_parent_path=f.get("parent_path", ""),
+                    related_extension=f.get("extension", ""),
+                    related_size_bytes=f.get("size_bytes"),
+                    related_modified_at=_iso_str(f.get("modified_at")),
+                    recommended_action=(
+                        "Verificar contexto. Se em pasta financeira/comprovantes legítima, "
+                        "pode ser falso positivo. Fora deste contexto, validar conteúdo."
+                    ),
+                    rule_id="DIAG-001",
+                    rule_name="credential_by_name",
+                    confidence=0.40,
+                    notes=f"Termo contextual: '{matched_contextual}'. Baseado em "
+                    f"nome/caminho.",
+                )
+            )
+            if len(candidates) >= _MAX_PER_RULE:
+                break
+
     return candidates
 
 
@@ -164,7 +247,13 @@ _EXECUTABLE_EXTENSIONS = frozenset({".exe", ".bat", ".cmd", ".ps1", ".vbs", ".sc
 def rule_executable_by_extension(
     files: list[FileDict], scanner_run_id: str
 ) -> list[DiagnosisCandidate]:
-    """DIAG-002: executable or script files in the document tree."""
+    """DIAG-002: executable or script files in the document tree.
+
+    Calibrated after real validation (2026-05-05):
+    - Detection is high-confidence (0.90) based on extension
+    - Presence in document folders is noteworthy for governance and risk assessment
+    - Does not imply malware — only flagged for human review
+    """
     matched = [f for f in files if (f.get("extension") or "").lower() in _EXECUTABLE_EXTENSIONS]
     candidates: list[DiagnosisCandidate] = []
     for f in matched[:_MAX_PER_RULE]:
@@ -173,10 +262,10 @@ def rule_executable_by_extension(
             DiagnosisCandidate(
                 title=f"Arquivo executável ou script identificado: {f.get('name', '?')}",
                 description=(
-                    f"Arquivo com extensão '{ext}' encontrado na estrutura de documentos. "
-                    "A presença de executáveis ou scripts em acervos documentais é incomum. "
-                    "Recomenda-se verificar a origem e necessidade. "
-                    "Análise baseada somente na extensão — o conteúdo não foi lido."
+                    f"Arquivo com extensão '{ext}' em estrutura de documentos. "
+                    "Presença de executáveis/scripts requer validação — pode indicar "
+                    "ferramenta de suporte, backup automatizado ou software instalado. "
+                    "Análise por extensão apenas — conteúdo não foi lido."
                 ),
                 category=AuditCategory.ENDPOINT_SECURITY,
                 severity=AuditSeverity.HIGH,
@@ -195,9 +284,10 @@ def rule_executable_by_extension(
                 related_size_bytes=f.get("size_bytes"),
                 related_modified_at=_iso_str(f.get("modified_at")),
                 recommended_action=(
-                    "Verificar a origem e finalidade do arquivo. "
-                    "Se não houver justificativa documentada, "
-                    "mover ou excluir após aprovação do responsável."
+                    "Verificar origem, finalidade e validade. "
+                    "Confirmar se é ferramenta autorizada, backup ou software instalado. "
+                    "Se sem justificativa: registrar para análise técnica e "
+                    "mover/excluir por procedimento aprovado (nunca automaticamente)."
                 ),
                 rule_id="DIAG-002",
                 rule_name="executable_by_extension",
@@ -312,8 +402,9 @@ def rule_large_files(
                 title=f"{len(large_pdf)} PDF(s) com tamanho acima de {large_pdf_mb} MB",
                 description=(
                     f"{len(large_pdf)} arquivo(s) PDF com tamanho superior a {large_pdf_mb} MB. "
-                    "PDFs grandes podem indicar digitalização em alta resolução sem compressão, "
-                    "documentos compostos ou artefatos incorretos."
+                    "PDFs grandes podem indicar comprovantes agregados/escaneados, livros, "
+                    "documentos compostos ou acervos digitalizados em alta resolução. "
+                    "Tamanho não implica automaticamente problema."
                 ),
                 category=AuditCategory.DOCUMENT_MANAGEMENT,
                 severity=AuditSeverity.MEDIUM,
@@ -331,8 +422,8 @@ def rule_large_files(
                 related_size_bytes=large_pdf[0].get("size_bytes"),
                 recommended_action=(
                     f"Revisar PDFs acima de {large_pdf_mb} MB. "
-                    "Avaliar compressão ou reorganização. "
-                    "Verificar se há duplicatas ou versões desnecessárias."
+                    "Se são comprovantes/acervos legítimos, tamanho é esperado. "
+                    "Se necessário, avaliar compressão, duplicatas ou reorganização."
                 ),
                 rule_id="DIAG-004a",
                 rule_name="large_pdf",
@@ -530,7 +621,13 @@ def _find_financial_root(path_relative: str) -> str | None:
 
 
 def rule_financial_archive(files: list[FileDict], scanner_run_id: str) -> list[DiagnosisCandidate]:
-    """DIAG-006: financial documents — one aggregated candidate per financial root."""
+    """DIAG-006: financial documents — one aggregated candidate per financial root.
+
+    Calibrated after real validation (2026-05-05):
+    - Identifies financial archives for governance review, not as automatic finding
+    - Validates policy, nomenclature, access controls, backup coverage
+    - Does not presume irregularity — acervo financeiro oficial é esperado
+    """
     groups: dict[str, list[FileDict]] = defaultdict(list)
     for f in files:
         root = _find_financial_root(f.get("path_relative", ""))
@@ -553,8 +650,9 @@ def rule_financial_archive(files: list[FileDict], scanner_run_id: str) -> list[D
                 description=(
                     f"Pasta com dados financeiros identificada: '{financial_root}'. "
                     f"Contém {total} arquivo(s) totalizando {_bytes_human(total_size)}. "
-                    "Documentos financeiros requerem controle de acesso, política de retenção "
-                    "e proteção conforme LGPD e normas fiscais."
+                    "Acervo financeiro oficial é esperado. Recomenda-se revisar: "
+                    "política de retenção, padrão de nomenclatura, controle de acesso, "
+                    "presença eventual de dados sensíveis/pessoais segregados, e backup coverage."
                 ),
                 category=AuditCategory.FINANCE,
                 severity=AuditSeverity.MEDIUM,
@@ -570,10 +668,13 @@ def rule_financial_archive(files: list[FileDict], scanner_run_id: str) -> list[D
                 related_parent_path=financial_root,
                 related_size_bytes=total_size,
                 recommended_action=(
-                    "Revisar controles de acesso à pasta financeira. "
-                    "Verificar política de retenção e descarte. "
-                    "Confirmar cobertura pelo plano de backup. "
-                    "Avaliar conformidade com LGPD e normas do CNJ."
+                    "Revisar governança financeira: "
+                    "(1) Confirmar existência de política formal de retenção e descarte; "
+                    "(2) Validar padrão de nomenclatura e clareza de descrição dos documentos; "
+                    "(3) Confirmar controles de acesso restrito; "
+                    "(4) Verificar se há dados pessoais/sensíveis misturados sem segregação; "
+                    "(5) Confirmar cobertura pelo plano de backup; "
+                    "(6) Validar conformidade com LGPD e normas fiscais/CNJ."
                 ),
                 rule_id="DIAG-006",
                 rule_name="financial_archive",
@@ -619,7 +720,12 @@ def rule_old_policy_docs(
     scanner_run_id: str,
     old_file_years: int = 5,
 ) -> list[DiagnosisCandidate]:
-    """DIAG-007: policy/compliance documents not modified for old_file_years+."""
+    """DIAG-007: policy/compliance documents not modified for old_file_years+.
+
+    Calibrated after real validation (2026-05-05):
+    - Documents may still be valid even if old — checks modification date, not actual validity
+    - Flags for formal review and version control, not for automatic replacement
+    """
     cutoff = _cutoff_dt(old_file_years)
     groups: dict[str, list[FileDict]] = defaultdict(list)
     for f in files:
@@ -645,7 +751,8 @@ def rule_old_policy_docs(
                     f"{total} arquivo(s) em pasta de política/procedimentos ('{policy_root}') "
                     f"não foram modificados há mais de {old_file_years} anos "
                     f"(data mais antiga: {oldest_str}). "
-                    "Documentos normativos desatualizados representam risco de conformidade."
+                    "Requer revisão formal para confirmar validade, atualização ou arquivamento. "
+                    "A idade do arquivo não implica automaticamente desatualização."
                 ),
                 category=AuditCategory.POLICY_DOCUMENT,
                 severity=AuditSeverity.MEDIUM,
@@ -660,9 +767,13 @@ def rule_old_policy_docs(
                 scanner_run_id=scanner_run_id,
                 related_parent_path=policy_root,
                 recommended_action=(
-                    f"Revisar documentos de política/procedimento em '{policy_root}'. "
-                    "Atualizar desatualizados ou registrar validade contínua. "
-                    "Documentos normativos devem ter revisão periódica documentada."
+                    f"Revisar formalmente documentos de política/procedimento em '{policy_root}': "
+                    "(1) Localizar versão vigente e comparar com cópia arquivada; "
+                    "(2) Se o documento ainda é válido, registrar data de revisão; "
+                    "(3) Se existe versão mais nova, padronizar nomenclatura (ex: v1.0, v2.0); "
+                    "(4) Arquivar versões antigas com data/responsável; "
+                    "(5) Manter histórico de versão. "
+                    "Implementar controle formal de versionamento para documentos normativos."
                 ),
                 rule_id="DIAG-007",
                 rule_name="old_policy_docs",
@@ -673,4 +784,133 @@ def rule_old_policy_docs(
                 ),
             )
         )
+    return candidates
+
+
+# ---------------------------------------------------------------------------
+# DIAG-008 — Documentos fora de contexto em pasta financeira (NOVO Sprint 3.6)
+# ---------------------------------------------------------------------------
+
+_OUT_OF_CONTEXT_KEYWORDS = (
+    "autorização",
+    "autorizacao",
+    "escritura",
+    "certidão",
+    "certidao",
+    "matrícula",
+    "matricula",
+    "rg",
+    "cpf",
+    "itcd",
+    "recibo",
+    "territorio nacional",
+    "território nacional",
+    "valida em todo",
+    "válida em todo",
+    "assinado",
+    "excerto",
+    "declaração",
+    "declaracao",
+    "documento pessoal",
+    "alvará",
+    "alvara",
+    "procuração",
+    "procuracao",
+    "contrato",
+    "inventário",
+    "inventario",
+    "formal de partilha",
+    "partilha",
+)
+
+# High-risk keywords
+_HIGH_RISK_OUT_OF_CONTEXT = (
+    "cpf",
+    "rg",
+    "documento pessoal",
+    "falso",
+    "fraude",
+    "senha",
+    "certificado",
+    "token",
+    "login",
+)
+
+
+def rule_out_of_context_document(
+    files: list[FileDict], scanner_run_id: str
+) -> list[DiagnosisCandidate]:
+    """DIAG-008: documents whose name suggests personal/operational content
+    stored in financial archives — indicates possible classification error or LGPD concern.
+
+    NEW in Sprint 3.6 after real validation (2026-05-05).
+    Discovered: files like 'VALIDA EM TODO O TERRITORIO NACIONAL.pdf',
+    'AUTORIZAÇÃO DE ESCRITURA - ALAIDE', etc. in financial folder.
+    """
+    candidates: list[DiagnosisCandidate] = []
+
+    for f in files:
+        p = _path_lower(f)
+        n = _name_lower(f)
+
+        # Only flag if in financial context
+        if not _is_financial_context(p):
+            continue
+
+        # Check for out-of-context keywords
+        matched_keyword = next((kw for kw in _OUT_OF_CONTEXT_KEYWORDS if kw in n), None)
+        if matched_keyword is None:
+            continue
+
+        # Determine severity based on risk level
+        has_high_risk = any(kw in n for kw in _HIGH_RISK_OUT_OF_CONTEXT)
+        severity = AuditSeverity.HIGH if has_high_risk else AuditSeverity.MEDIUM
+        priority = AuditPriority.SEVEN_DAYS if has_high_risk else AuditPriority.THIRTY_DAYS
+        confidence = 0.85 if has_high_risk else 0.70
+
+        candidates.append(
+            DiagnosisCandidate(
+                title=f"Documento pessoal/operacional em pasta financeira: {f.get('name', '?')}",
+                description=(
+                    f"Arquivo '{f.get('name', '?')}' contém termo de documento "
+                    f"pessoal/operacional ('{matched_keyword}'), mas está em pasta "
+                    f"financeira. Pode indicar erro de classificação ou violação LGPD. "
+                    "Análise por nome/caminho apenas — conteúdo não foi lido."
+                ),
+                category=AuditCategory.DOCUMENT_MANAGEMENT,
+                severity=severity,
+                probability=AuditProbability.MEDIUM_HIGH
+                if has_high_risk
+                else AuditProbability.MEDIUM,
+                impact=AuditImpact.MEDIUM if has_high_risk else AuditImpact.LOW,
+                priority=priority,
+                evidence_summary=(
+                    f"Documento com termo '{matched_keyword}' em pasta financeira. "
+                    f"Localização: {f.get('path_relative', '?')}"
+                ),
+                evidence_reference=f.get("path_relative", ""),
+                scanner_run_id=scanner_run_id,
+                related_file_path=f.get("path_relative", ""),
+                related_parent_path=f.get("parent_path", ""),
+                related_extension=f.get("extension", ""),
+                related_size_bytes=f.get("size_bytes"),
+                related_modified_at=_iso_str(f.get("modified_at")),
+                recommended_action=(
+                    "Verificar se o documento pertence genuinamente ao contexto financeiro. "
+                    "Se for pessoal/operacional/notarial fora de lugar: "
+                    "(1) Confirmar conteúdo e necessidade; "
+                    "(2) Se contém dados pessoais, revisar conformidade LGPD; "
+                    "(3) Mover para pasta apropriada por procedimento aprovado, "
+                    "preservando rastreabilidade. Não automatizar remoção."
+                ),
+                rule_id="DIAG-008",
+                rule_name="out_of_context_document",
+                confidence=confidence,
+                notes=f"Termo detectado: '{matched_keyword}'. Análise por nome/caminho apenas.",
+            )
+        )
+
+        if len(candidates) >= _MAX_PER_RULE:
+            break
+
     return candidates

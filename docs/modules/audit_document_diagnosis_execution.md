@@ -425,7 +425,46 @@ Solução:
 
 ---
 
-## X. Próximas Execuções — Ciclo Operacional
+## X. Calibração após Validação Real (Sprint 3.6)
+
+Quando a validação humana de um ciclo de diagnóstico identificar **falsos positivos sistemáticos**,
+recomenda-se executar a calibração:
+
+### Quando calibrar
+
+- [ ] Validação humana completada (≥10 candidatos da mesma regra marcados como CONTEXTO_LEGITIMO ou FALSO_POSITIVO)
+- [ ] Padrão claro de erro identificado (ex: engegraph/sefaz em contexto financeiro legítimo)
+- [ ] Consenso técnico sobre ajuste (regra pode ser refinada sem quebrar certos casos)
+
+### Processo de calibração
+
+1. **Análise**: revisar candidatos rejeitados pela validação humana
+2. **Ajuste de regra**: modificar lógica, palavras-chave, contextos
+3. **Testes**: adicionar cases que cobrem calibração
+4. **Reexecução**: rodar diagnóstico sobre mesmos artefatos
+5. **Comparação**: antes vs. depois — redução de falsos positivos esperada
+6. **Documentação**: atualizar regra, roadmap e guia de execução
+
+### Exemplo de comparação (Sprint 3.6)
+
+```markdown
+Antes (Sprint 3.5):
+  - DIAG-001: 30 candidatos (incluindo engegraph/sefaz em contexto financeiro)
+  - Total HIGH: 31
+  - Total MEDIUM: 13
+
+Depois (Sprint 3.6):
+  - DIAG-001: 0 (removidos 30 falsos positivos contextuais)
+  - DIAG-008: ~1-5 (novos: documentos pessoais/operacionais em pasta financeira)
+  - Total HIGH: 1
+  - Total MEDIUM: ~11-15
+```
+
+**Output**: `calibration_comparison_summary.md` gerado no diretório de diagnóstico comparativo.
+
+---
+
+## XI. Próximas Execuções — Ciclo Operacional
 
 Após validar a primeira execução, estabeleça um ciclo:
 
@@ -438,7 +477,7 @@ Após validar a primeira execução, estabeleça um ciclo:
 
 ---
 
-## XI. Conformidade CNJ 213/2026 — Classe 3
+## XII. Conformidade CNJ 213/2026 — Classe 3
 
 Este workflow apoia os requisitos:
 
@@ -452,7 +491,7 @@ Este workflow apoia os requisitos:
 
 ---
 
-## XII. Suporte e Documentação
+## XIII. Suporte e Documentação
 
 | Tópico | Referência |
 |---|---|

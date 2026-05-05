@@ -22,6 +22,7 @@ from app.modules.audit.diagnosis.rules import (
     rule_generic_name,
     rule_large_files,
     rule_old_policy_docs,
+    rule_out_of_context_document,
     rule_temp_folder,
 )
 from app.modules.audit.findings.enums import AuditPriority
@@ -128,6 +129,7 @@ class DocumentAnalyzer:
         candidates += rule_generic_name(files, scanner_run_id)
         candidates += rule_financial_archive(files, scanner_run_id)
         candidates += rule_old_policy_docs(files, scanner_run_id, self.old_file_years)
+        candidates += rule_out_of_context_document(files, scanner_run_id)
 
         if not self.include_low_priority:
             candidates = [c for c in candidates if c.priority != AuditPriority.BACKLOG]
