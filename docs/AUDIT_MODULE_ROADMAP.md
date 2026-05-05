@@ -218,9 +218,9 @@ sem precisar de suporte técnico para cada execução.
 
 ---
 
-### Fase 2 — Diagnóstico documental inicial ✅ (Sprint 3 concluída)
+### Fase 2 — Diagnóstico documental inicial ✅ (Sprint 3 concluída + Sprint 3.5 hardening)
 
-**Objetivo:** Analisar o inventário coletado na Fase 1 e identificar padrões
+**Sprint 3 objetivo:** Analisar o inventário coletado na Fase 1 e identificar padrões
 problemáticos: nomes genéricos, arquivos antigos, extensões suspeitas, pastas
 desorganizadas, possíveis duplicatas.
 
@@ -229,9 +229,9 @@ desorganizadas, possíveis duplicatas.
 Ver [`docs/decisions.md`](decisions.md) (D-23) e
 [`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](AUDIT_DEPLOYMENT_AND_OPERATION.md) (seção 12).
 
-**Entradas:** `inventory.json` da Fase 1
+**Sprint 3 entradas:** `inventory.json` da Fase 1
 
-**Processamento:**
+**Sprint 3 processamento:**
 
 - Análise de nomes: identificar padrões genéricos (`cópia`, `backup`, `novo`,
   `versão final`, `final2`, `temp`, `lixo`, `antigo`, `draft`)
@@ -244,29 +244,121 @@ Ver [`docs/decisions.md`](decisions.md) (D-23) e
 - Inconsistências de nomenclatura: mistura de padrões (maiúsculas, separadores,
   idiomas, datas no nome)
 
-**Saídas:**
+**Sprint 3 saídas (implementadas com 7 regras de diagnóstico — DIAG-001 a DIAG-007):**
 
 | Arquivo | Conteúdo |
 | --------- | ---------- |
-| `diagnosis_report.md` | Relatório com achados por categoria |
-| `generic_names.csv` | Arquivos com nomes genéricos |
-| `old_files.csv` | Arquivos sem modificação há mais de 365 dias |
-| `suspicious_extensions.csv` | Arquivos com extensões suspeitas |
-| `probable_duplicates.csv` | Pares de provável duplicata (nome + tamanho) |
-| `loose_files.csv` | Arquivos na raiz de pastas compartilhadas |
-| `manifest.json` | Metadados da execução |
+| `document_diagnosis.json` | Candidatos estruturados em JSON |
+| `document_diagnosis.csv` | Versão tabular para Excel |
+| `document_diagnosis.md` | Relatório legível com achados por regra |
+| `diagnosis_manifest.json` | Metadados: scanner_run_id, SHA-256, flags de segurança |
+
+**Sprint 3.5 — Operational Hardening & Validation:**
+
+Transformou o módulo de "implementado" para "operacionalmente validado":
+
+- ✅ Auditoria completa de conformidade com contrato de segurança (metadata-only)
+- ✅ Melhoria de rastreabilidade: `evidence_reference` consistency em todas as regras
+- ✅ Documentação operacional completa: [`docs/modules/audit_document_diagnosis_execution.md`](../modules/audit_document_diagnosis_execution.md)
+  - Checklists pré e pós-execução
+  - Guia de validação de integridade
+  - Separação de candidatos para revisão humana
+  - Template de relatório de execução real
+  - Troubleshooting
+  - Conformidade CNJ 213/2026
+- ✅ Validação: 29/29 testes passando, ruff aprovado, segurança mantida
+- ✅ Commit: `6e3a39f` com documentação operacional
+
 
 **Valor prático imediato:**
 
-- Identificar o que pode ser arquivado, consolidado ou removido (com decisão humana)
-- Gerar lista de achados documentais para o módulo `AuditFinding`
-- Evidência de diagnóstico documental para dossiê técnico
+- Candidatos organizados por severidade (HIGH, MEDIUM, LOW) e regra
+- Guia prático para execução real controlada em ambiente do gestor
+- Separação clara: candidatos → revisão humana → AuditFinding (nunca automático)
+- Evidência de conformidade de segurança para dossiê técnico
 
 **Riscos:** Falsos positivos em nomes genéricos — sempre requer revisão humana.
 
-**Limitações:** Sem análise de conteúdo interno dos arquivos.
+**Limitações:** 
+- Sem análise de conteúdo interno dos arquivos
+- Sem integração automática com AuditFinding (fluxo manual obrigatório)
+- Sem deduplicação por hash (apenas nome + tamanho)
 
-**Próximo passo:** Fase 3 — auditoria de discos.
+**Próximo passo:** Execução Real Controlada + Sprint 4 (Human Review Workflow).
+
+---
+
+### Fase 2.5 — Execução Real Controlada do DocumentDiagnosis (próximo passo)
+
+
+**Status:** Pronto para iniciar — documentação operacional completa
+
+**Objetivo:** Executar DocumentDiagnosis em dados reais da serventia, validar candidatos
+e iniciar revisão humana.
+
+**Pré-requisitos:**
+
+- `file_inventory.json` gerado pelo scanner (Fase 1)
+- Diretório externo (fora do repositório Git) para artefatos
+- Acesso à documentação: [`docs/modules/audit_document_diagnosis_execution.md`](../modules/audit_document_diagnosis_execution.md)
+
+**Execução:**
+
+```powershell
+python -m app.modules.audit.diagnosis.cli \
+    --inventory "C:\Audit_Reports\<data>\scan\file_inventory.json" \
+    --manifest "C:\Audit_Reports\<data>\scan\scan_manifest.json" \
+    --output-dir "C:\Audit_Reports\<data>\diagnosis" \
+    --run-name "diagnosis-real"
+```
+
+**Saídas (mantidas fora do Git):**
+
+- `document_diagnosis.json`, `.csv`, `.md`, `.manifest.json`
+- Relatório de execução (template: seção VII do guia operacional)
+
+**Validação:**
+
+1. Gestor revisa `document_diagnosis.md` (report legível)
+2. Abre `document_diagnosis.csv` em Excel
+3. Filtra por Severity (HIGH → MEDIUM → LOW)
+4. Decisão humana: candidato é achado real?
+5. Se SIM: criar AuditFinding (via API ou interface)
+6. Se NÃO: registrar como "falso positivo"
+
+
+**Valor prático imediato:**
+
+- Linha de base de candidatos documentais
+- Refinamento de regras com padrões reais
+- Primeiros AuditFindings baseados em diagnóstico
+
+**Riscos:**
+
+- Falsos positivos exigem revisão cuidadosa — não automatizar
+- Documentação privada (outputs reais) pode ficar desatualizada
+
+**Próximo passo após conclusão:** Sprint 4 (Human Review Workflow).
+
+
+---
+
+### Sprint 4 — Human Review Workflow (recomendado)
+
+**Status:** Planejado
+
+**Objetivo:** Formalizar o fluxo de revisão humana e integração com AuditFinding.
+
+**Escopo (recomendado):**
+
+- Interface web para revisar candidatos
+- Workflow: CANDIDATE → REVIEWING → ACCEPTED/REJECTED → AUDIT_FINDING
+- Rastreabilidade: quem revisou, quando, decisão e motivo
+- Batch processing: revise múltiplos candidatos de uma execução
+- Comparação com execuções anteriores (para detectar mudanças)
+
+**Não incluir:** Automação da criação de AuditFinding — sempre manual.
+
 
 ---
 
@@ -505,7 +597,54 @@ do gestor, alertas automáticos e comparação com execuções anteriores.
 
 ---
 
-## 5. Sprint 1 — Scanner Read-Only de Arquivos
+## 5. Sprints completadas
+
+### Sprint 1 ✅ — Scanner Read-Only de Arquivos
+
+**Status:** Concluída e validada em ambiente real  
+**Entrega:** Fase 1 — Scanner read-only  
+**Evidência:** 72 testes passando, scan de 1.539 arquivos em 0,428s  
+
+---
+
+### Sprint 2 ✅ — AuditFinding CRUD
+
+**Status:** Concluída  
+**Entrega:** Fase 1b — AuditFinding CRUD com enums, modelos, service, router, migration  
+**Evidência:** 36 testes, reversible Alembic migration  
+
+---
+
+### Sprint 2.5 ✅ — Procedimento Operacional Read-Only
+
+**Status:** Concluída  
+**Entrega:** Fase 1c — Documentação operacional completa  
+**Evidência:** [`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](AUDIT_DEPLOYMENT_AND_OPERATION.md), D-23  
+
+---
+
+### Sprint 3 ✅ — DocumentDiagnosis Core v1
+
+**Status:** Concluída  
+**Entrega:** Fase 2 — DocumentDiagnosis com 7 regras (DIAG-001 a DIAG-007)  
+**Evidência:** 29 testes passando, ruff aprovado, metadata-only contract validado  
+
+---
+
+### Sprint 3.5 ✅ — DocumentDiagnosis Operational Hardening & Validation
+
+**Status:** Concluída  
+**Entrega:** Documentação operacional + validação de segurança + hardening  
+**Evidência:**
+- Commit: `6e3a39f`
+- Documentação: [`docs/modules/audit_document_diagnosis_execution.md`](../modules/audit_document_diagnosis_execution.md)
+- Testes: 29/29 passando
+- Segurança: contrato validado (metadata-only, no file access, no AuditFinding creation)
+
+---
+
+## 6. Sprint 1 — Scanner Read-Only de Arquivos (Detalhes)
+
 
 ### Objetivo da sprint
 
@@ -622,7 +761,7 @@ exports/audit/<run-name>/
 
 ---
 
-## 6. Diagnóstico documental — especificação futura (Fase 2)
+## 7. Diagnóstico documental — implementado em Sprint 3 (Fase 2)
 
 Após o inventário, o sistema identifica padrões problemáticos nos metadados coletados:
 
@@ -653,7 +792,7 @@ Após o inventário, o sistema identifica padrões problemáticos nos metadados 
 
 ---
 
-## 7. Auditoria técnica — escopo futuro (Fases 3-6)
+## 8. Auditoria técnica — escopo futuro (Fases 3-6)
 
 | Área | Método de coleta | Limitação da fase inicial |
 | ------ | ----------------- | -------------------------- |
@@ -669,7 +808,7 @@ Após o inventário, o sistema identifica padrões problemáticos nos metadados 
 
 ---
 
-## 8. Auditoria operacional — escopo futuro (Fases 7-8)
+## 9. Auditoria operacional — escopo futuro (Fases 7-8)
 
 ### Fluxos a auditar
 
@@ -699,7 +838,7 @@ Após o inventário, o sistema identifica padrões problemáticos nos metadados 
 
 ---
 
-## 9. Modelo de matriz de riscos
+## 10. Modelo de matriz de riscos
 
 > Usar este modelo ao registrar achados no módulo `AuditFinding`.
 
@@ -726,7 +865,7 @@ Após o inventário, o sistema identifica padrões problemáticos nos metadados 
 
 ---
 
-## 10. Padrão de entregáveis
+## 11. Padrão de entregáveis
 
 Todos os artefatos produzidos pelo módulo de auditoria seguem este padrão:
 

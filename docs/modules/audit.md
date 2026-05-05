@@ -100,7 +100,7 @@ app/modules/audit/
 │   ├── schemas.py
 │   ├── service.py
 │   └── router.py
-├── diagnosis/                   # Sprint 3 — DocumentDiagnosis ✅
+├── diagnosis/                   # Sprint 3 ✅ + Sprint 3.5 ✅ — DocumentDiagnosis
 │   ├── __init__.py
 │   ├── models.py                # DiagnosisCandidate, DiagnosisResult (Pydantic)
 │   ├── rules.py                 # 7 regras DIAG-001..007 (metadados apenas)
@@ -115,12 +115,17 @@ app/modules/audit/
 ## Implantação e operação
 
 Para saber como executar o scanner no servidor real, organizar artefatos,
-gerar evidências e preparar a Sprint 3, ver:
+gerar evidências e executar o diagnóstico, ver:
 
 - [`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](../AUDIT_DEPLOYMENT_AND_OPERATION.md)
   — procedimento completo, modos de execução, checklists, fluxo de evidências
 - [`docs/decisions.md`](../decisions.md) (D-23) — decisão arquitetural: DocumentDiagnosis
   analisa artefatos, não o servidor diretamente
+- [`docs/modules/audit_document_diagnosis_execution.md`](audit_document_diagnosis_execution.md)
+  — guia completo para executar DocumentDiagnosis em dados reais, validar candidatos
+  e iniciar revisão humana
+
+---
 
 ### Fluxo operacional do módulo
 
@@ -148,8 +153,30 @@ os artefatos gerados pelo scanner. Ver D-23 em `decisions.md`.
 72 testes passando. Validado em ambiente real (1.539 arquivos, 0,428 s).
 Ver guia completo em [`audit_file_scanner.md`](audit_file_scanner.md).
 
-Para executar no servidor real, ver
-[`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](../AUDIT_DEPLOYMENT_AND_OPERATION.md).
+Para executar no servidor real, ver [`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](../AUDIT_DEPLOYMENT_AND_OPERATION.md).
+
+---
+
+## Sprint 3 — DocumentDiagnosis Core v1 ✅ (concluída)
+
+29 testes passando. 7 regras de diagnóstico implementadas (DIAG-001 a DIAG-007).
+Análise metadata-only de `file_inventory.json` — nenhum arquivo original acessado.
+Ver documentação em [`audit_document_diagnosis.md`](audit_document_diagnosis.md).
+
+---
+
+## Sprint 3.5 — DocumentDiagnosis Operational Hardening & Validation ✅ (concluída)
+
+Hardening operacional e validação de segurança do DocumentDiagnosis:
+- Documentação operacional completa para execução real controlada
+- Auditoria de conformidade com contrato de segurança (metadata-only)
+- Validação: 29/29 testes, ruff aprovado, segurança mantida
+- Commit: `6e3a39f`
+
+Ver guia operacional em [`audit_document_diagnosis_execution.md`](audit_document_diagnosis_execution.md).
+
+**Próximo passo:** Execução Real Controlada do DocumentDiagnosis em dados da serventia,
+com revisão humana de candidatos para criação de AuditFindings.
 
 ### Interface
 
@@ -251,7 +278,10 @@ Após o Scanner validado em uso real:
 | 0 | Reposicionamento e documentação | ✅ |
 | 1 | Scanner read-only de arquivos | ✅ Sprint 1 |
 | 1b | AuditFinding CRUD | ✅ Sprint 2 |
-| 2 | Diagnóstico documental | ✅ Sprint 3 |
+| 1c | Procedimento Operacional Read-Only | ✅ Sprint 2.5 |
+| 2 | Diagnóstico documental (DocumentDiagnosis) | ✅ Sprint 3 + Sprint 3.5 |
+| 2.5 | Execução Real Controlada (próximo) | ⏳ |
+| 4 | Human Review Workflow (Sprint 4 recomendado) | ⏳ |
 | 3 | Auditoria de discos | ⏳ |
 | 4 | Auditoria de backup | ⏳ |
 | 5 | Auditoria de segurança local | ⏳ |
