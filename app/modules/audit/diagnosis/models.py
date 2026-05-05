@@ -55,9 +55,7 @@ class DiagnosisResult(BaseModel):
     diagnosis_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     run_name: str
     scanner_run_id: str
-    generated_at: str = Field(
-        default_factory=lambda: datetime.now(UTC).isoformat()
-    )
+    generated_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     inventory_path: str
     total_files_analyzed: int
     total_candidates: int

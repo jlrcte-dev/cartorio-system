@@ -144,9 +144,7 @@ def write_markdown(result: DiagnosisResult, output_dir: Path) -> Path:
     # --- Header ---
     h(1, f"Diagnóstico Documental — {result.run_name}")
     p()
-    p(
-        "> **AVISO IMPORTANTE — Análise baseada exclusivamente em metadados.**  "
-    )
+    p("> **AVISO IMPORTANTE — Análise baseada exclusivamente em metadados.**  ")
     p(
         "> Nenhum arquivo original foi aberto, lido ou modificado. "
         "Os candidatos identificados são sugestões para revisão humana — "

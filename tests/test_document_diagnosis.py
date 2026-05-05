@@ -333,9 +333,7 @@ def test_rule_financial_archive_separate_roots(tmp_path):
     """Two distinct financial roots must produce two separate candidates."""
     files = [
         _file_entry("a.pdf", path_relative="financeiro/a.pdf", parent_path="financeiro"),
-        _file_entry(
-            "b.pdf", path_relative="emolumentos/b.pdf", parent_path="emolumentos"
-        ),
+        _file_entry("b.pdf", path_relative="emolumentos/b.pdf", parent_path="emolumentos"),
     ]
     inv = _write_inventory(tmp_path / "inv", files)
     result = DocumentAnalyzer(inventory_path=inv).run()

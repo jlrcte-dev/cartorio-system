@@ -72,14 +72,12 @@ def _cutoff_dt(years: int) -> datetime:
 def _examples_note(files: list[FileDict], label: str) -> str:
     shown = files[:_MAX_EXAMPLES]
     lines = [
-        f"  - {f.get('path_relative', '?')} ({_bytes_human(f.get('size_bytes', 0))})"
-        for f in shown
+        f"  - {f.get('path_relative', '?')} ({_bytes_human(f.get('size_bytes', 0))})" for f in shown
     ]
     extra = len(files) - len(shown)
     if extra > 0:
         lines.append(f"  ... e mais {extra} arquivo(s).")
     return f"{label} ({len(files)} total):\n" + "\n".join(lines)
-
 
 
 # ---------------------------------------------------------------------------
@@ -107,17 +105,13 @@ _CREDENTIAL_KEYWORDS = (
 )
 
 
-def rule_credential_by_name(
-    files: list[FileDict], scanner_run_id: str
-) -> list[DiagnosisCandidate]:
+def rule_credential_by_name(files: list[FileDict], scanner_run_id: str) -> list[DiagnosisCandidate]:
     """DIAG-001: files whose name or path suggests stored credentials."""
     candidates: list[DiagnosisCandidate] = []
     for f in files:
         p = _path_lower(f)
         n = _name_lower(f)
-        matched_kw = next(
-            (kw for kw in _CREDENTIAL_KEYWORDS if kw in p or kw in n), None
-        )
+        matched_kw = next((kw for kw in _CREDENTIAL_KEYWORDS if kw in p or kw in n), None)
         if matched_kw is None:
             continue
         candidates.append(
@@ -221,9 +215,7 @@ def rule_executable_by_extension(
 # DIAG-003 — Documentos em pasta temporária
 # ---------------------------------------------------------------------------
 
-_TEMP_KEYWORDS = frozenset(
-    {"temp", "temporário", "temporarios", "temporários", "temporario"}
-)
+_TEMP_KEYWORDS = frozenset({"temp", "temporário", "temporarios", "temporários", "temporario"})
 
 
 def _is_temp_path(path_lower: str) -> bool:
@@ -240,9 +232,7 @@ def _find_temp_root(path_relative: str) -> str:
     return parts_actual[0] if parts_actual else ""
 
 
-def rule_temp_folder(
-    files: list[FileDict], scanner_run_id: str
-) -> list[DiagnosisCandidate]:
+def rule_temp_folder(files: list[FileDict], scanner_run_id: str) -> list[DiagnosisCandidate]:
     """DIAG-003: real documents stored inside Temp/temporary folders."""
     groups: dict[str, list[FileDict]] = defaultdict(list)
     for f in files:
@@ -372,8 +362,7 @@ def rule_large_files(
                 impact=AuditImpact.LOW,
                 priority=AuditPriority.BACKLOG,
                 evidence_summary=(
-                    f"{len(videos)} arquivo(s) de vídeo. "
-                    f"Tamanho total: {_bytes_human(total_size)}."
+                    f"{len(videos)} arquivo(s) de vídeo. Tamanho total: {_bytes_human(total_size)}."
                 ),
                 scanner_run_id=scanner_run_id,
                 related_size_bytes=total_size,
@@ -469,9 +458,7 @@ def _is_generic_name(name: str) -> bool:
     return bool(name.startswith("-"))
 
 
-def rule_generic_name(
-    files: list[FileDict], scanner_run_id: str
-) -> list[DiagnosisCandidate]:
+def rule_generic_name(files: list[FileDict], scanner_run_id: str) -> list[DiagnosisCandidate]:
     """DIAG-005: files with non-descriptive or poorly standardised names."""
     matched = [f for f in files if _is_generic_name(f.get("name", ""))]
     if not matched:
@@ -538,9 +525,7 @@ def _find_financial_root(path_relative: str) -> str | None:
     return None
 
 
-def rule_financial_archive(
-    files: list[FileDict], scanner_run_id: str
-) -> list[DiagnosisCandidate]:
+def rule_financial_archive(files: list[FileDict], scanner_run_id: str) -> list[DiagnosisCandidate]:
     """DIAG-006: financial documents — one aggregated candidate per financial root."""
     groups: dict[str, list[FileDict]] = defaultdict(list)
     for f in files:

@@ -66,9 +66,7 @@ class DocumentAnalyzer:
             with open(self.inventory_path, encoding="utf-8") as fh:
                 data = json.load(fh)
         except FileNotFoundError as exc:
-            raise InventoryLoadError(
-                f"Inventory file not found: {self.inventory_path}"
-            ) from exc
+            raise InventoryLoadError(f"Inventory file not found: {self.inventory_path}") from exc
         except json.JSONDecodeError as exc:
             raise InventoryLoadError(f"Invalid JSON in inventory: {exc}") from exc
 
@@ -126,9 +124,7 @@ class DocumentAnalyzer:
         candidates += rule_credential_by_name(files, scanner_run_id)
         candidates += rule_executable_by_extension(files, scanner_run_id)
         candidates += rule_temp_folder(files, scanner_run_id)
-        candidates += rule_large_files(
-            files, scanner_run_id, self.large_file_mb, self.large_pdf_mb
-        )
+        candidates += rule_large_files(files, scanner_run_id, self.large_file_mb, self.large_pdf_mb)
         candidates += rule_generic_name(files, scanner_run_id)
         candidates += rule_financial_archive(files, scanner_run_id)
         candidates += rule_old_policy_docs(files, scanner_run_id, self.old_file_years)
