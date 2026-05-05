@@ -1,8 +1,152 @@
 # Módulo LGPD — Operacionalização e Evidenciação do Plano de Ação
 
 > **Prioridade:** Módulo de suporte operacional para conformidade jurídica  
-> **Status:** Design arquitetural (Sprint LGPD-0) — Pronto para implementação  
+> **Status:** Sprint LGPD-1 implementada (ações + importação + histórico). LGPD-2+ pendente.  
 > **Última atualização:** 2026-05-05
+
+---
+
+## 0. Sprint LGPD-1 — Estado da implementação
+
+A Sprint LGPD-1 entrega a **primeira versão operacional** do módulo, focada
+exclusivamente em ações do Plano (AC-01 a AC-25), seu histórico de status
+e relatórios mínimos. Evidências, políticas, treinamentos, RAT/ROPa,
+incidentes e integração com INOVA/Atlas **não foram implementados**.
+
+### Endpoints
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/api/v1/lgpd/actions/import` | Importa o `Plano de Ação.csv` (multipart). Idempotente por `action_code`. |
+| `GET` | `/api/v1/lgpd/actions` | Lista ações com filtros: `status`, `category`, `priority`, `action_type`, `responsible_party`, `department`. |
+| `GET` | `/api/v1/lgpd/actions/{action_code}` | Detalhe de uma ação (`AC-01`, `AC-25`, ...). |
+| `PATCH` | `/api/v1/lgpd/actions/{action_code}` | Atualiza campos editáveis e status (gera histórico). |
+| `GET` | `/api/v1/lgpd/actions/{action_code}/history` | Lista mudanças de status da ação. |
+| `GET` | `/api/v1/lgpd/actions/summary` | Dashboard JSON: totais, percentual, breakdowns. |
+| `GET` | `/api/v1/lgpd/actions/export.csv` | Exporta ações em CSV. |
+
+### Modelo implementado
+
+- **`lgpd_actions`** — campos: `id`, `action_code` (unique, `AC-XX`),
+  `title`, `category`, `description`, `justification`, `department`,
+  `action_type`, `priority`, `responsible_party`,
+  `planned_date`, `due_date`, `completed_date`,
+  `status`, `original_status`, `notes`,
+  `created_by`, `updated_by`, `created_at`, `updated_at`.
+- **`lgpd_action_status_history`** — campos: `id`, `action_id` (FK),
+  `previous_status`, `new_status`, `changed_by`, `changed_at`, `reason`.
+
+Migration Alembic: `a7f1c2d3e4b5 — add lgpd actions` (downgrade reversível,
+`batch_alter_table` para SQLite).
+
+### Enums
+
+- `LgpdActionStatus` = `PENDING | IN_PROGRESS | COMPLETED`
+- `LgpdActionCategory` = `GOVERNANCA | PREPARACAO | IMPLANTACAO | OTHER`
+- `LgpdActionType` = `OBRIGATORIO | RECOMENDACAO | OTHER`
+- `LgpdActionPriority` = `ALTA | MEDIA | BAIXA | OTHER`
+
+### Regras de normalização do CSV INOVA
+
+| Coluna do CSV | Valor recebido | Mapeado para |
+|---|---|---|
+| Status | "Finalizada", "Concluída", "Concluida" | `COMPLETED` |
+| Status | "Pendente" | `PENDING` |
+| Status | "Em andamento", "Em Progresso" | `IN_PROGRESS` |
+| Status | desconhecido | `PENDING` (preserva texto original em `original_status`) |
+| Categoria | "Governança" / "Preparação" / "Implantação" | enum equivalente |
+| Categoria | desconhecido | `OTHER` |
+| Tipo | "Obrigatório" / "Recomendação" | enum equivalente |
+| Prioridade | "Alta" / "Média" / "Baixa" | enum equivalente |
+| Datas | ISO (`yyyy-mm-dd`, `yyyy-mm-ddTHH:MM:SSZ`) ou BR (`dd/mm/yyyy`) | `date` ou `None` |
+
+A importação é **idempotente**: se o `action_code` já existir, a linha é
+pulada (não sobrescreve). O cabeçalho `ListSchema=...` do export INOVA é
+detectado e ignorado automaticamente.
+
+### Filtros — case sensitivity
+
+Os query params de filtro (`status`, `category`, `priority`, `action_type`)
+aceitam **apenas os valores em UPPERCASE** definidos pelos enums (ex.:
+`?status=PENDING`, `?category=GOVERNANCA`). Lowercase ou variações com
+acento retornam **422 Unprocessable Entity**. Esse é o comportamento
+padrão de `StrEnum` no Pydantic v2 — manter explícito evita surpresas e
+mantém a validação estrita.
+
+### Transições de status válidas
+
+```
+PENDING      → PENDING | IN_PROGRESS | COMPLETED
+IN_PROGRESS  → IN_PROGRESS | PENDING | COMPLETED
+COMPLETED    → COMPLETED | IN_PROGRESS   (não pode voltar para PENDING)
+```
+
+Histórico (`lgpd_action_status_history`) é criado **apenas quando há mudança
+real de status** (PATCH com mesmo status atual é no-op no histórico). Cada
+linha registra `previous_status`, `new_status`, `changed_by` e `reason`
+(opcional).
+
+Comportamento de `completed_date`:
+
+- ao mover para `COMPLETED`, é preenchido com `today()` se ainda for nulo;
+- ao reabrir (`COMPLETED → IN_PROGRESS`), `completed_date` é **preservado**
+  como registro do término anterior. Para limpar, envie
+  `{"completed_date": null}` no PATCH explicitamente.
+
+### Limitações da Sprint LGPD-1
+
+A Sprint LGPD-1 **não** implementa:
+
+- upload de evidências, hash SHA-256, pasta `_VISTORIA`;
+- `PolicyDocument`, `TrainingRecord`, `ProcessingActivity` (RAT/ROPa);
+- `PrivacyIncident`, `VendorAssessment`, `DpoRecord`;
+- coleta de consentimento, gestão de titulares, dashboard visual;
+- integração com plataforma INOVA;
+- integração com Atlas;
+- autenticação multiusuário ou permissões por perfil.
+
+### O que ficou para Sprint LGPD-2+
+
+Continua válido o roadmap em `docs/analysis/lgpd_module_backlog.md`:
+
+- LGPD-2 — Evidências, hash, política versionada, treinamentos.
+- LGPD-3 — Relatórios consolidados, integração com `_VISTORIA/`.
+- LGPD-4+ — Incidentes, fornecedores, RAT/ROPa, integração com INOVA/Atlas.
+
+### Como testar manualmente
+
+```bash
+# Subir API
+uvicorn app.main:app --reload
+
+# Aplicar migrations
+alembic upgrade head
+
+# Importar o CSV real da INOVA
+curl -F "file=@_local_data/LGPD - inova/Plano de Ação.csv" \
+     "http://localhost:8000/api/v1/lgpd/actions/import"
+
+# Resumo
+curl http://localhost:8000/api/v1/lgpd/actions/summary
+
+# Listagem filtrada (apenas pendentes)
+curl "http://localhost:8000/api/v1/lgpd/actions?status=PENDING"
+
+# Atualizar status com motivo
+curl -X PATCH http://localhost:8000/api/v1/lgpd/actions/AC-01 \
+     -H "Content-Type: application/json" \
+     -d '{"status": "IN_PROGRESS", "reason": "Iniciado"}'
+
+# Exportar CSV
+curl http://localhost:8000/api/v1/lgpd/actions/export.csv -o lgpd_actions.csv
+```
+
+### Testes
+
+`tests/test_lgpd_actions.py` — 37 testes cobrindo importação (real CSV +
+sintéticos), CRUD, filtros, summary, export, histórico de status,
+transições inválidas, idempotência, normalização e isolamento dos demais
+módulos. Total da suíte após a sprint: **191 passed, 1 skipped**.
 
 ---
 

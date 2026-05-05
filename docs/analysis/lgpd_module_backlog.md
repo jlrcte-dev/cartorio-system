@@ -117,6 +117,13 @@ Versão: 1.0
 
 **Estimativa:** 2 semanas (1 dev)
 
+**Status:** ✅ Implementada em 2026-05-05 — ver `docs/modules/lgpd.md` seção 0 para endpoints, modelo, regras de normalização e limitações conhecidas. Migration: `a7f1c2d3e4b5`. Testes: `tests/test_lgpd_actions.py` (37 testes). Suíte total: 191 passed.
+
+**Diferenças em relação ao plano original:**
+- `LgpdActionOwner` **não** foi criada como entidade separada — `responsible_party` é string em `LgpdAction` (suficiente para os dados da INOVA, pode ser promovida em sprint futura).
+- Histórico foi implementado em **`LgpdActionStatusHistory`** dedicada, não via auditoria genérica.
+- Filtros adicionais: `action_type`, `department` (além dos planejados `status`, `category`, `priority`, `responsible_party`).
+
 ### User Stories
 
 #### US-LGPD-1.1: Criar entidades de ação e responsável
