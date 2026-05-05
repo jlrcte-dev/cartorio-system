@@ -87,19 +87,26 @@ evidenciar e preparar a serventia para essa vistoria.
 ```text
 app/modules/audit/
 ├── __init__.py
-├── scanner/                     # Sprint 1 — read-only
+├── scanner/                     # Sprint 1 — read-only ✅
 │   ├── __init__.py
 │   ├── file_scanner.py          # lógica de varredura (os.walk, sem open)
-│   ├── models.py                # FileEntry, ScanResult (dataclasses/Pydantic)
-│   ├── report.py                # geração de JSON, CSV, Markdown
+│   ├── models.py                # FileEntry, ScanResult (dataclasses)
+│   ├── report.py                # geração de JSON, CSV, Markdown, manifest
 │   └── cli.py                   # entry point CLI
-├── findings/                    # Sprint 2 — AuditFinding CRUD
+├── findings/                    # Sprint 2 — AuditFinding CRUD ✅
 │   ├── enums.py
 │   ├── models.py
 │   ├── rules.py
 │   ├── schemas.py
 │   ├── service.py
 │   └── router.py
+├── diagnosis/                   # Sprint 3 — DocumentDiagnosis ✅
+│   ├── __init__.py
+│   ├── models.py                # DiagnosisCandidate, DiagnosisResult (Pydantic)
+│   ├── rules.py                 # 7 regras DIAG-001..007 (metadados apenas)
+│   ├── analyzer.py              # DocumentAnalyzer — carrega inventory, executa regras
+│   ├── report.py                # geração de JSON, CSV, Markdown, manifest
+│   └── cli.py                   # entry point CLI
 └── (fases futuras: questionnaires/, actions/, reports/, dossier/)
 ```
 
@@ -244,7 +251,7 @@ Após o Scanner validado em uso real:
 | 0 | Reposicionamento e documentação | ✅ |
 | 1 | Scanner read-only de arquivos | ✅ Sprint 1 |
 | 1b | AuditFinding CRUD | ✅ Sprint 2 |
-| 2 | Diagnóstico documental | 🟡 Sprint 3 (próxima) |
+| 2 | Diagnóstico documental | ✅ Sprint 3 |
 | 3 | Auditoria de discos | ⏳ |
 | 4 | Auditoria de backup | ⏳ |
 | 5 | Auditoria de segurança local | ⏳ |

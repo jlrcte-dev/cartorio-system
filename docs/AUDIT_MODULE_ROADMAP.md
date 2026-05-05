@@ -218,7 +218,7 @@ sem precisar de suporte técnico para cada execução.
 
 ---
 
-### Fase 2 — Diagnóstico documental inicial 🟡 (Sprint 3 — próxima)
+### Fase 2 — Diagnóstico documental inicial ✅ (Sprint 3 concluída)
 
 **Objetivo:** Analisar o inventário coletado na Fase 1 e identificar padrões
 problemáticos: nomes genéricos, arquivos antigos, extensões suspeitas, pastas
