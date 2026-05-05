@@ -324,6 +324,7 @@ def rule_large_files(
                     f"{len(large_pdf)} PDF(s) acima de {large_pdf_mb} MB. "
                     f"Tamanho total: {_bytes_human(total_size)}."
                 ),
+                evidence_reference=large_pdf[0].get("path_relative", ""),
                 scanner_run_id=scanner_run_id,
                 related_file_path=large_pdf[0].get("path_relative", ""),
                 related_extension=".pdf",
@@ -364,6 +365,7 @@ def rule_large_files(
                 evidence_summary=(
                     f"{len(videos)} arquivo(s) de vídeo. Tamanho total: {_bytes_human(total_size)}."
                 ),
+                evidence_reference=videos[0].get("path_relative", ""),
                 scanner_run_id=scanner_run_id,
                 related_size_bytes=total_size,
                 recommended_action=(
@@ -408,6 +410,7 @@ def rule_large_files(
                     f"{len(other_large)} arquivo(s) acima de {large_file_mb} MB. "
                     f"Tamanho total: {_bytes_human(total_size)}."
                 ),
+                evidence_reference=other_large[0].get("path_relative", ""),
                 scanner_run_id=scanner_run_id,
                 related_size_bytes=total_size,
                 recommended_action=(
@@ -481,6 +484,7 @@ def rule_generic_name(files: list[FileDict], scanner_run_id: str) -> list[Diagno
                 f"{total} arquivo(s) com nomes genéricos. "
                 "Recomenda-se revisão da política de nomenclatura."
             ),
+            evidence_reference=matched[0].get("path_relative", "") if matched else "",
             scanner_run_id=scanner_run_id,
             related_file_path=matched[0].get("path_relative", "") if matched else "",
             recommended_action=(
