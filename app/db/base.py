@@ -13,6 +13,7 @@ def _register_models() -> None:
     from app.modules.audit.findings import models as _audit_findings_models  # noqa: F401
     from app.modules.finance import models as _finance_models  # noqa: F401
     from app.modules.lgpd import models as _lgpd_models  # noqa: F401
+    from app.modules.retention import models as _retention_models  # noqa: F401
 
 
 _register_models()

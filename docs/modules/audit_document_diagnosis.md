@@ -81,6 +81,33 @@ Ver `docs/decisions.md` (D-23) e `docs/AUDIT_DEPLOYMENT_AND_OPERATION.md` (seç�
 | `DIAG-007` | `old_policy_docs` | Documentos de política/POP/LGPD não modificados há `--old-file-years` anos (padrão 5) — requer revisão formal | MEDIUM | NINETY_DAYS | ✓ Melhorada |
 | `DIAG-008` | `out_of_context_document` | **NOVO**: documentos com termos pessoais/operacionais (autorização, escritura, CPF, RG, recibo…) em pasta financeira — indica erro de classificação/LGPD | MEDIUM/HIGH | THIRTY/SEVEN_DAYS | ✓ Nova |
 
+### Temporalidade documental via `retention` (Sprint retention-1B)
+
+Quando o operador habilita o módulo `retention`, três regras adicionais
+de temporalidade são acopladas ao mesmo pipeline. As regras são
+estritamente conservadoras: **não leem conteúdo, não movem nem excluem
+arquivos e nunca recomendam descarte automático** — apenas indicam
+candidatos à revisão humana, com fundamento no Provimento CNJ 50/2015.
+
+| ID | Nome | O que detecta | Severidade | Prioridade |
+|----|------|---------------|------------|------------|
+| `TEMP-001` | `unclassified_document` | Arquivo em diretório aparentemente documental (ex.: `/registros/`, `/livros/`) sem regra retention casada | LOW | BACKLOG |
+| `TEMP-002` | `potentially_expired_document` | Arquivo casado com regra DURATION cuja fase corrente parece vencida pelo `modified_at` | MEDIUM | NINETY_DAYS |
+| `TEMP-003` | `permanent_in_suspicious_location` | Arquivo casado com regra de guarda permanente, mas em diretório suspeito (ex.: `_old/`, `tmp/`, `descarte/`) | HIGH | THIRTY_DAYS |
+
+Habilitação no CLI:
+
+```powershell
+python -m app.modules.audit.diagnosis.cli `
+    --inventory "..." `
+    --output-dir "..." `
+    --with-retention-rules
+```
+
+Sem o flag, o pipeline se comporta exatamente como antes da Sprint
+retention-1B (nenhum finding TEMP-* é emitido). Detalhes operacionais e
+limitações normativas estão em [`retention.md`](retention.md).
+
 **Candidatos `BACKLOG` são excluídos por padrão.** Use `--include-low-priority` para incluí-los.
 
 ---
@@ -149,6 +176,7 @@ python -m app.modules.audit.diagnosis.cli `
 | `--large-file-mb` | `50` | Limite em MB para arquivos genéricos grandes |
 | `--large-pdf-mb` | `10` | Limite em MB para PDFs grandes |
 | `--include-low-priority` | `false` | Incluir candidatos de prioridade BACKLOG |
+| `--with-retention-rules` | `false` | Carregar regras de temporalidade (Provimento CNJ 50/2015) do banco em modo somente leitura e habilitar TEMP-001/002/003 |
 | `--fail-fast` | `false` | Abortar no primeiro erro de carregamento |
 
 ---

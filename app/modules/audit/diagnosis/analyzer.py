@@ -6,13 +6,16 @@ SAFETY CONTRACT
 - Never opens any file path listed inside the inventory.
 - Never accesses the original file system tree.
 - Never creates or modifies AuditFinding records.
-- No database connection of any kind.
+- No database connection of any kind (retention rules, when used,
+  são carregadas pelo chamador — tipicamente pela CLI — e injetadas
+  como lista in-memory).
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from app.modules.audit.diagnosis.models import DiagnosisCandidate, DiagnosisResult
 from app.modules.audit.diagnosis.rules import (
@@ -25,7 +28,15 @@ from app.modules.audit.diagnosis.rules import (
     rule_out_of_context_document,
     rule_temp_folder,
 )
+from app.modules.audit.diagnosis.temp_rules import (
+    rule_temp_001_unclassified,
+    rule_temp_002_expired,
+    rule_temp_003_permanent_in_suspicious_location,
+)
 from app.modules.audit.findings.enums import AuditPriority
+
+if TYPE_CHECKING:
+    from app.modules.retention.models import RetentionRule
 
 
 class InventoryLoadError(ValueError):
@@ -49,6 +60,7 @@ class DocumentAnalyzer:
         large_pdf_mb: int = 10,
         include_low_priority: bool = False,
         fail_fast: bool = False,
+        retention_rules: list[RetentionRule] | None = None,
     ) -> None:
         self.inventory_path = Path(inventory_path)
         self.manifest_path = Path(manifest_path) if manifest_path else None
@@ -57,6 +69,10 @@ class DocumentAnalyzer:
         self.large_pdf_mb = large_pdf_mb
         self.include_low_priority = include_low_priority
         self.fail_fast = fail_fast
+        # Retention é estritamente read-only e opcional: quando None, o pipeline
+        # não emite findings TEMP-*. Quando a lista é fornecida (mesmo vazia),
+        # as regras TEMP-001/002/003 rodam contra os metadados do inventory.
+        self.retention_rules: list[RetentionRule] | None = retention_rules
 
     # ------------------------------------------------------------------
     # Internal: loading
@@ -130,6 +146,17 @@ class DocumentAnalyzer:
         candidates += rule_financial_archive(files, scanner_run_id)
         candidates += rule_old_policy_docs(files, scanner_run_id, self.old_file_years)
         candidates += rule_out_of_context_document(files, scanner_run_id)
+
+        # Temporalidade documental (Provimento CNJ 50/2015) — só roda quando
+        # o chamador injeta as regras de retention. As três regras são
+        # estritamente conservadoras: sem leitura de conteúdo, sem mover ou
+        # excluir nada, e nunca recomendam descarte automático.
+        if self.retention_rules is not None:
+            candidates += rule_temp_001_unclassified(files, self.retention_rules, scanner_run_id)
+            candidates += rule_temp_002_expired(files, self.retention_rules, scanner_run_id)
+            candidates += rule_temp_003_permanent_in_suspicious_location(
+                files, self.retention_rules, scanner_run_id
+            )
 
         if not self.include_low_priority:
             candidates = [c for c in candidates if c.priority != AuditPriority.BACKLOG]

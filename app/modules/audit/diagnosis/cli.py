@@ -95,12 +95,40 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Include BACKLOG-priority candidates (videos, other large files, generic names).",
     )
     parser.add_argument(
+        "--with-retention-rules",
+        action="store_true",
+        default=False,
+        help=(
+            "Carrega as regras de temporalidade (Provimento CNJ 50/2015) do "
+            "banco e habilita os findings TEMP-001/002/003. Read-only. "
+            "Nunca altera, move ou descarta arquivos."
+        ),
+    )
+    parser.add_argument(
         "--fail-fast",
         action="store_true",
         default=False,
         help="Abort on the first loading error instead of continuing.",
     )
     return parser
+
+
+def _load_retention_rules_from_db() -> list:
+    """Carrega regras de temporalidade do banco para uso pelo analyzer.
+
+    Operação read-only: a sessão é aberta, lida e fechada. Não há escrita
+    e não há side-effects. Retorna lista vazia se a tabela existir mas
+    estiver sem regras seedadas.
+    """
+
+    from app.db.session import SessionLocal
+    from app.modules.retention.service import load_rules
+
+    db = SessionLocal()
+    try:
+        return load_rules(db)
+    finally:
+        db.close()
 
 
 def main() -> None:
@@ -122,6 +150,12 @@ def main() -> None:
     print(f"  large-file-mb   : {args.large_file_mb}")
     print(f"  large-pdf-mb    : {args.large_pdf_mb}")
     print(f"  include-low-priority: {args.include_low_priority}")
+    print(f"  with-retention-rules: {args.with_retention_rules}")
+
+    retention_rules = None
+    if args.with_retention_rules:
+        retention_rules = _load_retention_rules_from_db()
+        print(f"  retention rules : {len(retention_rules)} (somente leitura)")
 
     analyzer = DocumentAnalyzer(
         inventory_path=inventory_path,
@@ -131,6 +165,7 @@ def main() -> None:
         large_pdf_mb=args.large_pdf_mb,
         include_low_priority=args.include_low_priority,
         fail_fast=args.fail_fast,
+        retention_rules=retention_rules,
     )
 
     try:
