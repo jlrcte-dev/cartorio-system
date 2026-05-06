@@ -144,3 +144,13 @@ O módulo é uma ferramenta de diagnóstico e evidência — não um agente de r
 | Semana 4-6 | Fase 7 + Fase 8 | Políticas + fluxos |
 | Semana 6-8 | Fase 9 | Matriz de riscos + plano de ação |
 | Antes da vistoria | Fase 10 | Dossiê técnico completo |
+
+---
+
+## Módulo Compliance (fundação read-only)
+
+Em 2026-05-06 foi iniciado o módulo `app/modules/compliance/` com a Sprint
+LGPD/Compliance-1, que materializa a Matriz de Correlação INOVA V1 do
+Provimento (requisitos → políticas indicadas → prazos por classe → evidências
+sugeridas). A camada é estritamente consultiva (somente leitura) e **não
+declara conformidade**. Detalhes em [`docs/modules/compliance.md`](modules/compliance.md).
