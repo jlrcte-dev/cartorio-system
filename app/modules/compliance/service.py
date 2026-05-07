@@ -1,7 +1,7 @@
-"""Service read-only do módulo compliance.
+"""Service do módulo compliance.
 
-Não consome `audit`, `lgpd` ou `retention`. Não tem operações de escrita
-(escrita só via `seed.run_seed`).
+Não consome `audit`, `lgpd` ou `retention`. Integração com outros módulos
+ocorre exclusivamente por referência fraca (source_module/source_type/source_ref).
 """
 
 from __future__ import annotations
@@ -9,16 +9,20 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Sequence
 
+from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.compliance.enums import (
+    ComplianceEvidenceSourceModule,
+    ComplianceEvidenceStatus,
     PolicyDocumentKind,
     RequirementClassification,
     RequirementSource,
     RequirementStage,
 )
 from app.modules.compliance.models import (
+    ComplianceEvidence,
     ComplianceEvidenceTemplate,
     CompliancePolicyDocument,
     ComplianceRequirement,
@@ -26,7 +30,12 @@ from app.modules.compliance.models import (
     ComplianceRequirementPolicy,
     ComplianceSeedMeta,
 )
-from app.modules.compliance.schemas import ComplianceSummary, EtapaSummary
+from app.modules.compliance.schemas import (
+    ComplianceEvidenceCreate,
+    ComplianceEvidenceUpdate,
+    ComplianceSummary,
+    EtapaSummary,
+)
 from app.modules.compliance.seed_data import SEED_META
 
 
@@ -162,3 +171,124 @@ def get_seed_meta(db: Session) -> ComplianceSeedMeta | None:
     return db.scalar(
         select(ComplianceSeedMeta).where(ComplianceSeedMeta.seed_name == SEED_META["seed_name"])
     )
+
+
+# ---------------------------------------------------------------------------
+# ComplianceEvidence — escrita e leitura
+# ---------------------------------------------------------------------------
+
+
+def _resolve_requirement(db: Session, requirement_code: str) -> ComplianceRequirement:
+    req = db.scalar(
+        select(ComplianceRequirement).where(ComplianceRequirement.code == requirement_code)
+    )
+    if req is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Requisito '{requirement_code}' não encontrado.",
+        )
+    return req
+
+
+def _validate_template(
+    db: Session, template_id: int, requirement_id: int
+) -> ComplianceEvidenceTemplate:
+    tpl = db.scalar(
+        select(ComplianceEvidenceTemplate).where(ComplianceEvidenceTemplate.id == template_id)
+    )
+    if tpl is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Template de evidência id={template_id} não encontrado.",
+        )
+    if tpl.requirement_id != requirement_id:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Template id={template_id} pertence ao requisito id={tpl.requirement_id}, "
+                f"mas a evidência está sendo registrada para o requisito id={requirement_id}. "
+                "Utilize um template compatível com o requisito informado."
+            ),
+        )
+    return tpl
+
+
+def create_evidence(db: Session, payload: ComplianceEvidenceCreate) -> ComplianceEvidence:
+    req = _resolve_requirement(db, payload.requirement_code)
+    if payload.evidence_template_id is not None:
+        _validate_template(db, payload.evidence_template_id, req.id)
+
+    evidence = ComplianceEvidence(
+        requirement_id=req.id,
+        evidence_template_id=payload.evidence_template_id,
+        title=payload.title,
+        description=payload.description,
+        evidence_type=payload.evidence_type,
+        status=payload.status,
+        source_module=payload.source_module,
+        source_type=payload.source_type,
+        source_ref=payload.source_ref,
+        file_reference=payload.file_reference,
+        responsible_name=payload.responsible_name,
+        collected_at=payload.collected_at,
+        notes=payload.notes,
+    )
+    db.add(evidence)
+    db.flush()
+    db.refresh(evidence)
+    return evidence
+
+
+def list_evidences(
+    db: Session,
+    *,
+    requirement_code: str | None = None,
+    status: ComplianceEvidenceStatus | None = None,
+    source_module: ComplianceEvidenceSourceModule | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> Sequence[ComplianceEvidence]:
+    stmt = (
+        select(ComplianceEvidence)
+        .join(ComplianceEvidence.requirement)
+        .options(selectinload(ComplianceEvidence.requirement))
+        .order_by(ComplianceEvidence.id)
+    )
+    if requirement_code is not None:
+        stmt = stmt.where(ComplianceRequirement.code == requirement_code)
+    if status is not None:
+        stmt = stmt.where(ComplianceEvidence.status == status)
+    if source_module is not None:
+        stmt = stmt.where(ComplianceEvidence.source_module == source_module)
+    stmt = stmt.limit(limit).offset(offset)
+    return db.scalars(stmt).all()
+
+
+def get_evidence(db: Session, evidence_id: int) -> ComplianceEvidence | None:
+    return db.scalar(
+        select(ComplianceEvidence)
+        .where(ComplianceEvidence.id == evidence_id)
+        .options(selectinload(ComplianceEvidence.requirement))
+    )
+
+
+def update_evidence(
+    db: Session, evidence_id: int, payload: ComplianceEvidenceUpdate
+) -> ComplianceEvidence:
+    evidence = get_evidence(db, evidence_id)
+    if evidence is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Evidência id={evidence_id} não encontrada.",
+        )
+
+    if payload.evidence_template_id is not None:
+        _validate_template(db, payload.evidence_template_id, evidence.requirement_id)
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(evidence, field, value)
+
+    db.flush()
+    db.refresh(evidence)
+    return evidence

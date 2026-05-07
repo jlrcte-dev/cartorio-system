@@ -3,9 +3,12 @@
 import datetime as _dt
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from app.modules.compliance.enums import (
+    ComplianceEvidenceSourceModule,
+    ComplianceEvidenceStatus,
+    ComplianceEvidenceType,
     DeadlineUnit,
     PolicyDocumentKind,
     RequirementClassification,
@@ -149,8 +152,94 @@ class SeedMetaRead(BaseModel):
     notes: str | None
 
 
+CONSERVATIVE_EVIDENCE_NOTE = (
+    "Evidência registrada para apoio à organização regulatória; "
+    "não representa declaração automática de conformidade. "
+    "Exige validação humana, jurídica ou administrativa."
+)
+
+
+class ComplianceEvidenceCreate(BaseModel):
+    requirement_code: str = Field(..., description="Código do requisito normativo (ex: ART_5)")
+    evidence_template_id: int | None = Field(
+        None, description="Template sugerido pela Matriz INOVA (opcional)"
+    )
+    title: str = Field(..., min_length=1, max_length=300)
+    description: str = Field(..., min_length=1)
+    evidence_type: ComplianceEvidenceType
+    status: ComplianceEvidenceStatus = ComplianceEvidenceStatus.COLLECTED
+    source_module: ComplianceEvidenceSourceModule = ComplianceEvidenceSourceModule.MANUAL
+    source_type: str | None = Field(None, max_length=64)
+    source_ref: str | None = Field(None, max_length=200)
+    file_reference: str | None = Field(None, max_length=500)
+    responsible_name: str | None = Field(None, max_length=200)
+    collected_at: _dt.datetime | None = None
+    notes: str | None = None
+
+
+class ComplianceEvidenceUpdate(BaseModel):
+    title: str | None = Field(None, min_length=1, max_length=300)
+    description: str | None = Field(None, min_length=1)
+    evidence_type: ComplianceEvidenceType | None = None
+    status: ComplianceEvidenceStatus | None = None
+    source_module: ComplianceEvidenceSourceModule | None = None
+    source_type: str | None = Field(None, max_length=64)
+    source_ref: str | None = Field(None, max_length=200)
+    file_reference: str | None = Field(None, max_length=500)
+    responsible_name: str | None = Field(None, max_length=200)
+    collected_at: _dt.datetime | None = None
+    reviewed_at: _dt.datetime | None = None
+    notes: str | None = None
+    evidence_template_id: int | None = None
+
+    @model_validator(mode="after")
+    def required_fields_not_null_if_set(self) -> "ComplianceEvidenceUpdate":
+        for field_name in ("title", "description"):
+            if field_name in self.model_fields_set and getattr(self, field_name) is None:
+                raise ValueError(
+                    f"'{field_name}' não pode ser null; omita o campo ou forneça uma string."
+                )
+        return self
+
+
+class ComplianceEvidenceRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    requirement_id: int
+    requirement_code: str
+    evidence_template_id: int | None
+    title: str
+    description: str
+    evidence_type: ComplianceEvidenceType
+    status: ComplianceEvidenceStatus
+    source_module: ComplianceEvidenceSourceModule
+    source_type: str | None
+    source_ref: str | None
+    file_reference: str | None
+    responsible_name: str | None
+    collected_at: _dt.datetime | None
+    reviewed_at: _dt.datetime | None
+    created_at: _dt.datetime
+    updated_at: _dt.datetime
+
+    @computed_field
+    @property
+    def evidence_note(self) -> str:
+        return CONSERVATIVE_EVIDENCE_NOTE
+
+
+class ComplianceEvidenceDetail(ComplianceEvidenceRead):
+    notes: str | None
+
+
 __all__ = [
+    "CONSERVATIVE_EVIDENCE_NOTE",
     "CONSERVATIVE_SOURCE_NOTE",
+    "ComplianceEvidenceCreate",
+    "ComplianceEvidenceDetail",
+    "ComplianceEvidenceRead",
+    "ComplianceEvidenceUpdate",
     "ComplianceSummary",
     "DeadlineRead",
     "EtapaSummary",

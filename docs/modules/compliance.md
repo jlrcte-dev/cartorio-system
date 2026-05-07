@@ -2,20 +2,34 @@
 
 ## Objetivo
 
-Representar, de forma estruturada, versionada e somente leitura, a Matriz de
-Correlação INOVA V1 do Provimento CNJ nº 213/2026. O módulo apoia a
-organização da conformidade da serventia, mas **não declara conformidade**,
-não armazena evidências reais e não substitui validação humana, jurídica
-ou administrativa.
+Representar, de forma estruturada e versionada, a Matriz de Correlação INOVA V1
+do Provimento CNJ nº 213/2026, e permitir o registro de evidências regulatórias
+reais vinculadas aos requisitos normativos.
 
-## Escopo da Sprint LGPD/Compliance-1
+O módulo apoia a organização da conformidade da serventia, mas **não declara
+conformidade**, não substitui validação humana, jurídica ou administrativa, e
+não emite qualquer certificação de regularidade.
+
+## Sprints implementadas
+
+### Sprint LGPD/Compliance-1 (fundação)
 
 - Camada fundacional `app/modules/compliance/`.
 - Modelo de dados para requisitos, políticas indicadas, prazos por classe e
-  evidências sugeridas pela matriz.
+  evidências sugeridas pela matriz (`ComplianceEvidenceTemplate`).
 - Seed determinístico e idempotente da Matriz INOVA V1 (`matriz_v1`).
 - Endpoints REST somente leitura.
 - Fronteira estrita: nenhum import de `audit`, `lgpd` ou `retention`.
+
+### Sprint LGPD/Compliance-2 — ComplianceEvidence MVP
+
+- Entidade `ComplianceEvidence` — evidência regulatória real registrada.
+- Enums: `ComplianceEvidenceType`, `ComplianceEvidenceStatus`,
+  `ComplianceEvidenceSourceModule`.
+- Migration `20260506_1500_add_compliance_evidences.py`.
+- CRUD parcial: POST/GET/PATCH. DELETE não implementado nesta sprint.
+- Integração por referência fraca: `source_module`, `source_type`, `source_ref`.
+  Não há FK cruzada com `audit`, `retention` ou `lgpd` (ADR-001, ADR-002).
 
 ## O que o módulo faz
 
@@ -25,18 +39,34 @@ ou administrativa.
 - Calcula resumos por etapa e visão geral consolidada.
 - Registra metadados de seed (`compliance_seed_meta`) com versão e checksum
   SHA-256 para detecção de mudanças.
+- Permite registrar evidências regulatórias reais (`ComplianceEvidence`)
+  vinculadas a requisitos normativos, com filtros por requisito, status e módulo
+  de origem.
 
 ## O que o módulo não faz
 
 - Não declara que a serventia cumpre o Provimento.
-- Não persiste evidências reais — `ComplianceEvidenceTemplate` representa
-  apenas a evidência sugerida pela matriz.
-- Não há ações corretivas, dossiê técnico, geração de PDF, dashboard,
-  upload, workflow de descarte, status de cumprimento ou cálculo de
-  conformidade.
+- `ComplianceEvidenceTemplate` representa apenas a evidência sugerida pela
+  matriz; `ComplianceEvidence` é a evidência real registrada, mas **não é
+  validação automática de conformidade**.
+- Não há upload de arquivos, armazenamento binário, geração de PDF, dossiê
+  técnico, dashboard, workflow de descarte, status agregado de cumprimento ou
+  cálculo automático de conformidade.
 - Não importa nem consome `app.modules.audit`, `app.modules.lgpd` ou
   `app.modules.retention`.
-- Não expõe métodos de escrita via HTTP (`POST/PATCH/PUT/DELETE`).
+- A referência a outro módulo via `source_module`/`source_ref` não valida a
+  existência do recurso referenciado — é apenas referência fraca documental.
+
+## Linguagem conservadora obrigatória
+
+Toda evidência registrada exige linguagem conservadora:
+
+- `evidência registrada para apoio à organização regulatória`
+- `não representa declaração automática de conformidade`
+- `exige validação humana, jurídica ou administrativa`
+
+O campo `evidence_note` em todos os schemas de leitura repete este aviso
+automaticamente.
 
 ## Relação com a Matriz INOVA V1
 
@@ -46,7 +76,7 @@ Março 2026, v1.0).
 O PDF **não é versionado no repositório** — apenas a referência textual
 ao caminho local é registrada em `compliance_seed_meta.source_file_reference`:
 
-```
+```text
 _local_data/LGPD - inova/Guia provimento 213/
 Matriz_Correlacao_Provimento213_Politicas V1.pdf
 ```
@@ -185,7 +215,7 @@ Documentos produzidos:
 ### Decisões propostas (aguardam aprovação)
 
 1. `ComplianceEvidence` é a entidade central de evidência regulatória real,
-   pertencendo ao módulo `compliance`.
+   pertencente ao módulo `compliance`.
 2. A integração com `audit`, `lgpd` e `retention` ocorre por **referência fraca**
    textual, não por foreign key direta.
 3. `ComplianceAction` só será criada após análise de casos reais que não possam

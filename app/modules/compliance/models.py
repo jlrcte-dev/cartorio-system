@@ -17,6 +17,9 @@ from sqlalchemy.sql import func
 
 from app.db.base import Base
 from app.modules.compliance.enums import (
+    ComplianceEvidenceSourceModule,
+    ComplianceEvidenceStatus,
+    ComplianceEvidenceType,
     DeadlineUnit,
     PolicyDocumentKind,
     RequirementClassification,
@@ -103,6 +106,12 @@ class ComplianceRequirement(Base):
         "ComplianceRequirementPolicy",
         back_populates="requirement",
         cascade="all, delete-orphan",
+    )
+    evidences: Mapped[list[ComplianceEvidence]] = relationship(
+        "ComplianceEvidence",
+        back_populates="requirement",
+        cascade="all, delete-orphan",
+        order_by="ComplianceEvidence.id",
     )
 
 
@@ -280,6 +289,93 @@ class ComplianceEvidenceTemplate(Base):
 
     requirement: Mapped[ComplianceRequirement] = relationship(
         "ComplianceRequirement", back_populates="evidence_templates"
+    )
+
+
+class ComplianceEvidence(Base):
+    """Evidência regulatória real registrada para apoio à organização de conformidade.
+
+    Não representa declaração automática de conformidade. Exige validação
+    humana, jurídica ou administrativa antes de qualquer uso oficial.
+
+    Integração com outros módulos ocorre exclusivamente por referência fraca
+    (source_module / source_type / source_ref). Não há FK cruzada com audit,
+    retention ou lgpd — ADR-001 e ADR-002.
+    """
+
+    __tablename__ = "compliance_evidences"
+    __table_args__ = (
+        Index("ix_compliance_evidences_requirement_id", "requirement_id"),
+        Index("ix_compliance_evidences_template_id", "evidence_template_id"),
+        Index("ix_compliance_evidences_status", "status"),
+        Index("ix_compliance_evidences_source", "source_module"),
+        Index("ix_compliance_evidences_collected_at", "collected_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    requirement_id: Mapped[int] = mapped_column(
+        ForeignKey("compliance_requirements.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    evidence_template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("compliance_evidence_templates.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_type: Mapped[ComplianceEvidenceType] = mapped_column(
+        Enum(
+            ComplianceEvidenceType,
+            name="compliance_evidence_type_enum",
+            length=24,
+            **_ENUM_KWARGS,
+        ),
+        nullable=False,
+    )
+    status: Mapped[ComplianceEvidenceStatus] = mapped_column(
+        Enum(
+            ComplianceEvidenceStatus,
+            name="compliance_evidence_status_enum",
+            length=24,
+            **_ENUM_KWARGS,
+        ),
+        nullable=False,
+        default=ComplianceEvidenceStatus.COLLECTED,
+    )
+    source_module: Mapped[ComplianceEvidenceSourceModule] = mapped_column(
+        Enum(
+            ComplianceEvidenceSourceModule,
+            name="compliance_evidence_source_module_enum",
+            length=16,
+            **_ENUM_KWARGS,
+        ),
+        nullable=False,
+        default=ComplianceEvidenceSourceModule.MANUAL,
+    )
+    source_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    file_reference: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    responsible_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    requirement: Mapped[ComplianceRequirement] = relationship(
+        "ComplianceRequirement", back_populates="evidences"
+    )
+    template: Mapped[ComplianceEvidenceTemplate | None] = relationship(
+        "ComplianceEvidenceTemplate", foreign_keys=[evidence_template_id]
     )
 
 

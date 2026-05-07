@@ -210,6 +210,11 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
   `compliance`. Ver
   [`CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md`](CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md)
   e ADRs em [`docs/decisions/`](decisions/).
+- [x] **Sprint LGPD/Compliance-2** (2026-05-06): `ComplianceEvidence` MVP
+  implementado. Evidências regulatórias reais podem ser registradas e
+  vinculadas a requisitos da Matriz INOVA V1. Integração por referência fraca
+  (ADR-001/ADR-002). Próximos passos: `RequirementFindingLink`,
+  `ComplianceStatus` por requisito, dossiê técnico.
 
 ### F — Dossiê
 

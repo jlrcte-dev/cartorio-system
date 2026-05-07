@@ -38,13 +38,34 @@ def test_compliance_does_not_import_other_modules(path: Path) -> None:
                 assert not module.startswith(forbidden), f"{path}: from {module} viola fronteira"
 
 
-def test_router_only_exposes_get_methods() -> None:
+def test_router_does_not_expose_delete() -> None:
     from app.modules.compliance.router import router
 
-    write_methods = {"POST", "PUT", "PATCH", "DELETE"}
     for route in router.routes:
         methods = getattr(route, "methods", None) or set()
-        offending = methods & write_methods
-        assert not offending, (
-            f"Rota {getattr(route, 'path', '<?>')} expõe métodos de escrita: {offending}"
+        assert "DELETE" not in methods, (
+            f"Rota {getattr(route, 'path', '<?>')} expõe DELETE — proibido nesta sprint"
         )
+
+
+def test_router_evidence_endpoints_exist() -> None:
+    from app.modules.compliance.router import router
+
+    paths_methods: dict[str, set[str]] = {}
+    for route in router.routes:
+        path = getattr(route, "path", "")
+        methods = getattr(route, "methods", None) or set()
+        paths_methods.setdefault(path, set()).update(methods)
+
+    assert "/compliance/evidences" in paths_methods, "Endpoint /evidences não registrado"
+    assert "POST" in paths_methods["/compliance/evidences"], "POST /evidences ausente"
+    assert "GET" in paths_methods["/compliance/evidences"], "GET /evidences ausente"
+    assert "/compliance/evidences/{evidence_id}" in paths_methods, (
+        "Endpoint /evidences/{id} não registrado"
+    )
+    assert "GET" in paths_methods["/compliance/evidences/{evidence_id}"], (
+        "GET /evidences/{id} ausente"
+    )
+    assert "PATCH" in paths_methods["/compliance/evidences/{evidence_id}"], (
+        "PATCH /evidences/{id} ausente"
+    )
