@@ -31,6 +31,20 @@ não emite qualquer certificação de regularidade.
 - Integração por referência fraca: `source_module`, `source_type`, `source_ref`.
   Não há FK cruzada com `audit`, `retention` ou `lgpd` (ADR-001, ADR-002).
 
+### Sprint LGPD/Compliance-3 — RequirementFindingLink MVP
+
+- Entidade `RequirementFindingLink` — vínculo entre um requisito normativo e um
+  achado, sinal, ação ou documento de origem externa.
+- Enums: `ComplianceLinkSourceModule`, `ComplianceLinkSourceType`,
+  `ComplianceLinkRiskLevel`.
+- Migration `20260506_1600_add_compliance_requirement_finding_links.py`.
+- CRUD parcial: POST/GET/GET detail/PATCH. DELETE não implementado.
+- Unicidade: `UniqueConstraint(requirement_id, source_module, source_type, source_ref)`
+  com nome `uq_compliance_requirement_finding_source`. Duplicata retorna 400.
+- Integração exclusivamente por referência fraca: sem FK para `audit`,
+  `retention` ou `lgpd` (ADR-002).
+- Não calcula `ComplianceStatus`. Não afirma conformidade.
+
 ## O que o módulo faz
 
 - Persiste o mapa: requisito normativo → política indicada → prazo estimado
@@ -42,6 +56,9 @@ não emite qualquer certificação de regularidade.
 - Permite registrar evidências regulatórias reais (`ComplianceEvidence`)
   vinculadas a requisitos normativos, com filtros por requisito, status e módulo
   de origem.
+- Permite registrar vínculos entre requisitos e achados/sinais externos
+  (`RequirementFindingLink`), por referência fraca, sem acoplamento com os
+  módulos de origem.
 
 ## O que o módulo não faz
 
@@ -103,6 +120,23 @@ Matriz_Correlacao_Provimento213_Politicas V1.pdf
 - `ComplianceEvidenceTemplate`: evidência sugerida pela matriz.
 - `ComplianceSeedMeta`: metadados do seed `matriz_v1`, com checksum
   SHA-256 para detecção de mudanças.
+- `RequirementFindingLink`: vínculo entre um `ComplianceRequirement` e um
+  achado, sinal, ação ou documento de origem externa, identificado por
+  `source_module` / `source_type` / `source_ref`.
+  - `source_module`: origem do achado (`AUDIT`, `RETENTION`, `LGPD`,
+    `MANUAL`, `EXTERNAL`).
+  - `source_type`: natureza da referência (`FINDING`, `DIAGNOSIS`, `SIGNAL`,
+    `ACTION`, `POLICY`, `DOCUMENT`, `MANUAL_NOTE`).
+  - `source_ref`: código textual livre (ex.: `DIAG-004`, `TEMP-002`,
+    `AC-01`). Não é validado contra tabelas externas — referência fraca.
+  - `risk_level` (opcional): `INFO`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`.
+  - `title`, `link_reason`, `notes`: metadados opcionais de contexto.
+  - UniqueConstraint em `(requirement_id, source_module, source_type,
+    source_ref)` impede vínculos duplicados da mesma origem para o mesmo
+    requisito.
+  - **Não declara conformidade.** A existência de um vínculo não indica
+    que o requisito está atendido ou descumprido. Campo `link_note`
+    conservador incluído em toda resposta.
 
 ## Tabelas
 
@@ -113,7 +147,19 @@ Matriz_Correlacao_Provimento213_Politicas V1.pdf
 - `compliance_evidence_templates`
 - `compliance_seed_meta`
 
-Todas criadas pela migration `c1d2e3f4b5a6 — add compliance tables`.
+Criadas pela migration `c1d2e3f4b5a6 — add compliance tables`.
+
+- `compliance_evidences`
+
+Criada pela migration `d2e3f4a5b6c7 — add compliance evidences`.
+
+- `compliance_requirement_finding_links`
+
+Criada pela migration `e3f4a5b6c7d8 — add compliance requirement finding links`.
+UniqueConstraint `uq_compliance_requirement_finding_link_source` em
+`(requirement_id, source_module, source_type, source_ref)`.
+FK interna para `compliance_requirements.id` com `ondelete=CASCADE`.
+Sem FK cruzada com `audit`, `retention` ou `lgpd`.
 
 ## Seed e versionamento
 
@@ -158,6 +204,36 @@ Todos sob `/api/v1/compliance`:
 
 Métodos de escrita não existem (testado em `test_compliance_routes` e
 `test_compliance_isolation`).
+
+### Evidências regulatórias
+
+Sob `/api/v1/compliance`:
+
+- `POST /evidences` — registra evidência regulatória real; retorna 201.
+  Payload: `requirement_code` (obrigatório), `title`, `description`,
+  `evidence_type`, `source_module`, `source_type`, `source_ref`, etc.
+- `GET /evidences` — lista, filtrável por `requirement_code`, `status`,
+  `source_module`.
+- `GET /evidences/{evidence_id}` — detalhe, com campo `evidence_note`
+  conservador.
+- `PATCH /evidences/{evidence_id}` — atualização parcial. DELETE não
+  implementado.
+
+### Vínculos com achados externos (RequirementFindingLink)
+
+Sob `/api/v1/compliance`:
+
+- `POST /requirement-links` — cria vínculo requisito ↔ achado. Payload
+  identifica o requisito por `requirement_code`; se não existir, retorna 404.
+  Duplicata `(requirement_code, source_module, source_type, source_ref)` retorna 400.
+- `GET /requirement-links` — lista, filtrável por `requirement_code`,
+  `source_module`, `source_type`, `source_ref`, `risk_level`.
+- `GET /requirement-links/{link_id}` — detalhe, com campo `link_note`
+  conservador.
+- `PATCH /requirement-links/{link_id}` — atualiza `title`, `link_reason`,
+  `risk_level`, `notes`, `source_ref`, `source_module`, `source_type`.
+  Não permite trocar o `requirement_id`. Campos NOT NULL não aceitam null
+  explícito. DELETE não implementado.
 
 ## Fronteiras com audit, lgpd e retention
 
@@ -225,10 +301,12 @@ Documentos produzidos:
 
 ## Roadmap futuro
 
-- **LGPD/Compliance-2**: evidências reais (`ComplianceEvidence`),
-  vinculadas a requisitos por referência fraca; primeiros relatórios de cobertura.
-- **Sprint RequirementFindingLink**: vínculo entre requisito e achado/sinal.
-- **Sprint ComplianceStatus**: cálculo de status indicativo por requisito.
+- ~~**LGPD/Compliance-2**: evidências reais (`ComplianceEvidence`).~~ ✅ Concluída (commit `4ccf50c`).
+- ~~**Sprint RequirementFindingLink**: vínculo entre requisito e achado/sinal.~~ ✅ Concluída (commit `c588bc2`).
+- **Sprint Compliance-4 — ComplianceStatus**: cálculo de status indicativo por
+  requisito. Baseado em `ComplianceEvidence` + `RequirementFindingLink`.
+  Linguagem conservadora obrigatória; nenhum status automático declarará
+  conformidade.
 - **Retention-1C revisada**: persistência de `RetentionEvaluation`; alinhar
   fontes normativas e enums com a fronteira de compliance.
 - **LGPD-2**: hash/_VISTORIA, políticas versionadas, treinamentos,

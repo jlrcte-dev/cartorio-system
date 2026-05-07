@@ -213,8 +213,14 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
 - [x] **Sprint LGPD/Compliance-2** (2026-05-06): `ComplianceEvidence` MVP
   implementado. Evidências regulatórias reais podem ser registradas e
   vinculadas a requisitos da Matriz INOVA V1. Integração por referência fraca
-  (ADR-001/ADR-002). Próximos passos: `RequirementFindingLink`,
-  `ComplianceStatus` por requisito, dossiê técnico.
+  (ADR-001/ADR-002).
+- [x] **Sprint LGPD/Compliance-3** (2026-05-06): `RequirementFindingLink` MVP
+  implementado. Requisitos normativos podem ser vinculados a achados, sinais e
+  ações de `audit`, `retention`, `lgpd` ou fontes externas, por referência
+  fraca (`source_module` / `source_type` / `source_ref`). UniqueConstraint
+  impede vínculos duplicados da mesma origem. Isolamento modular preservado:
+  sem FK cruzada, sem import de outros módulos. Próximo passo:
+  `ComplianceStatus` por requisito (Sprint Compliance-4).
 
 ### F — Dossiê
 

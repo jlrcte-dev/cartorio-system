@@ -6,8 +6,8 @@
 > conformidade.
 
 Última atualização: 2026-05-06  
-Versão: 1.1 — Sprint LGPD/Compliance-2 concluída  
-Estado: Em implementação — ComplianceEvidence MVP entregue
+Versão: 1.2 — Sprint LGPD/Compliance-3 concluída  
+Estado: Em implementação — RequirementFindingLink MVP entregue
 
 ---
 
@@ -104,6 +104,7 @@ na dimensão de proteção de dados pessoais conforme Plano INOVA.
 **Sprints concluídas:**
 - LGPD/Compliance-1 — Matriz INOVA V1, read-only (2026-05-06)
 - LGPD/Compliance-2 — `ComplianceEvidence` MVP (2026-05-06)
+- LGPD/Compliance-3 — `RequirementFindingLink` MVP (2026-05-06)
 
 **O que existe:**
 - `ComplianceRequirement` — 32 requisitos normativos mapeados
@@ -113,17 +114,21 @@ na dimensão de proteção de dados pessoais conforme Plano INOVA.
 - `ComplianceEvidenceTemplate` — ~131 evidências sugeridas pela matriz
 - `ComplianceSeedMeta` — metadados de versão e checksum SHA-256
 - `ComplianceEvidence` — evidências regulatórias reais (MVP, sem upload)
+- `RequirementFindingLink` — vínculos requisito ↔ achado/sinal por referência
+  fraca. Enums `ComplianceLinkSourceModule`, `ComplianceLinkSourceType`,
+  `ComplianceLinkRiskLevel`. UniqueConstraint por origem. POST/GET/PATCH.
+  Sem FK cruzada com `audit`, `retention` ou `lgpd` (ADR-002).
 - Seed determinístico e idempotente da Matriz INOVA V1
-- Endpoints: GET (requisitos, políticas, etapas, summary) + POST/GET/PATCH (evidências)
+- Endpoints: GET (requisitos, políticas, etapas, summary) +
+  POST/GET/PATCH (evidências) + POST/GET/PATCH (requirement-links)
 
 **O que não existe ainda:**
 
-- `RequirementFindingLink` — vínculo com achados de audit/retention
 - `ComplianceAction` — ação corretiva regulatória
 - Status de conformidade calculado por requisito (`ComplianceStatus`)
 - Dossiê técnico consolidado
 - Upload de arquivos de evidência (hash SHA-256, armazenamento binário)
-- Integração real com audit, lgpd ou retention (apenas referência fraca)
+- Integração real bidirecional com audit, lgpd ou retention (apenas referência fraca)
 
 **Fronteira estrita:** nenhum import de `audit`, `lgpd` ou `retention` no código
 (ADR-001, ADR-002).
@@ -339,45 +344,63 @@ EXPIRED          → válida por prazo, prazo vencido
 
 ---
 
-## 8. Modelo futuro de `RequirementFindingLink`
+## 8. `RequirementFindingLink` — implementado (Sprint Compliance-3)
 
-> **Não implementar.** Especificação para sprint futura.
+> **Implementado.** Commit `c588bc2` — Sprint LGPD/Compliance-3 (2026-05-06).
 
-`RequirementFindingLink` representa o vínculo conceitual entre um requisito
-normativo e um achado técnico/documental. É distinto de `ComplianceEvidence`:
-o link mapeia a **lacuna ou relação**, não a evidência de cumprimento.
+`RequirementFindingLink` representa o vínculo entre um requisito normativo e
+um achado, sinal, ação ou documento de origem externa. É distinto de
+`ComplianceEvidence`: o link rastreia a **relação com a fonte**, não a
+evidência formal de cumprimento.
 
-### Proposta de campos
+### Campos implementados
 
 ```
 RequirementFindingLink
-├── id                  UUID        PK
-├── requirement_id      UUID        FK → compliance_requirements.id (NOT NULL)
-├── source_module       str(50)     NOT NULL — "audit" | "retention"
-├── source_type         str(100)    NOT NULL — "finding" | "temp_signal"
-├── source_ref          str(200)    NOT NULL — ex: "DIAG-004", "TEMP-002"
-├── link_type           enum        NOT NULL — ver LinkType abaixo
-├── notes               text        nullable — justificativa do vínculo
-├── created_by          str(200)    NOT NULL
-├── created_at          datetime    automático
-└── updated_at          datetime    automático
+├── id               Integer     PK autoincrement
+├── requirement_id   Integer     FK → compliance_requirements.id (NOT NULL, CASCADE)
+├── source_module    enum        NOT NULL — AUDIT|RETENTION|LGPD|MANUAL|EXTERNAL
+├── source_type      enum        NOT NULL — FINDING|DIAGNOSIS|SIGNAL|ACTION|
+│                                           POLICY|DOCUMENT|MANUAL_NOTE
+├── source_ref       str(200)    NOT NULL — ex: "DIAG-004", "TEMP-002", "AC-01"
+├── title            str(300)    nullable — rótulo opcional do vínculo
+├── link_reason      text        nullable — justificativa do vínculo
+├── risk_level       enum        nullable — INFO|LOW|MEDIUM|HIGH|CRITICAL
+├── notes            text        nullable — observações adicionais
+├── created_at       datetime    automático
+└── updated_at       datetime    automático
 ```
 
-### Enum `LinkType`
+UniqueConstraint `uq_compliance_requirement_finding_link_source` em
+`(requirement_id, source_module, source_type, source_ref)` impede vínculos
+duplicados da mesma origem para o mesmo requisito.
 
-```
-GAP              → achado indica lacuna regulatória no requisito
-RISK             → achado representa risco que impacta o requisito
-EVIDENCE_SOURCE  → achado pode ser usado como fonte de evidência
-CONTEXT          → achado oferece contexto relevante sem ser lacuna direta
-```
+### Diferenças em relação à proposta original
 
-### Regras de linguagem conservadora
+| Aspecto | Proposta original | Implementado |
+| ------- | ----------------- | ------------ |
+| `link_type` (GAP/RISK/etc.) | Previsto | **Não implementado** — substituído por `risk_level` (INFO/LOW/MEDIUM/HIGH/CRITICAL), mais flexível para sprint conservadora |
+| `created_by` | Previsto | **Não implementado** — aguarda autenticação multiusuário |
+| Validação de `source_ref` | Prevista | **Não implementada** — referência fraca intencional; validação seria acoplamento |
+| Status indicativo | Previsto após criação de link | **Não implementado** — sprint Compliance-4 |
 
-- Links do tipo `GAP` devem sempre incluir `notes` com justificativa
-- Nenhum link cria status automático de requisito
-- A existência de um link não implica que o requisito está atendido ou descumprido
-- O módulo `audit` não sabe da existência de `RequirementFindingLink`
+### Fronteiras mantidas (ADR-002)
+
+- `audit`, `retention` e `lgpd` **não sabem** da existência de
+  `RequirementFindingLink`.
+- Nenhuma FK cruzada entre módulos.
+- `source_ref` é string livre — não validada contra tabelas externas.
+- A integridade referencial entre módulos é responsabilidade do operador
+  humano, não do banco de dados.
+
+### Linguagem conservadora
+
+- A existência de um vínculo não implica que o requisito está atendido ou
+  descumprido.
+- Campo `link_note` conservador incluído em toda resposta de leitura:
+  > "Vínculo registrado para apoio à rastreabilidade regulatória; não
+  > representa declaração automática de conformidade. Exige validação
+  > humana, jurídica ou administrativa."
 
 ---
 
@@ -659,26 +682,27 @@ são válidas (ex: evidência não prevista pela Matriz INOVA).
 ## 14. Roadmap técnico recomendado
 
 ```
-[atual]  Sprint Blueprint — definição de fronteiras e contratos (esta sprint)
+[concluída]  Sprint Blueprint — definição de fronteiras e contratos
               │
               ▼
-LGPD/Compliance-2 — ComplianceEvidence MVP
-  - Modelo ComplianceEvidence com campos mínimos
-  - Endpoints: POST (criar), GET (listar por requirement), PATCH (status)
-  - Integração read-only com lgpd_actions (busca por source_ref)
-  - Integração read-only com audit_findings (busca por source_ref)
+[concluída]  LGPD/Compliance-2 — ComplianceEvidence MVP (commit 4ccf50c)
+  - ComplianceEvidence com campos mínimos
+  - Endpoints: POST/GET/PATCH (evidências)
+  - Integração por referência fraca (sem FK cruzada)
   - Testes: isolamento, criação, status, referência fraca
   - Sem PDF, sem dossiê, sem ComplianceAction
               │
               ▼
-Sprint RequirementFindingLink — vínculos com achados
-  - Modelo RequirementFindingLink
-  - Endpoints: POST (criar vínculo), GET (listar por requirement)
-  - Lógica de status indicativo básica (NOT_STARTED → EVIDENCE_PENDING)
-  - Integração com ComplianceEvidence
+[concluída]  Sprint Compliance-3 — RequirementFindingLink MVP (commit c588bc2)
+  - RequirementFindingLink com enums próprios e UniqueConstraint
+  - Endpoints: POST/GET/GET detail/PATCH (requirement-links)
+  - Referência fraca: source_module / source_type / source_ref
+  - risk_level (INFO/LOW/MEDIUM/HIGH/CRITICAL) no lugar de link_type
+  - Testes: model, service, routes, isolamento (376 passed)
+  - Sem ComplianceStatus, sem FK cruzada, sem DELETE
               │
               ▼
-Sprint ComplianceStatus — status indicativo
+Sprint Compliance-4 — ComplianceStatus — status indicativo
   - Cálculo de status por requisito (regra da seção 10)
   - Exposto nos endpoints de requirement
   - status_note conservadora obrigatória
@@ -719,15 +743,24 @@ Sprint PDF/Vistoria — exportação para Sistema Justiça Aberta
       `app/modules/compliance/`
 - [ ] Ruff clean; testes passando
 
-### Sprint RequirementFindingLink
+### Sprint Compliance-3 — RequirementFindingLink ✅ concluída (commit c588bc2)
 
-- [ ] Link criado com `source_module`, `source_type`, `source_ref`, `link_type`
-- [ ] Service valida existência do `source_ref` antes de criar link
-- [ ] Listagem por `requirement_id`
-- [ ] `link_type = GAP` exige `notes` (validação de negócio)
-- [ ] Status indicativo básico calculado após criação de link
-- [ ] Testes: criação, validação, listagem, status indicativo
-- [ ] Ruff clean; testes passando
+- [x] Link criado com `requirement_code`, `source_module`, `source_type`, `source_ref`
+- [x] `requirement_code` inexistente retorna 404
+- [x] Duplicata `(requirement_id, source_module, source_type, source_ref)` retorna 400
+- [x] Listagem com filtros: `requirement_code`, `source_module`, `source_type`,
+      `source_ref`, `risk_level`
+- [x] PATCH: campos opcionais atualizáveis; requirement não pode ser trocado;
+      campos NOT NULL rejeitam null explícito (422)
+- [x] DELETE não exposto
+- [x] Testes: model, service, routes, isolamento — 376 passed, 1 skipped
+- [x] Ruff clean
+- [ ] `link_type` (GAP/RISK/etc.) — **não implementado**; substituído por
+      `risk_level` (INFO..CRITICAL); decisão conservadora da sprint
+- [ ] Validação de `source_ref` contra módulos externos — **não implementada**;
+      referência fraca intencional (ADR-002)
+- [ ] Status indicativo calculado após criação de link — **não implementado**;
+      aguarda Sprint Compliance-4
 
 ### Sprint ComplianceStatus
 
@@ -749,5 +782,5 @@ Sprint PDF/Vistoria — exportação para Sistema Justiça Aberta
 | D-04 | Formato do dossiê técnico para Sistema Justiça Aberta: JSON estruturado, PDF, ou ambos? | Sprint DossieTecnico | Antes de sprint DossieTecnico |
 | D-05 | `RetentionEvaluation` (persistida): sprint retention-1C antes ou depois de LGPD/Compliance-2? | Prioridade de roadmap | Próximo ciclo de planejamento |
 | D-06 | Autenticação multiusuário: antecipada para antes de expor evidências via API? | Segurança | Urgente — antes de LGPD/Compliance-2 se evidências forem sensíveis |
-| D-07 | `RequirementFindingLink`: permitir criação por fonte externa (sem `source_ref` de módulo)? | Flexibilidade | Antes de sprint RequirementFindingLink |
+| D-07 | ~~`RequirementFindingLink`: permitir criação por fonte externa (sem `source_ref` de módulo)?~~ | ✅ Resolvido | `source_module=MANUAL` e `source_module=EXTERNAL` implementados; `source_ref` é string livre |
 | D-08 | Prazo de expiração de evidência: sistema calcula com base no prazo do requisito ou é manual? | Enum `EXPIRED` | Antes de ComplianceStatus sprint |
