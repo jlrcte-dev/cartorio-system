@@ -9,6 +9,9 @@ from app.modules.compliance.enums import (
     ComplianceEvidenceSourceModule,
     ComplianceEvidenceStatus,
     ComplianceEvidenceType,
+    ComplianceLinkRiskLevel,
+    ComplianceLinkSourceModule,
+    ComplianceLinkSourceType,
     DeadlineUnit,
     PolicyDocumentKind,
     RequirementClassification,
@@ -233,8 +236,71 @@ class ComplianceEvidenceDetail(ComplianceEvidenceRead):
     notes: str | None
 
 
+CONSERVATIVE_LINK_NOTE = (
+    "Vínculo registrado para apoio à rastreabilidade regulatória; "
+    "não representa declaração automática de conformidade. "
+    "Exige validação humana, jurídica ou administrativa."
+)
+
+
+class RequirementFindingLinkCreate(BaseModel):
+    requirement_code: str = Field(..., description="Código do requisito normativo (ex: ART_12)")
+    source_module: ComplianceLinkSourceModule
+    source_type: ComplianceLinkSourceType
+    source_ref: str = Field(..., min_length=1, max_length=200)
+    title: str | None = Field(None, max_length=300)
+    link_reason: str | None = None
+    risk_level: ComplianceLinkRiskLevel | None = None
+    notes: str | None = None
+
+
+class RequirementFindingLinkUpdate(BaseModel):
+    source_module: ComplianceLinkSourceModule | None = None
+    source_type: ComplianceLinkSourceType | None = None
+    source_ref: str | None = Field(None, max_length=200)
+    title: str | None = Field(None, max_length=300)
+    link_reason: str | None = None
+    risk_level: ComplianceLinkRiskLevel | None = None
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def required_fields_not_null_if_set(self) -> "RequirementFindingLinkUpdate":
+        for field_name in ("source_module", "source_type", "source_ref"):
+            if field_name in self.model_fields_set and getattr(self, field_name) is None:
+                raise ValueError(
+                    f"'{field_name}' não pode ser null; omita o campo ou forneça um valor."
+                )
+        return self
+
+
+class RequirementFindingLinkRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    requirement_id: int
+    requirement_code: str
+    source_module: ComplianceLinkSourceModule
+    source_type: ComplianceLinkSourceType
+    source_ref: str
+    title: str | None
+    link_reason: str | None
+    risk_level: ComplianceLinkRiskLevel | None
+    created_at: _dt.datetime
+    updated_at: _dt.datetime
+
+    @computed_field
+    @property
+    def link_note(self) -> str:
+        return CONSERVATIVE_LINK_NOTE
+
+
+class RequirementFindingLinkDetail(RequirementFindingLinkRead):
+    notes: str | None
+
+
 __all__ = [
     "CONSERVATIVE_EVIDENCE_NOTE",
+    "CONSERVATIVE_LINK_NOTE",
     "CONSERVATIVE_SOURCE_NOTE",
     "ComplianceEvidenceCreate",
     "ComplianceEvidenceDetail",
@@ -248,6 +314,10 @@ __all__ = [
     "PolicyDocumentRead",
     "PolicyRequirementLinkRead",
     "RequirementDetail",
+    "RequirementFindingLinkCreate",
+    "RequirementFindingLinkDetail",
+    "RequirementFindingLinkRead",
+    "RequirementFindingLinkUpdate",
     "RequirementPolicyLinkRead",
     "RequirementRead",
     "SeedMetaRead",

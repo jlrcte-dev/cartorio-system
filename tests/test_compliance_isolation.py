@@ -69,3 +69,35 @@ def test_router_evidence_endpoints_exist() -> None:
     assert "PATCH" in paths_methods["/compliance/evidences/{evidence_id}"], (
         "PATCH /evidences/{id} ausente"
     )
+
+
+def test_router_requirement_links_endpoints_exist() -> None:
+    from app.modules.compliance.router import router
+
+    paths_methods: dict[str, set[str]] = {}
+    for route in router.routes:
+        path = getattr(route, "path", "")
+        methods = getattr(route, "methods", None) or set()
+        paths_methods.setdefault(path, set()).update(methods)
+
+    assert "/compliance/requirement-links" in paths_methods, (
+        "Endpoint /requirement-links não registrado"
+    )
+    assert "POST" in paths_methods["/compliance/requirement-links"], (
+        "POST /requirement-links ausente"
+    )
+    assert "GET" in paths_methods["/compliance/requirement-links"], (
+        "GET /requirement-links ausente"
+    )
+    assert "/compliance/requirement-links/{link_id}" in paths_methods, (
+        "Endpoint /requirement-links/{id} não registrado"
+    )
+    assert "GET" in paths_methods["/compliance/requirement-links/{link_id}"], (
+        "GET /requirement-links/{id} ausente"
+    )
+    assert "PATCH" in paths_methods["/compliance/requirement-links/{link_id}"], (
+        "PATCH /requirement-links/{id} ausente"
+    )
+    assert "DELETE" not in paths_methods.get("/compliance/requirement-links/{link_id}", set()), (
+        "DELETE /requirement-links/{id} não deve existir"
+    )

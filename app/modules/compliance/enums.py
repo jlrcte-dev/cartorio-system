@@ -95,3 +95,29 @@ class ComplianceEvidenceSourceModule(StrEnum):
     RETENTION = "RETENTION"
     LGPD = "LGPD"
     SYSTEM = "SYSTEM"
+
+
+class ComplianceLinkSourceModule(StrEnum):
+    AUDIT = "AUDIT"
+    RETENTION = "RETENTION"
+    LGPD = "LGPD"
+    MANUAL = "MANUAL"
+    EXTERNAL = "EXTERNAL"
+
+
+class ComplianceLinkSourceType(StrEnum):
+    FINDING = "FINDING"
+    DIAGNOSIS = "DIAGNOSIS"
+    SIGNAL = "SIGNAL"
+    ACTION = "ACTION"
+    POLICY = "POLICY"
+    DOCUMENT = "DOCUMENT"
+    MANUAL_NOTE = "MANUAL_NOTE"
+
+
+class ComplianceLinkRiskLevel(StrEnum):
+    INFO = "INFO"
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"

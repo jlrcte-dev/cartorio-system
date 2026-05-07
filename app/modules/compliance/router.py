@@ -10,12 +10,15 @@ from app.modules.compliance import service
 from app.modules.compliance.enums import (
     ComplianceEvidenceSourceModule,
     ComplianceEvidenceStatus,
+    ComplianceLinkRiskLevel,
+    ComplianceLinkSourceModule,
+    ComplianceLinkSourceType,
     PolicyDocumentKind,
     RequirementClassification,
     RequirementSource,
     RequirementStage,
 )
-from app.modules.compliance.models import ComplianceEvidence
+from app.modules.compliance.models import ComplianceEvidence, RequirementFindingLink
 from app.modules.compliance.schemas import (
     ComplianceEvidenceCreate,
     ComplianceEvidenceDetail,
@@ -27,6 +30,10 @@ from app.modules.compliance.schemas import (
     PolicyDocumentRead,
     PolicyRequirementLinkRead,
     RequirementDetail,
+    RequirementFindingLinkCreate,
+    RequirementFindingLinkDetail,
+    RequirementFindingLinkRead,
+    RequirementFindingLinkUpdate,
     RequirementPolicyLinkRead,
     RequirementRead,
 )
@@ -239,3 +246,97 @@ def update_evidence(
     db.commit()
     db.refresh(ev)
     return _evidence_to_detail(ev)
+
+
+# ---------------------------------------------------------------------------
+# RequirementFindingLink — vínculos entre requisitos e achados/sinais
+# ---------------------------------------------------------------------------
+
+
+def _link_to_read(link: RequirementFindingLink) -> RequirementFindingLinkRead:
+    return RequirementFindingLinkRead.model_validate(
+        {
+            "id": link.id,
+            "requirement_id": link.requirement_id,
+            "requirement_code": link.requirement.code,
+            "source_module": link.source_module,
+            "source_type": link.source_type,
+            "source_ref": link.source_ref,
+            "title": link.title,
+            "link_reason": link.link_reason,
+            "risk_level": link.risk_level,
+            "created_at": link.created_at,
+            "updated_at": link.updated_at,
+        }
+    )
+
+
+def _link_to_detail(link: RequirementFindingLink) -> RequirementFindingLinkDetail:
+    return RequirementFindingLinkDetail.model_validate(
+        {
+            "id": link.id,
+            "requirement_id": link.requirement_id,
+            "requirement_code": link.requirement.code,
+            "source_module": link.source_module,
+            "source_type": link.source_type,
+            "source_ref": link.source_ref,
+            "title": link.title,
+            "link_reason": link.link_reason,
+            "risk_level": link.risk_level,
+            "notes": link.notes,
+            "created_at": link.created_at,
+            "updated_at": link.updated_at,
+        }
+    )
+
+
+@router.post("/requirement-links", response_model=RequirementFindingLinkDetail, status_code=201)
+def create_finding_link(
+    payload: RequirementFindingLinkCreate, db: DbSession
+) -> RequirementFindingLinkDetail:
+    link = service.create_finding_link(db, payload)
+    db.commit()
+    db.refresh(link)
+    return _link_to_detail(link)
+
+
+@router.get("/requirement-links", response_model=list[RequirementFindingLinkRead])
+def list_finding_links(
+    db: DbSession,
+    requirement_code: str | None = None,
+    source_module: ComplianceLinkSourceModule | None = None,
+    source_type: ComplianceLinkSourceType | None = None,
+    source_ref: str | None = None,
+    risk_level: ComplianceLinkRiskLevel | None = None,
+    limit: LimitQuery = 100,
+    offset: OffsetQuery = 0,
+) -> list[RequirementFindingLinkRead]:
+    links = service.list_finding_links(
+        db,
+        requirement_code=requirement_code,
+        source_module=source_module,
+        source_type=source_type,
+        source_ref=source_ref,
+        risk_level=risk_level,
+        limit=limit,
+        offset=offset,
+    )
+    return [_link_to_read(lnk) for lnk in links]
+
+
+@router.get("/requirement-links/{link_id}", response_model=RequirementFindingLinkDetail)
+def get_finding_link(link_id: int, db: DbSession) -> RequirementFindingLinkDetail:
+    link = service.get_finding_link(db, link_id)
+    if link is None:
+        raise HTTPException(status_code=404, detail=f"Link id={link_id} não encontrado.")
+    return _link_to_detail(link)
+
+
+@router.patch("/requirement-links/{link_id}", response_model=RequirementFindingLinkDetail)
+def update_finding_link(
+    link_id: int, payload: RequirementFindingLinkUpdate, db: DbSession
+) -> RequirementFindingLinkDetail:
+    link = service.update_finding_link(db, link_id, payload)
+    db.commit()
+    db.refresh(link)
+    return _link_to_detail(link)

@@ -16,6 +16,9 @@ from sqlalchemy.orm import Session, selectinload
 from app.modules.compliance.enums import (
     ComplianceEvidenceSourceModule,
     ComplianceEvidenceStatus,
+    ComplianceLinkRiskLevel,
+    ComplianceLinkSourceModule,
+    ComplianceLinkSourceType,
     PolicyDocumentKind,
     RequirementClassification,
     RequirementSource,
@@ -29,12 +32,15 @@ from app.modules.compliance.models import (
     ComplianceRequirementDeadline,
     ComplianceRequirementPolicy,
     ComplianceSeedMeta,
+    RequirementFindingLink,
 )
 from app.modules.compliance.schemas import (
     ComplianceEvidenceCreate,
     ComplianceEvidenceUpdate,
     ComplianceSummary,
     EtapaSummary,
+    RequirementFindingLinkCreate,
+    RequirementFindingLinkUpdate,
 )
 from app.modules.compliance.seed_data import SEED_META
 
@@ -292,3 +298,109 @@ def update_evidence(
     db.flush()
     db.refresh(evidence)
     return evidence
+
+
+# ---------------------------------------------------------------------------
+# RequirementFindingLink — escrita e leitura
+# ---------------------------------------------------------------------------
+
+
+def _check_duplicate_link(
+    db: Session,
+    requirement_id: int,
+    source_module: ComplianceLinkSourceModule,
+    source_type: ComplianceLinkSourceType,
+    source_ref: str,
+) -> None:
+    existing = db.scalar(
+        select(RequirementFindingLink).where(
+            RequirementFindingLink.requirement_id == requirement_id,
+            RequirementFindingLink.source_module == source_module,
+            RequirementFindingLink.source_type == source_type,
+            RequirementFindingLink.source_ref == source_ref,
+        )
+    )
+    if existing is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Já existe vínculo para este requisito com a mesma origem.",
+        )
+
+
+def create_finding_link(
+    db: Session, payload: RequirementFindingLinkCreate
+) -> RequirementFindingLink:
+    req = _resolve_requirement(db, payload.requirement_code)
+    _check_duplicate_link(
+        db, req.id, payload.source_module, payload.source_type, payload.source_ref
+    )
+    link = RequirementFindingLink(
+        requirement_id=req.id,
+        source_module=payload.source_module,
+        source_type=payload.source_type,
+        source_ref=payload.source_ref,
+        title=payload.title,
+        link_reason=payload.link_reason,
+        risk_level=payload.risk_level,
+        notes=payload.notes,
+    )
+    db.add(link)
+    db.flush()
+    db.refresh(link)
+    return link
+
+
+def list_finding_links(
+    db: Session,
+    *,
+    requirement_code: str | None = None,
+    source_module: ComplianceLinkSourceModule | None = None,
+    source_type: ComplianceLinkSourceType | None = None,
+    source_ref: str | None = None,
+    risk_level: ComplianceLinkRiskLevel | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> Sequence[RequirementFindingLink]:
+    stmt = (
+        select(RequirementFindingLink)
+        .join(RequirementFindingLink.requirement)
+        .options(selectinload(RequirementFindingLink.requirement))
+        .order_by(RequirementFindingLink.id)
+    )
+    if requirement_code is not None:
+        stmt = stmt.where(ComplianceRequirement.code == requirement_code)
+    if source_module is not None:
+        stmt = stmt.where(RequirementFindingLink.source_module == source_module)
+    if source_type is not None:
+        stmt = stmt.where(RequirementFindingLink.source_type == source_type)
+    if source_ref is not None:
+        stmt = stmt.where(RequirementFindingLink.source_ref == source_ref)
+    if risk_level is not None:
+        stmt = stmt.where(RequirementFindingLink.risk_level == risk_level)
+    stmt = stmt.limit(limit).offset(offset)
+    return db.scalars(stmt).all()
+
+
+def get_finding_link(db: Session, link_id: int) -> RequirementFindingLink | None:
+    return db.scalar(
+        select(RequirementFindingLink)
+        .where(RequirementFindingLink.id == link_id)
+        .options(selectinload(RequirementFindingLink.requirement))
+    )
+
+
+def update_finding_link(
+    db: Session, link_id: int, payload: RequirementFindingLinkUpdate
+) -> RequirementFindingLink:
+    link = get_finding_link(db, link_id)
+    if link is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Link id={link_id} não encontrado.",
+        )
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(link, field, value)
+    db.flush()
+    db.refresh(link)
+    return link

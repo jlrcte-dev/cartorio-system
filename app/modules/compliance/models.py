@@ -20,6 +20,9 @@ from app.modules.compliance.enums import (
     ComplianceEvidenceSourceModule,
     ComplianceEvidenceStatus,
     ComplianceEvidenceType,
+    ComplianceLinkRiskLevel,
+    ComplianceLinkSourceModule,
+    ComplianceLinkSourceType,
     DeadlineUnit,
     PolicyDocumentKind,
     RequirementClassification,
@@ -112,6 +115,12 @@ class ComplianceRequirement(Base):
         back_populates="requirement",
         cascade="all, delete-orphan",
         order_by="ComplianceEvidence.id",
+    )
+    finding_links: Mapped[list[RequirementFindingLink]] = relationship(
+        "RequirementFindingLink",
+        back_populates="requirement",
+        cascade="all, delete-orphan",
+        order_by="RequirementFindingLink.id",
     )
 
 
@@ -376,6 +385,81 @@ class ComplianceEvidence(Base):
     )
     template: Mapped[ComplianceEvidenceTemplate | None] = relationship(
         "ComplianceEvidenceTemplate", foreign_keys=[evidence_template_id]
+    )
+
+
+class RequirementFindingLink(Base):
+    """Vínculo entre um requisito regulatório e um achado/sinal de outro módulo.
+
+    Integração ocorre por referência fraca (source_module/source_type/source_ref).
+    Não há FK cruzada com audit, retention ou lgpd — ADR-002.
+    Não representa declaração de conformidade.
+    """
+
+    __tablename__ = "compliance_requirement_finding_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "requirement_id",
+            "source_module",
+            "source_type",
+            "source_ref",
+            name="uq_compliance_requirement_finding_link_source",
+        ),
+        Index("ix_compliance_finding_links_requirement_id", "requirement_id"),
+        Index("ix_compliance_finding_links_source_module", "source_module"),
+        Index("ix_compliance_finding_links_risk_level", "risk_level"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    requirement_id: Mapped[int] = mapped_column(
+        ForeignKey("compliance_requirements.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    source_module: Mapped[ComplianceLinkSourceModule] = mapped_column(
+        Enum(
+            ComplianceLinkSourceModule,
+            name="compliance_link_source_module_enum",
+            length=16,
+            **_ENUM_KWARGS,
+        ),
+        nullable=False,
+    )
+    source_type: Mapped[ComplianceLinkSourceType] = mapped_column(
+        Enum(
+            ComplianceLinkSourceType,
+            name="compliance_link_source_type_enum",
+            length=24,
+            **_ENUM_KWARGS,
+        ),
+        nullable=False,
+    )
+    source_ref: Mapped[str] = mapped_column(String(200), nullable=False)
+    title: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    link_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    risk_level: Mapped[ComplianceLinkRiskLevel | None] = mapped_column(
+        Enum(
+            ComplianceLinkRiskLevel,
+            name="compliance_link_risk_level_enum",
+            length=16,
+            **_ENUM_KWARGS,
+        ),
+        nullable=True,
+    )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    requirement: Mapped[ComplianceRequirement] = relationship(
+        "ComplianceRequirement", back_populates="finding_links"
     )
 
 
