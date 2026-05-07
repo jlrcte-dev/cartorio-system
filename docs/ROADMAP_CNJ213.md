@@ -5,7 +5,7 @@
 > adequação. Nenhuma afirmação deste documento deve ser interpretada como
 > certificação de conformidade.
 
-Última atualização: 2026-05-04
+Última atualização: 2026-05-06
 
 ---
 
@@ -205,6 +205,11 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
 - [ ] Módulo de auditoria (Etapa B): CRUD de achados implementado
 - [ ] Início do planejamento de autenticação multiusuário
 - [ ] Banco de produção (PostgreSQL) definido e incluído no plano de backup
+- [ ] **Blueprint de integração regulatória** (Sprint 2026-05-06): fronteiras,
+  modelos futuros e roadmap definidos para `audit`, `retention`, `lgpd` e
+  `compliance`. Ver
+  [`CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md`](CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md)
+  e ADRs em [`docs/decisions/`](decisions/).
 
 ### F — Dossiê
 

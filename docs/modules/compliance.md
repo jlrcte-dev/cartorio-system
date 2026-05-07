@@ -166,14 +166,43 @@ conservadora:
   Provimento deve ser consultada para uso jurídico.
 - Não há autenticação por papéis nesta sprint — endpoints públicos.
 
+## Blueprint de integração regulatória
+
+A Sprint Blueprint (2026-05-06) definiu as fronteiras, contratos futuros e
+roadmap de integração entre `audit`, `retention`, `lgpd` e `compliance`.
+
+Documentos produzidos:
+
+- [CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md](../CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md)
+  — fronteiras, fluxos conceituais, modelos futuros, roadmap
+- [ADR-001 — ComplianceEvidence como entidade central](../decisions/ADR-001-compliance-evidence-ownership.md)
+  — `ComplianceEvidence` pertence ao módulo `compliance`; outros módulos são
+  referenciados por referência fraca
+- [ADR-002 — Referências fracas entre módulos](../decisions/ADR-002-weak-references-between-regulatory-modules.md)
+  — integração inicial por `source_module` + `source_type` + `source_ref`,
+  sem FK direta entre módulos
+
+### Decisões propostas (aguardam aprovação)
+
+1. `ComplianceEvidence` é a entidade central de evidência regulatória real,
+   pertencendo ao módulo `compliance`.
+2. A integração com `audit`, `lgpd` e `retention` ocorre por **referência fraca**
+   textual, não por foreign key direta.
+3. `ComplianceAction` só será criada após análise de casos reais que não possam
+   ser cobertos por `LgpdAction` + `RequirementFindingLink`.
+4. Status indicativo nunca usa termos como "CONFORME" ou "APROVADO" automaticamente;
+   `status_note` conservadora é obrigatória em todo output.
+
 ## Roadmap futuro
 
 - **LGPD/Compliance-2**: evidências reais (`ComplianceEvidence`),
-  vinculadas a requisitos; primeiros relatórios de cobertura.
-- **Retention-1C revisada**: alinhar fontes normativas e enums de
-  retenção com a fronteira de compliance.
-- **LGPD-2**: hash/_VISTORIA, RAT/ROPA estendidos, incidentes,
-  fornecedores.
-- **Dossiê técnico**: agregar evidências, achados (`audit`), ações
-  (`lgpd`) e regras de retenção em um pacote por etapa para Sistema
-  Justiça Aberta.
+  vinculadas a requisitos por referência fraca; primeiros relatórios de cobertura.
+- **Sprint RequirementFindingLink**: vínculo entre requisito e achado/sinal.
+- **Sprint ComplianceStatus**: cálculo de status indicativo por requisito.
+- **Retention-1C revisada**: persistência de `RetentionEvaluation`; alinhar
+  fontes normativas e enums com a fronteira de compliance.
+- **LGPD-2**: hash/_VISTORIA, políticas versionadas, treinamentos,
+  evidências operacionais.
+- **Dossiê técnico**: agregar `ComplianceEvidence` + achados (`audit`) + ações
+  (`lgpd`) + sinais (`retention`) em um pacote por etapa para Sistema Justiça Aberta.
+  Primeiro formato: JSON + Markdown. PDF em sprint posterior.
