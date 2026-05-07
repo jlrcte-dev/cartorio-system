@@ -101,3 +101,77 @@ def test_router_requirement_links_endpoints_exist() -> None:
     assert "DELETE" not in paths_methods.get("/compliance/requirement-links/{link_id}", set()), (
         "DELETE /requirement-links/{id} não deve existir"
     )
+
+
+def test_router_requirement_status_endpoints_exist() -> None:
+    from app.modules.compliance.router import router
+
+    paths_methods: dict[str, set[str]] = {}
+    for route in router.routes:
+        path = getattr(route, "path", "")
+        methods = getattr(route, "methods", None) or set()
+        paths_methods.setdefault(path, set()).update(methods)
+
+    assert "/compliance/requirement-statuses" in paths_methods, (
+        "GET /requirement-statuses ausente"
+    )
+    assert "GET" in paths_methods["/compliance/requirement-statuses"]
+
+    assert "/compliance/requirements/{code}/status" in paths_methods, (
+        "GET /requirements/{code}/status ausente"
+    )
+    assert "GET" in paths_methods["/compliance/requirements/{code}/status"]
+
+    assert "/compliance/requirement-statuses/recompute" in paths_methods, (
+        "POST /requirement-statuses/recompute ausente"
+    )
+    assert "POST" in paths_methods["/compliance/requirement-statuses/recompute"]
+
+    assert "/compliance/requirements/{code}/status/recompute" in paths_methods, (
+        "POST /requirements/{code}/status/recompute ausente"
+    )
+    assert "POST" in paths_methods["/compliance/requirements/{code}/status/recompute"]
+
+
+def test_router_requirement_status_does_not_expose_delete_or_patch() -> None:
+    """Não deve haver DELETE em status nem PATCH humano nesta sprint."""
+
+    from app.modules.compliance.router import router
+
+    status_paths = (
+        "/compliance/requirement-statuses",
+        "/compliance/requirements/{code}/status",
+        "/compliance/requirement-statuses/recompute",
+        "/compliance/requirements/{code}/status/recompute",
+    )
+    for route in router.routes:
+        path = getattr(route, "path", "")
+        if path in status_paths:
+            methods = getattr(route, "methods", None) or set()
+            assert "DELETE" not in methods, f"DELETE proibido em {path}"
+            assert "PATCH" not in methods, f"PATCH humano proibido em {path}"
+
+
+def test_compliance_models_no_cross_module_fk() -> None:
+    """Garantir que nenhuma FK aponta para audit/retention/lgpd/finance."""
+
+    from app.modules.compliance.models import (
+        ComplianceRequirementStatus,
+        ComplianceRequirementStatusHistory,
+    )
+
+    forbidden_prefixes = (
+        "audit_",
+        "retention_",
+        "lgpd_",
+        "finance_",
+        "temp_",
+    )
+
+    for model in (ComplianceRequirementStatus, ComplianceRequirementStatusHistory):
+        for fk in model.__table__.foreign_keys:
+            target_table = fk.column.table.name
+            for prefix in forbidden_prefixes:
+                assert not target_table.startswith(prefix), (
+                    f"{model.__name__}: FK cruzada para {target_table} não permitida"
+                )

@@ -121,3 +121,21 @@ class ComplianceLinkRiskLevel(StrEnum):
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
+
+
+class ComplianceRequirementStatusValue(StrEnum):
+    """Status indicativo interno de acompanhamento por requisito.
+
+    Não representa declaração automática de conformidade. A conclusão sempre
+    depende de revisão humana e validação documental — nenhum dos valores
+    abaixo afirma cumprimento ou aprovação.
+
+    UNDER_REVIEW está reservado para futura sprint de revisão humana; o
+    recompute desta sprint não emite UNDER_REVIEW.
+    """
+
+    EVIDENCE_PENDING = "EVIDENCE_PENDING"
+    EVIDENCE_AVAILABLE = "EVIDENCE_AVAILABLE"
+    HAS_OPEN_FINDINGS = "HAS_OPEN_FINDINGS"
+    NEEDS_HUMAN_REVIEW = "NEEDS_HUMAN_REVIEW"
+    UNDER_REVIEW = "UNDER_REVIEW"

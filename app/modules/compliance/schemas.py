@@ -12,6 +12,7 @@ from app.modules.compliance.enums import (
     ComplianceLinkRiskLevel,
     ComplianceLinkSourceModule,
     ComplianceLinkSourceType,
+    ComplianceRequirementStatusValue,
     DeadlineUnit,
     PolicyDocumentKind,
     RequirementClassification,
@@ -298,10 +299,102 @@ class RequirementFindingLinkDetail(RequirementFindingLinkRead):
     notes: str | None
 
 
+# ---------------------------------------------------------------------------
+# ComplianceRequirementStatus — status indicativo derivado
+# ---------------------------------------------------------------------------
+
+REQUIREMENT_STATUS_DISCLAIMER = (
+    "Este status é indicativo e não representa declaração automática de "
+    "conformidade. A conclusão depende de revisão humana e validação documental."
+)
+
+
+class RequirementStatusRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    requirement_id: int
+    requirement_code: str
+    status: ComplianceRequirementStatusValue
+    evidence_count: int
+    finding_link_count: int
+    high_risk_link_count: int
+    critical_risk_link_count: int
+    last_evidence_at: _dt.datetime | None
+    last_link_at: _dt.datetime | None
+    human_review_required: bool
+    status_note: str | None
+    computed_at: _dt.datetime
+    review_note: str | None
+    reviewed_by: str | None
+    reviewed_at: _dt.datetime | None
+    created_at: _dt.datetime
+    updated_at: _dt.datetime
+
+    @computed_field
+    @property
+    def disclaimer(self) -> str:
+        return REQUIREMENT_STATUS_DISCLAIMER
+
+
+class RequirementStatusDetail(RequirementStatusRead):
+    """Detalhamento — atualmente idêntico ao Read; existe para futura expansão."""
+
+
+class RequirementStatusHistoryRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    requirement_id: int
+    requirement_code: str
+    previous_status: ComplianceRequirementStatusValue | None
+    new_status: ComplianceRequirementStatusValue
+    evidence_count: int
+    finding_link_count: int
+    high_risk_link_count: int
+    critical_risk_link_count: int
+    human_review_required: bool
+    change_reason: str | None
+    computed_at: _dt.datetime
+    created_at: _dt.datetime
+
+    @computed_field
+    @property
+    def disclaimer(self) -> str:
+        return REQUIREMENT_STATUS_DISCLAIMER
+
+
+class RequirementStatusRecomputeResult(BaseModel):
+    requirement_code: str
+    mutated: bool
+    status: ComplianceRequirementStatusValue
+    change_reason: str | None
+    history_entry_created: bool
+
+    @computed_field
+    @property
+    def disclaimer(self) -> str:
+        return REQUIREMENT_STATUS_DISCLAIMER
+
+
+class RequirementStatusBulkRecomputeResult(BaseModel):
+    processed: int
+    mutated: int
+    unchanged: int
+    failed: int = 0
+    failed_codes: list[str] = Field(default_factory=list)
+
+    @computed_field
+    @property
+    def disclaimer(self) -> str:
+        return REQUIREMENT_STATUS_DISCLAIMER
+
+
 __all__ = [
     "CONSERVATIVE_EVIDENCE_NOTE",
     "CONSERVATIVE_LINK_NOTE",
     "CONSERVATIVE_SOURCE_NOTE",
+    "REQUIREMENT_STATUS_DISCLAIMER",
     "ComplianceEvidenceCreate",
     "ComplianceEvidenceDetail",
     "ComplianceEvidenceRead",
@@ -320,5 +413,10 @@ __all__ = [
     "RequirementFindingLinkUpdate",
     "RequirementPolicyLinkRead",
     "RequirementRead",
+    "RequirementStatusBulkRecomputeResult",
+    "RequirementStatusDetail",
+    "RequirementStatusHistoryRead",
+    "RequirementStatusRead",
+    "RequirementStatusRecomputeResult",
     "SeedMetaRead",
 ]

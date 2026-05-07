@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     Enum,
     ForeignKey,
@@ -23,6 +24,7 @@ from app.modules.compliance.enums import (
     ComplianceLinkRiskLevel,
     ComplianceLinkSourceModule,
     ComplianceLinkSourceType,
+    ComplianceRequirementStatusValue,
     DeadlineUnit,
     PolicyDocumentKind,
     RequirementClassification,
@@ -121,6 +123,18 @@ class ComplianceRequirement(Base):
         back_populates="requirement",
         cascade="all, delete-orphan",
         order_by="RequirementFindingLink.id",
+    )
+    status: Mapped[ComplianceRequirementStatus | None] = relationship(
+        "ComplianceRequirementStatus",
+        back_populates="requirement",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    status_history: Mapped[list[ComplianceRequirementStatusHistory]] = relationship(
+        "ComplianceRequirementStatusHistory",
+        back_populates="requirement",
+        cascade="all, delete-orphan",
+        order_by="ComplianceRequirementStatusHistory.id",
     )
 
 
@@ -460,6 +474,152 @@ class RequirementFindingLink(Base):
 
     requirement: Mapped[ComplianceRequirement] = relationship(
         "ComplianceRequirement", back_populates="finding_links"
+    )
+
+
+class ComplianceRequirementStatus(Base):
+    """Status indicativo, derivado, persistido por requisito regulatório.
+
+    Trata-se de uma "view materializada conceitual": a fonte primária da
+    verdade são `compliance_evidences` e `compliance_requirement_finding_links`.
+    Esta tabela existe apenas para leitura rápida do estado computado, e é
+    reconstruída exclusivamente por chamadas REST de recompute.
+
+    O status NÃO declara conformidade automática. Os campos humanos
+    (`review_note`, `reviewed_by`, `reviewed_at`) jamais devem ser alterados
+    pelo recompute.
+    """
+
+    __tablename__ = "compliance_requirement_statuses"
+    __table_args__ = (
+        UniqueConstraint(
+            "requirement_id",
+            name="uq_compliance_requirement_status_requirement",
+        ),
+        Index("ix_compliance_requirement_status_status", "status"),
+        Index(
+            "ix_compliance_requirement_status_human_review_required",
+            "human_review_required",
+        ),
+        Index("ix_compliance_requirement_status_computed_at", "computed_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    requirement_id: Mapped[int] = mapped_column(
+        ForeignKey("compliance_requirements.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    status: Mapped[ComplianceRequirementStatusValue] = mapped_column(
+        Enum(
+            ComplianceRequirementStatusValue,
+            name="compliance_requirement_status_value_enum",
+            length=32,
+            **_ENUM_KWARGS,
+        ),
+        nullable=False,
+    )
+    evidence_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    finding_link_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    high_risk_link_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    critical_risk_link_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_evidence_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_link_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    human_review_required: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    status_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    requirement: Mapped[ComplianceRequirement] = relationship(
+        "ComplianceRequirement",
+        foreign_keys=[requirement_id],
+        back_populates="status",
+    )
+
+
+class ComplianceRequirementStatusHistory(Base):
+    """Histórico append-only de mutações do status indicativo.
+
+    Pertence ao requisito, não ao registro atual: por isso não há FK para
+    `compliance_requirement_statuses.id`. Sem updated_at, sem UPDATE via API,
+    sem DELETE.
+    """
+
+    __tablename__ = "compliance_requirement_status_history"
+    __table_args__ = (
+        Index(
+            "ix_compliance_requirement_status_history_requirement_id",
+            "requirement_id",
+        ),
+        Index("ix_compliance_requirement_status_history_new_status", "new_status"),
+        Index("ix_compliance_requirement_status_history_computed_at", "computed_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    requirement_id: Mapped[int] = mapped_column(
+        ForeignKey("compliance_requirements.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    previous_status: Mapped[ComplianceRequirementStatusValue | None] = mapped_column(
+        Enum(
+            ComplianceRequirementStatusValue,
+            name="compliance_requirement_status_value_enum",
+            length=32,
+            **_ENUM_KWARGS,
+        ),
+        nullable=True,
+    )
+    new_status: Mapped[ComplianceRequirementStatusValue] = mapped_column(
+        Enum(
+            ComplianceRequirementStatusValue,
+            name="compliance_requirement_status_value_enum",
+            length=32,
+            **_ENUM_KWARGS,
+        ),
+        nullable=False,
+    )
+    evidence_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    finding_link_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    high_risk_link_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    critical_risk_link_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    human_review_required: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    change_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    requirement: Mapped[ComplianceRequirement] = relationship(
+        "ComplianceRequirement",
+        foreign_keys=[requirement_id],
+        back_populates="status_history",
     )
 
 

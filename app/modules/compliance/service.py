@@ -8,9 +8,12 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.modules.compliance.enums import (
@@ -19,6 +22,7 @@ from app.modules.compliance.enums import (
     ComplianceLinkRiskLevel,
     ComplianceLinkSourceModule,
     ComplianceLinkSourceType,
+    ComplianceRequirementStatusValue,
     PolicyDocumentKind,
     RequirementClassification,
     RequirementSource,
@@ -31,6 +35,8 @@ from app.modules.compliance.models import (
     ComplianceRequirement,
     ComplianceRequirementDeadline,
     ComplianceRequirementPolicy,
+    ComplianceRequirementStatus,
+    ComplianceRequirementStatusHistory,
     ComplianceSeedMeta,
     RequirementFindingLink,
 )
@@ -404,3 +410,462 @@ def update_finding_link(
     db.flush()
     db.refresh(link)
     return link
+
+
+# ---------------------------------------------------------------------------
+# ComplianceRequirementStatus — recompute indicativo
+# ---------------------------------------------------------------------------
+
+
+_PROHIBITED_TERMS_IN_NOTE = (
+    "compliant",
+    "conforme",
+    "certified",
+    "aprovado",
+    "regular",
+    "cumprido",
+    "validado como conforme",
+)
+
+
+_BULK_RECOMPUTE_BATCH_SIZE = 100
+
+
+@dataclass(frozen=True)
+class _RequirementSourceCounts:
+    evidence_count: int
+    finding_link_count: int
+    high_risk_link_count: int
+    critical_risk_link_count: int
+    last_evidence_at: datetime | None
+    last_link_at: datetime | None
+
+
+def _count_requirement_status_sources(
+    db: Session, requirement_id: int
+) -> _RequirementSourceCounts:
+    """Lê fontes primárias da verdade (compliance_evidences e finding_links).
+
+    Não consulta tabelas fora do módulo compliance.
+    """
+
+    ev_row = db.execute(
+        select(
+            func.count(ComplianceEvidence.id),
+            func.max(
+                func.coalesce(ComplianceEvidence.collected_at, ComplianceEvidence.created_at)
+            ),
+        ).where(ComplianceEvidence.requirement_id == requirement_id)
+    ).one()
+    evidence_count = int(ev_row[0] or 0)
+    last_evidence_at = ev_row[1]
+
+    high_case = case(
+        (RequirementFindingLink.risk_level == ComplianceLinkRiskLevel.HIGH, 1),
+        else_=0,
+    )
+    crit_case = case(
+        (RequirementFindingLink.risk_level == ComplianceLinkRiskLevel.CRITICAL, 1),
+        else_=0,
+    )
+    link_row = db.execute(
+        select(
+            func.count(RequirementFindingLink.id),
+            func.coalesce(func.sum(high_case), 0),
+            func.coalesce(func.sum(crit_case), 0),
+            func.max(RequirementFindingLink.created_at),
+        ).where(RequirementFindingLink.requirement_id == requirement_id)
+    ).one()
+    finding_link_count = int(link_row[0] or 0)
+    high_risk_link_count = int(link_row[1] or 0)
+    critical_risk_link_count = int(link_row[2] or 0)
+    last_link_at = link_row[3]
+
+    return _RequirementSourceCounts(
+        evidence_count=evidence_count,
+        finding_link_count=finding_link_count,
+        high_risk_link_count=high_risk_link_count,
+        critical_risk_link_count=critical_risk_link_count,
+        last_evidence_at=last_evidence_at,
+        last_link_at=last_link_at,
+    )
+
+
+def _compute_requirement_status_value(
+    counts: _RequirementSourceCounts,
+) -> tuple[ComplianceRequirementStatusValue, bool]:
+    """Aplica a regra de cálculo determinística.
+
+    Retorna (status, human_review_required). UNDER_REVIEW não é emitido nesta
+    sprint — fica reservado para futura revisão humana.
+    """
+
+    if counts.critical_risk_link_count > 0 or counts.high_risk_link_count > 0:
+        return ComplianceRequirementStatusValue.HAS_OPEN_FINDINGS, True
+    if counts.finding_link_count > 0:
+        return ComplianceRequirementStatusValue.NEEDS_HUMAN_REVIEW, True
+    if counts.evidence_count > 0:
+        return ComplianceRequirementStatusValue.EVIDENCE_AVAILABLE, False
+    return ComplianceRequirementStatusValue.EVIDENCE_PENDING, False
+
+
+def _build_status_note(
+    counts: _RequirementSourceCounts,
+    status_value: ComplianceRequirementStatusValue,
+) -> str:
+    """Texto curto, determinístico, conservador. Nunca usa termos proibidos."""
+
+    if status_value == ComplianceRequirementStatusValue.HAS_OPEN_FINDINGS:
+        note = (
+            f"{counts.critical_risk_link_count} achado(s) de risco CRITICAL e "
+            f"{counts.high_risk_link_count} de risco HIGH. "
+            "Revisão humana obrigatória."
+        )
+    elif status_value == ComplianceRequirementStatusValue.NEEDS_HUMAN_REVIEW:
+        note = (
+            f"{counts.finding_link_count} achado(s) de risco MEDIUM/LOW/INFO. "
+            "Revisão humana indicada."
+        )
+    elif status_value == ComplianceRequirementStatusValue.EVIDENCE_AVAILABLE:
+        note = (
+            f"{counts.evidence_count} evidência(s) registrada(s); "
+            "sem achados vinculados. Status indicativo, sujeito a revisão humana."
+        )
+    else:
+        note = "Sem evidência registrada e sem achado vinculado. Status indicativo."
+
+    note = note[:500]
+    lowered = note.lower()
+    for term in _PROHIBITED_TERMS_IN_NOTE:
+        if term in lowered:
+            raise RuntimeError(
+                f"status_note contém termo proibido '{term}'. "
+                "Revisar _build_status_note — nunca declarar conformidade."
+            )
+    return note
+
+
+def _record_status_history_if_mutated(
+    db: Session,
+    requirement_id: int,
+    previous_status: ComplianceRequirementStatusValue | None,
+    new_status: ComplianceRequirementStatusValue,
+    counts: _RequirementSourceCounts,
+    human_review_required: bool,
+    change_reason: str,
+    computed_at: datetime,
+) -> None:
+    history = ComplianceRequirementStatusHistory(
+        requirement_id=requirement_id,
+        previous_status=previous_status,
+        new_status=new_status,
+        evidence_count=counts.evidence_count,
+        finding_link_count=counts.finding_link_count,
+        high_risk_link_count=counts.high_risk_link_count,
+        critical_risk_link_count=counts.critical_risk_link_count,
+        human_review_required=human_review_required,
+        change_reason=change_reason,
+        computed_at=computed_at,
+    )
+    db.add(history)
+
+
+def _create_initial_status(
+    db: Session,
+    requirement: ComplianceRequirement,
+    counts: _RequirementSourceCounts,
+    status_value: ComplianceRequirementStatusValue,
+    human_review_required: bool,
+    note: str,
+    now: datetime,
+) -> tuple[ComplianceRequirementStatus, bool]:
+    """Cria status inicial mitigando race com savepoint.
+
+    Não usa lock distribuído ou advisory lock; em caso de IntegrityError
+    (corrida simultânea), faz rollback do savepoint e relê o registro
+    persistido por outra transação. Retorna (status, was_created).
+    """
+
+    status = ComplianceRequirementStatus(
+        requirement_id=requirement.id,
+        status=status_value,
+        evidence_count=counts.evidence_count,
+        finding_link_count=counts.finding_link_count,
+        high_risk_link_count=counts.high_risk_link_count,
+        critical_risk_link_count=counts.critical_risk_link_count,
+        last_evidence_at=counts.last_evidence_at,
+        last_link_at=counts.last_link_at,
+        human_review_required=human_review_required,
+        status_note=note,
+        computed_at=now,
+    )
+    try:
+        with db.begin_nested():
+            db.add(status)
+            db.flush()
+    except IntegrityError:
+        existing = db.scalar(
+            select(ComplianceRequirementStatus).where(
+                ComplianceRequirementStatus.requirement_id == requirement.id
+            )
+        )
+        if existing is None:
+            raise
+        return existing, False
+    return status, True
+
+
+def _apply_recompute(
+    db: Session,
+    requirement: ComplianceRequirement,
+    *,
+    now: datetime | None = None,
+) -> tuple[ComplianceRequirementStatus, bool, str | None]:
+    """Recomputa o status indicativo do requisito.
+
+    Retorna (status, mutated, change_reason). Estritamente idempotente:
+    chamadas redundantes não criam history, não tocam computed_at,
+    updated_at ou status_note, e não marcam o objeto como dirty.
+    """
+
+    if now is None:
+        now = datetime.now(UTC)
+
+    counts = _count_requirement_status_sources(db, requirement.id)
+    status_value, human_review_required = _compute_requirement_status_value(counts)
+    note = _build_status_note(counts, status_value)
+
+    existing = db.scalar(
+        select(ComplianceRequirementStatus).where(
+            ComplianceRequirementStatus.requirement_id == requirement.id
+        )
+    )
+
+    if existing is None:
+        status, was_created = _create_initial_status(
+            db, requirement, counts, status_value, human_review_required, note, now
+        )
+        if was_created:
+            _record_status_history_if_mutated(
+                db,
+                requirement_id=requirement.id,
+                previous_status=None,
+                new_status=status_value,
+                counts=counts,
+                human_review_required=human_review_required,
+                change_reason="first_compute",
+                computed_at=now,
+            )
+            db.flush()
+            return status, True, "first_compute"
+        # Outro request criou o registro entre nossa leitura e nossa escrita
+        # (race). Continuamos com a lógica de comparação para garantir
+        # idempotência.
+        existing = status
+
+    previous_status = existing.status
+    status_changed = existing.status != status_value
+    counters_changed = (
+        existing.evidence_count != counts.evidence_count
+        or existing.finding_link_count != counts.finding_link_count
+        or existing.high_risk_link_count != counts.high_risk_link_count
+        or existing.critical_risk_link_count != counts.critical_risk_link_count
+    )
+    human_review_changed = existing.human_review_required != human_review_required
+
+    mutated = status_changed or counters_changed or human_review_changed
+
+    if not mutated:
+        # last_evidence_at e last_link_at não disparam histórico isoladamente
+        # nesta sprint. Com os contadores e status inalterados, nenhum campo
+        # do objeto é tocado — preserva updated_at e idempotência absoluta.
+        return existing, False, None
+
+    if existing.status != status_value:
+        existing.status = status_value
+    if existing.evidence_count != counts.evidence_count:
+        existing.evidence_count = counts.evidence_count
+    if existing.finding_link_count != counts.finding_link_count:
+        existing.finding_link_count = counts.finding_link_count
+    if existing.high_risk_link_count != counts.high_risk_link_count:
+        existing.high_risk_link_count = counts.high_risk_link_count
+    if existing.critical_risk_link_count != counts.critical_risk_link_count:
+        existing.critical_risk_link_count = counts.critical_risk_link_count
+    if existing.last_evidence_at != counts.last_evidence_at:
+        existing.last_evidence_at = counts.last_evidence_at
+    if existing.last_link_at != counts.last_link_at:
+        existing.last_link_at = counts.last_link_at
+    if existing.human_review_required != human_review_required:
+        existing.human_review_required = human_review_required
+    if existing.status_note != note:
+        existing.status_note = note
+    existing.computed_at = now
+
+    if status_changed and counters_changed:
+        change_reason = "status_and_counters_changed"
+    elif status_changed:
+        change_reason = "status_changed"
+    else:
+        change_reason = "counters_changed"
+
+    _record_status_history_if_mutated(
+        db,
+        requirement_id=requirement.id,
+        previous_status=previous_status,
+        new_status=status_value,
+        counts=counts,
+        human_review_required=human_review_required,
+        change_reason=change_reason,
+        computed_at=now,
+    )
+    db.flush()
+    return existing, True, change_reason
+
+
+def get_requirement_status(
+    db: Session, requirement_code: str
+) -> ComplianceRequirementStatus | None:
+    """Lê o status persistido do requisito. Retorna None se ainda não computado.
+
+    Levanta 404 se o requirement_code não existir.
+    """
+
+    req = db.scalar(
+        select(ComplianceRequirement).where(ComplianceRequirement.code == requirement_code)
+    )
+    if req is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Requisito '{requirement_code}' não encontrado.",
+        )
+    return db.scalar(
+        select(ComplianceRequirementStatus)
+        .where(ComplianceRequirementStatus.requirement_id == req.id)
+        .options(selectinload(ComplianceRequirementStatus.requirement))
+    )
+
+
+def list_requirement_statuses(
+    db: Session,
+    *,
+    status: ComplianceRequirementStatusValue | None = None,
+    human_review_required: bool | None = None,
+    requirement_code: str | None = None,
+    source: RequirementSource | None = None,
+    classification: RequirementClassification | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> Sequence[ComplianceRequirementStatus]:
+    stmt = (
+        select(ComplianceRequirementStatus)
+        .join(ComplianceRequirementStatus.requirement)
+        .options(selectinload(ComplianceRequirementStatus.requirement))
+        .order_by(ComplianceRequirementStatus.id)
+    )
+    if status is not None:
+        stmt = stmt.where(ComplianceRequirementStatus.status == status)
+    if human_review_required is not None:
+        stmt = stmt.where(
+            ComplianceRequirementStatus.human_review_required == human_review_required
+        )
+    if requirement_code is not None:
+        stmt = stmt.where(ComplianceRequirement.code == requirement_code)
+    if source is not None:
+        stmt = stmt.where(ComplianceRequirement.source == source)
+    if classification is not None:
+        stmt = stmt.where(ComplianceRequirement.classification == classification)
+    stmt = stmt.limit(limit).offset(offset)
+    return db.scalars(stmt).all()
+
+
+def recompute_requirement_status(
+    db: Session, requirement_code: str
+) -> tuple[ComplianceRequirementStatus, bool, str | None]:
+    req = db.scalar(
+        select(ComplianceRequirement).where(ComplianceRequirement.code == requirement_code)
+    )
+    if req is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Requisito '{requirement_code}' não encontrado.",
+        )
+    return _apply_recompute(db, req)
+
+
+def recompute_all_statuses(
+    db: Session,
+    *,
+    batch_size: int = _BULK_RECOMPUTE_BATCH_SIZE,
+) -> dict[str, int | list[str]]:
+    """Recompute em massa, processado por lotes, com isolamento por requisito.
+
+    Cada requisito é processado dentro de seu próprio savepoint para que
+    falhas isoladas (ex.: corrupção pontual em fontes) não invalidem todo
+    o lote. Não há commit interno: o commit fica a cargo do chamador
+    (router), preservando o padrão transacional do módulo.
+    """
+
+    processed = 0
+    mutated = 0
+    unchanged = 0
+    failed = 0
+    failed_codes: list[str] = []
+
+    offset = 0
+    while True:
+        requirements = list(
+            db.scalars(
+                select(ComplianceRequirement)
+                .order_by(ComplianceRequirement.id)
+                .limit(batch_size)
+                .offset(offset)
+            ).all()
+        )
+        if not requirements:
+            break
+
+        for req in requirements:
+            processed += 1
+            try:
+                with db.begin_nested():
+                    _, was_mutated, _ = _apply_recompute(db, req)
+                if was_mutated:
+                    mutated += 1
+                else:
+                    unchanged += 1
+            except Exception:
+                failed += 1
+                failed_codes.append(req.code)
+
+        offset += batch_size
+
+    return {
+        "processed": processed,
+        "mutated": mutated,
+        "unchanged": unchanged,
+        "failed": failed,
+        "failed_codes": failed_codes,
+    }
+
+
+def get_status_history(
+    db: Session, requirement_code: str, *, limit: int = 100, offset: int = 0
+) -> Sequence[ComplianceRequirementStatusHistory]:
+    """Lê o histórico append-only de mutações do status para um requisito."""
+
+    req = db.scalar(
+        select(ComplianceRequirement).where(ComplianceRequirement.code == requirement_code)
+    )
+    if req is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Requisito '{requirement_code}' não encontrado.",
+        )
+    stmt = (
+        select(ComplianceRequirementStatusHistory)
+        .where(ComplianceRequirementStatusHistory.requirement_id == req.id)
+        .order_by(ComplianceRequirementStatusHistory.id)
+        .limit(limit)
+        .offset(offset)
+    )
+    return db.scalars(stmt).all()

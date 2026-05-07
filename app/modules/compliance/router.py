@@ -13,12 +13,17 @@ from app.modules.compliance.enums import (
     ComplianceLinkRiskLevel,
     ComplianceLinkSourceModule,
     ComplianceLinkSourceType,
+    ComplianceRequirementStatusValue,
     PolicyDocumentKind,
     RequirementClassification,
     RequirementSource,
     RequirementStage,
 )
-from app.modules.compliance.models import ComplianceEvidence, RequirementFindingLink
+from app.modules.compliance.models import (
+    ComplianceEvidence,
+    ComplianceRequirementStatus,
+    RequirementFindingLink,
+)
 from app.modules.compliance.schemas import (
     ComplianceEvidenceCreate,
     ComplianceEvidenceDetail,
@@ -36,6 +41,10 @@ from app.modules.compliance.schemas import (
     RequirementFindingLinkUpdate,
     RequirementPolicyLinkRead,
     RequirementRead,
+    RequirementStatusBulkRecomputeResult,
+    RequirementStatusDetail,
+    RequirementStatusRead,
+    RequirementStatusRecomputeResult,
 )
 
 router = APIRouter(prefix="/compliance", tags=["compliance"])
@@ -340,3 +349,108 @@ def update_finding_link(
     db.commit()
     db.refresh(link)
     return _link_to_detail(link)
+
+
+# ---------------------------------------------------------------------------
+# ComplianceRequirementStatus — status indicativo
+# ---------------------------------------------------------------------------
+
+
+def _status_to_read(status: ComplianceRequirementStatus) -> RequirementStatusRead:
+    return RequirementStatusRead.model_validate(
+        {
+            "id": status.id,
+            "requirement_id": status.requirement_id,
+            "requirement_code": status.requirement.code,
+            "status": status.status,
+            "evidence_count": status.evidence_count,
+            "finding_link_count": status.finding_link_count,
+            "high_risk_link_count": status.high_risk_link_count,
+            "critical_risk_link_count": status.critical_risk_link_count,
+            "last_evidence_at": status.last_evidence_at,
+            "last_link_at": status.last_link_at,
+            "human_review_required": status.human_review_required,
+            "status_note": status.status_note,
+            "computed_at": status.computed_at,
+            "review_note": status.review_note,
+            "reviewed_by": status.reviewed_by,
+            "reviewed_at": status.reviewed_at,
+            "created_at": status.created_at,
+            "updated_at": status.updated_at,
+        }
+    )
+
+
+def _status_to_detail(status: ComplianceRequirementStatus) -> RequirementStatusDetail:
+    return RequirementStatusDetail.model_validate(_status_to_read(status).model_dump())
+
+
+@router.get("/requirement-statuses", response_model=list[RequirementStatusRead])
+def list_requirement_statuses(
+    db: DbSession,
+    status: ComplianceRequirementStatusValue | None = None,
+    human_review_required: bool | None = None,
+    requirement_code: str | None = None,
+    source: RequirementSource | None = None,
+    classification: RequirementClassification | None = None,
+    limit: LimitQuery = 100,
+    offset: OffsetQuery = 0,
+) -> list[RequirementStatusRead]:
+    statuses = service.list_requirement_statuses(
+        db,
+        status=status,
+        human_review_required=human_review_required,
+        requirement_code=requirement_code,
+        source=source,
+        classification=classification,
+        limit=limit,
+        offset=offset,
+    )
+    return [_status_to_read(s) for s in statuses]
+
+
+@router.get(
+    "/requirements/{code}/status", response_model=RequirementStatusDetail
+)
+def get_requirement_status(code: str, db: DbSession) -> RequirementStatusDetail:
+    status = service.get_requirement_status(db, code)
+    if status is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"Status do requisito '{code}' ainda não foi computado. "
+                "Execute o recompute para inicializar."
+            ),
+        )
+    return _status_to_detail(status)
+
+
+@router.post(
+    "/requirement-statuses/recompute",
+    response_model=RequirementStatusBulkRecomputeResult,
+)
+def bulk_recompute_requirement_statuses(
+    db: DbSession,
+) -> RequirementStatusBulkRecomputeResult:
+    result = service.recompute_all_statuses(db)
+    db.commit()
+    return RequirementStatusBulkRecomputeResult.model_validate(result)
+
+
+@router.post(
+    "/requirements/{code}/status/recompute",
+    response_model=RequirementStatusRecomputeResult,
+)
+def recompute_single_requirement_status(
+    code: str, db: DbSession
+) -> RequirementStatusRecomputeResult:
+    status, mutated, change_reason = service.recompute_requirement_status(db, code)
+    db.commit()
+    db.refresh(status)
+    return RequirementStatusRecomputeResult(
+        requirement_code=code,
+        mutated=mutated,
+        status=status.status,
+        change_reason=change_reason,
+        history_entry_created=mutated,
+    )
