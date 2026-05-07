@@ -45,6 +45,44 @@ não emite qualquer certificação de regularidade.
   `retention` ou `lgpd` (ADR-002).
 - Não calcula `ComplianceStatus`. Não afirma conformidade.
 
+### Sprint LGPD/Compliance-4 — ComplianceRequirementStatus MVP
+
+- Entidade `ComplianceRequirementStatus` — status indicativo derivado, persistido por
+  requisito. Funciona como "view materializada conceitual": a fonte primária da verdade
+  são `ComplianceEvidence` e `RequirementFindingLink`. Esta tabela existe para leitura
+  rápida do estado computado e é reconstruída exclusivamente por chamadas REST de
+  recompute.
+- Entidade `ComplianceRequirementStatusHistory` — histórico append-only de mutações de
+  status e contadores. Sem `UPDATE`, sem `DELETE`, sem FK para o registro de status
+  atual (FK somente para `compliance_requirements.id`).
+- Enum `ComplianceRequirementStatusValue`: `EVIDENCE_PENDING`, `EVIDENCE_AVAILABLE`,
+  `HAS_OPEN_FINDINGS`, `NEEDS_HUMAN_REVIEW`, `UNDER_REVIEW`.
+  `UNDER_REVIEW` está reservado para sprint futura de revisão humana explícita;
+  o recompute desta sprint não emite `UNDER_REVIEW`.
+- Migration `20260507_1000_add_compliance_requirement_status.py`.
+- Recompute REST explícito — único mecanismo de atualização do status:
+  - `POST /requirement-statuses/recompute` — bulk por lotes de 100; isolamento por
+    requisito via savepoint; sem commit interno.
+  - `POST /requirements/{code}/status/recompute` — recompute individual.
+- Leitura paginada:
+  - `GET /requirement-statuses` — filtrável por `status`, `human_review_required`,
+    `requirement_code`, `source`, `classification`.
+  - `GET /requirements/{code}/status` — detalhe do status atual; retorna 404 se
+    ainda não computado.
+- Idempotência estrita: recompute redundante não cria histórico, não toca
+  `computed_at`, `updated_at` ou `status_note`, e não marca o objeto SQLAlchemy como
+  dirty sem mutação real.
+- Campos de revisão humana (`review_note`, `reviewed_by`, `reviewed_at`) existem no
+  modelo e são expostos nas respostas, mas são somente leitura nesta sprint. O
+  recompute nunca os altera.
+- Sem `PATCH` humano para campos de revisão nesta sprint. Sem `DELETE` de status ou
+  histórico. Sem auto-recompute ao criar evidência ou vínculo.
+- Disclaimer conservador obrigatório incluído no body de toda resposta de status:
+  > "Este status é indicativo e não representa declaração automática de conformidade.
+  > A conclusão depende de revisão humana e validação documental."
+- Isolamento preservado: sem import de `audit`, `lgpd`, `retention`. Sem FK cruzada
+  com outros módulos.
+
 ## O que o módulo faz
 
 - Persiste o mapa: requisito normativo → política indicada → prazo estimado
@@ -59,6 +97,11 @@ não emite qualquer certificação de regularidade.
 - Permite registrar vínculos entre requisitos e achados/sinais externos
   (`RequirementFindingLink`), por referência fraca, sem acoplamento com os
   módulos de origem.
+- Calcula e persiste status indicativo por requisito (`ComplianceRequirementStatus`)
+  via recompute REST explícito. O status é derivado de `ComplianceEvidence` e
+  `RequirementFindingLink` e exposto com disclaimer conservador obrigatório.
+- Mantém histórico append-only de mutações do status indicativo
+  (`ComplianceRequirementStatusHistory`), rastreável por requisito.
 
 ## O que o módulo não faz
 
@@ -73,6 +116,15 @@ não emite qualquer certificação de regularidade.
   `app.modules.retention`.
 - A referência a outro módulo via `source_module`/`source_ref` não valida a
   existência do recurso referenciado — é apenas referência fraca documental.
+- Não há auto-recompute ao criar evidência ou vínculo. O recompute é
+  exclusivamente explícito via REST.
+- Não há `PATCH` humano para `review_note`, `reviewed_by` ou `reviewed_at`
+  nesta sprint. Esses campos existem no modelo mas são somente leitura.
+- `ComplianceRequirementStatus` não declara conformidade. Nenhum valor do enum
+  `ComplianceRequirementStatusValue` equivale a "conforme", "aprovado" ou "regular".
+- Não há `DELETE` de status ou histórico de status. `ComplianceRequirementStatusHistory`
+  é append-only e não pode ser removido via API.
+- Não há FK cruzada do módulo de status com `audit`, `retention`, `lgpd` ou `finance`.
 
 ## Linguagem conservadora obrigatória
 
@@ -137,6 +189,28 @@ Matriz_Correlacao_Provimento213_Politicas V1.pdf
   - **Não declara conformidade.** A existência de um vínculo não indica
     que o requisito está atendido ou descumprido. Campo `link_note`
     conservador incluído em toda resposta.
+- `ComplianceRequirementStatus`: status indicativo derivado e persistido por
+  requisito. Funciona como "view materializada conceitual" — não é fonte de
+  verdade; é projeção operacional reconstruível a partir de `ComplianceEvidence`
+  e `RequirementFindingLink`. Campos relevantes:
+  - `status`: `ComplianceRequirementStatusValue` — valor indicativo atual.
+  - `evidence_count`, `finding_link_count`, `high_risk_link_count`,
+    `critical_risk_link_count`: contadores das fontes primárias.
+  - `last_evidence_at`, `last_link_at`: timestamps da fonte mais recente.
+  - `human_review_required`: indica se o status exige revisão humana.
+  - `status_note`: texto curto conservador, validado contra termos proibidos.
+  - `computed_at`: timestamp da última computação.
+  - `review_note`, `reviewed_by`, `reviewed_at`: campos de revisão humana,
+    somente leitura nesta sprint, nunca alterados pelo recompute.
+  - UniqueConstraint em `requirement_id`.
+  - **Nunca declara conformidade.** Disclaimer obrigatório em toda resposta.
+- `ComplianceRequirementStatusHistory`: histórico append-only de mutações do
+  status indicativo. Pertence ao requisito, não ao registro de status atual:
+  FK somente para `compliance_requirements.id`, não para
+  `compliance_requirement_statuses.id`. Campos: `previous_status`, `new_status`,
+  `evidence_count`, `finding_link_count`, `high_risk_link_count`,
+  `critical_risk_link_count`, `human_review_required`, `change_reason`,
+  `computed_at`. Sem `UPDATE`, sem `DELETE`, sem `updated_at`.
 
 ## Tabelas
 
@@ -160,6 +234,17 @@ UniqueConstraint `uq_compliance_requirement_finding_link_source` em
 `(requirement_id, source_module, source_type, source_ref)`.
 FK interna para `compliance_requirements.id` com `ondelete=CASCADE`.
 Sem FK cruzada com `audit`, `retention` ou `lgpd`.
+
+- `compliance_requirement_statuses`
+- `compliance_requirement_status_history`
+
+Criadas pela migration `20260507_1000_add_compliance_requirement_status`.
+`compliance_requirement_statuses`: UniqueConstraint `uq_compliance_requirement_status_requirement`
+em `requirement_id`. FK para `compliance_requirements.id` com `ondelete=CASCADE`.
+`compliance_requirement_status_history`: FK para `compliance_requirements.id`
+com `ondelete=CASCADE`. **Não possui FK** para `compliance_requirement_statuses.id` —
+o histórico pertence ao requisito, não ao snapshot de status atual.
+Sem FK cruzada com `audit`, `retention`, `lgpd` ou `finance`.
 
 ## Seed e versionamento
 
@@ -235,16 +320,38 @@ Sob `/api/v1/compliance`:
   Não permite trocar o `requirement_id`. Campos NOT NULL não aceitam null
   explícito. DELETE não implementado.
 
+### Status indicativo por requisito (ComplianceRequirementStatus)
+
+Sob `/api/v1/compliance`:
+
+- `GET /requirement-statuses` — lista paginada de status computados. Filtrável
+  por `status`, `human_review_required`, `requirement_code`, `source`,
+  `classification`. Toda resposta inclui disclaimer conservador.
+- `GET /requirements/{code}/status` — detalhe do status atual do requisito.
+  Retorna 404 se o status ainda não foi computado (recompute explícito necessário).
+- `POST /requirement-statuses/recompute` — recompute bulk de todos os requisitos.
+  Processado em lotes de 100, cada requisito isolado por savepoint. Retorna
+  contadores: `processed`, `mutated`, `unchanged`, `failed`, `failed_codes`.
+- `POST /requirements/{code}/status/recompute` — recompute individual do requisito.
+  Retorna `mutated`, `status`, `change_reason` e o status atualizado.
+
+Nenhum endpoint de escrita humana (`PATCH`, `DELETE`) existe para status ou
+histórico de status nesta sprint.
+
 ## Fronteiras com audit, lgpd e retention
 
 - `audit` cuida de achados técnicos/documentais.
 - `retention` cuida de temporalidade documental.
 - `lgpd` cuida do plano de ações (AC-01..25) e proteção de dados.
-- `compliance` cuida apenas do **mapeamento normativo consultivo** da
-  Matriz INOVA V1.
+- `compliance` cuida do **mapeamento normativo** da Matriz INOVA V1,
+  do registro de evidências regulatórias reais e do cálculo de status
+  indicativo por requisito.
 
-Esta sprint não cria pontes entre os módulos. Integrações ficam para
-sprints futuras (LGPD/Compliance-2 e seguintes).
+A integração com outros módulos ocorre exclusivamente por **referência fraca**
+(`source_module`, `source_type`, `source_ref`). Não há import de `audit`,
+`lgpd` ou `retention` no módulo `compliance`, nem FK cruzada entre tabelas
+de módulos distintos (ADR-001, ADR-002). A integridade referencial entre
+módulos é responsabilidade do operador humano, não do banco de dados.
 
 ## Linguagem conservadora
 
@@ -288,25 +395,116 @@ Documentos produzidos:
   — integração inicial por `source_module` + `source_type` + `source_ref`,
   sem FK direta entre módulos
 
-### Decisões propostas (aguardam aprovação)
+### Decisões arquiteturais adotadas
 
 1. `ComplianceEvidence` é a entidade central de evidência regulatória real,
-   pertencente ao módulo `compliance`.
+   pertencente ao módulo `compliance` (ADR-001 — implementado na Compliance-2).
 2. A integração com `audit`, `lgpd` e `retention` ocorre por **referência fraca**
-   textual, não por foreign key direta.
-3. `ComplianceAction` só será criada após análise de casos reais que não possam
-   ser cobertos por `LgpdAction` + `RequirementFindingLink`.
+   textual, não por foreign key direta (ADR-002 — implementado nas Compliance-2 e 3).
+3. `ComplianceAction` só será criada após validação operacional com casos reais
+   que não possam ser cobertos por `LgpdAction` + `RequirementFindingLink`
+   (política vigente — não implementada nesta fase).
 4. Status indicativo nunca usa termos como "CONFORME" ou "APROVADO" automaticamente;
-   `status_note` conservadora é obrigatória em todo output.
+   `status_note` conservadora é obrigatória em todo output (implementado na Compliance-4).
+
+## Status indicativo — Sprint Compliance-4
+
+### Fontes de verdade
+
+O status indicativo é derivado exclusivamente das fontes primárias dentro do módulo:
+
+- `ComplianceEvidence` — evidências documentais candidatas registradas.
+- `RequirementFindingLink` — vínculos fracos com achados/sinais de outros módulos.
+
+`ComplianceRequirementStatus` é projeção operacional reconstruível; não é fonte de
+verdade. `ComplianceRequirementStatusHistory` registra mudanças relevantes de status
+e contadores.
+
+### Regras de cálculo
+
+| Condição | Status resultante | `human_review_required` |
+| -------- | ----------------- | ---------------------- |
+| Há link com `risk_level` CRITICAL ou HIGH | `HAS_OPEN_FINDINGS` | `True` |
+| Há qualquer outro link (MEDIUM, LOW, INFO ou `NULL`) | `NEEDS_HUMAN_REVIEW` | `True` |
+| Uma ou mais evidências, sem nenhum link | `EVIDENCE_AVAILABLE` | `False` |
+| Sem evidência e sem link | `EVIDENCE_PENDING` | `False` |
+
+### Observações operacionais
+
+- `NULL risk_level` em um link é tratado como equivalente a `INFO`.
+- Todas as evidências contam no MVP independentemente do status
+  (`COLLECTED`, `REJECTED`, `EXPIRED`, etc.).
+- `last_evidence_at` usa `MAX(COALESCE(collected_at, created_at))`.
+- `last_link_at` usa `MAX(created_at)`.
+- `status_note` é conservadora, determinística e validada contra lista de
+  termos proibidos: "conforme", "aprovado", "certified", "regular", "cumprido",
+  "validado como conforme". Qualquer presença desses termos levanta `RuntimeError`
+  em tempo de execução antes de persistir.
+
+### Idempotência do recompute
+
+- Recompute que não altera `status`, contadores ou `human_review_required` não
+  cria histórico, não altera `computed_at`, `updated_at` ou `status_note`, e não
+  marca o objeto SQLAlchemy como dirty.
+- Criação concorrente do status inicial usa `session.begin_nested()` (savepoint);
+  `IntegrityError` é tratado com releitura do registro persistido por outra
+  transação, sem propagação do erro.
+- Bulk recompute: lotes de 100 requisitos, cada um isolado por savepoint; falhas
+  pontuais não invalidam o lote; sem commit interno (commit fica a cargo do router).
+
+### Campos humanos (somente leitura nesta sprint)
+
+Os campos `review_note`, `reviewed_by` e `reviewed_at` existem no modelo e são
+expostos nas respostas de leitura, mas não possuem endpoint de escrita nesta sprint.
+O recompute nunca os altera.
+
+### Quando o histórico é criado
+
+- Primeira computação → cria history com `previous_status=NULL` e
+  `change_reason="first_compute"`.
+- Mudança de status → cria history com `change_reason="status_changed"`.
+- Mudança apenas de contador → cria history com `change_reason="counters_changed"`.
+- Mudança de status e contador simultâneos → `change_reason="status_and_counters_changed"`.
+- Recompute redundante → nenhum history criado.
+
+### Disclaimer obrigatório
+
+Todo output de status inclui o texto:
+
+> "Este status é indicativo e não representa declaração automática de conformidade.
+> A conclusão depende de revisão humana e validação documental."
+
+### Limitações desta sprint
+
+- `UNDER_REVIEW` existe no enum mas não é emitido pelo recompute. Reservado para
+  sprint futura de revisão humana explícita.
+- Não existe enum `NOT_EVALUATED` nesta sprint.
+- Não há auto-recompute ao criar evidência ou vínculo.
+- Não há `PATCH` humano para `review_note`, `reviewed_by`, `reviewed_at`.
+- Não há `DELETE` de status ou histórico.
+- Não há dashboard, relatório consolidado, PDF ou dossiê.
+- Não há FK cruzada com `audit`, `retention`, `lgpd` ou `finance`.
+
+---
 
 ## Roadmap futuro
 
 - ~~**LGPD/Compliance-2**: evidências reais (`ComplianceEvidence`).~~ ✅ Concluída (commit `4ccf50c`).
 - ~~**Sprint RequirementFindingLink**: vínculo entre requisito e achado/sinal.~~ ✅ Concluída (commit `c588bc2`).
-- **Sprint Compliance-4 — ComplianceStatus**: cálculo de status indicativo por
-  requisito. Baseado em `ComplianceEvidence` + `RequirementFindingLink`.
-  Linguagem conservadora obrigatória; nenhum status automático declarará
-  conformidade.
+- ~~**Sprint Compliance-4 — ComplianceStatus**: status indicativo por requisito.~~ ✅ Concluída (commit `d782013`).
+- **Document Registry-0 — CNPFE-GO Normative Matrix Blueprint**: próxima frente
+  prioritária. Escopo exclusivamente documental e normativo: mapeamento dos documentos,
+  livros, acervo, arquivos, pastas e classificadores esperados pela serventia conforme
+  o Código de Normas e Procedimentos do Foro Extrajudicial de Goiás (CNPFE-GO).
+  Sem implementação de código nesta etapa. O futuro módulo `document_registry` será
+  dono da matriz documental e do inventário documental institucional; `compliance` não
+  deve assumir essa responsabilidade.
+- **Document Registry-1 — Expected Documents MVP**: futuro. Implementação da matriz de
+  documentos esperados, candidatos encontrados pelo `audit`, conciliação e summary.
+- **Compliance-5 — Operational Reporting MVP**: futuro, após Document Registry-0/1.
+  Relatórios operacionais indicativos consolidando `compliance` + `document_registry`.
+- **Compliance-6 — Human Review MVP**: futuro. Revisão humana explícita: preenchimento
+  de `review_note`, `reviewed_by`, `reviewed_at`; uso efetivo de `UNDER_REVIEW`.
 - **Retention-1C revisada**: persistência de `RetentionEvaluation`; alinhar
   fontes normativas e enums com a fronteira de compliance.
 - **LGPD-2**: hash/_VISTORIA, políticas versionadas, treinamentos,

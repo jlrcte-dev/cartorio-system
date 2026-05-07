@@ -5,7 +5,7 @@
 > adequação. Nenhuma afirmação deste documento deve ser interpretada como
 > certificação de conformidade.
 
-Última atualização: 2026-05-06
+Última atualização: 2026-05-07
 
 ---
 
@@ -42,7 +42,7 @@ para a vistoria e para a segurança operacional imediata.
 | P-02 | O Provimento CNJ nº 213/2026 é a referência normativa central |
 | P-03 | O Engegraph é o sistema legado crítico de produção documental |
 | P-04 | O banco do Engegraph é provavelmente SQL Server (a confirmar) |
-| P-05 | O Cartório System é o sistema próprio em desenvolvimento (FastAPI + PostgreSQL) |
+| P-05 | O Cartório System é o sistema próprio em desenvolvimento (FastAPI + SQLite em desenvolvimento / PostgreSQL planejado para produção) |
 | P-06 | A integração futura com o Atlas ocorre por dados estruturados, sem acoplamento direto |
 | P-07 | O servidor atual é físico, Windows, hospedando Engegraph, arquivos e backup |
 | P-08 | O backup atual (Cobian Gravity) copia arquivos sem dump transacional confirmado |
@@ -99,6 +99,12 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
 ### F — Dossiê
 
 - [ ] Criar pasta `_VISTORIA/` na rede local para centralizar evidências
+
+  > **Nota:** A pasta `_VISTORIA/` é uma estrutura emergencial e provisória de
+  > centralização de evidências. Não substitui o futuro repositório oficial de
+  > documentação institucional, cuja arquitetura será definida durante o
+  > Document Registry.
+
 - [ ] Registrar data/hora de todas as ações emergenciais executadas (evidência para dossiê)
 - [ ] Tirar screenshot do estado atual dos discos, backup e usuários (antes de qualquer mudança)
 
@@ -152,7 +158,7 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
 
 ### F — Dossiê
 
-- [ ] Criar matriz de conformidade CNJ 213/2026 Classe 3 (ver `CNJ_213_COMPLIANCE_PLAN.md`)
+- [ ] Consolidar matriz gerencial de conformidade CNJ 213/2026 Classe 3 (ver `CNJ_213_COMPLIANCE_PLAN.md`)
 - [ ] Criar registro de riscos inicial (ver `RISK_REGISTER.md`)
 - [ ] Documentar topologia de rede atual com diagrama
 
@@ -202,7 +208,8 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
 
 ### E — Cartório System
 
-- [ ] Módulo de auditoria (Etapa B): CRUD de achados implementado
+- [x] Módulo de auditoria (Etapa B): CRUD de achados (AuditFinding) implementado
+- [ ] Validar uso operacional do módulo de auditoria com dados reais da serventia
 - [ ] Início do planejamento de autenticação multiusuário
 - [ ] Banco de produção (PostgreSQL) definido e incluído no plano de backup
 - [ ] **Blueprint de integração regulatória** (Sprint 2026-05-06): fronteiras,
@@ -219,8 +226,33 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
   ações de `audit`, `retention`, `lgpd` ou fontes externas, por referência
   fraca (`source_module` / `source_type` / `source_ref`). UniqueConstraint
   impede vínculos duplicados da mesma origem. Isolamento modular preservado:
-  sem FK cruzada, sem import de outros módulos. Próximo passo:
-  `ComplianceStatus` por requisito (Sprint Compliance-4).
+  sem FK cruzada, sem import de outros módulos.
+- [x] **Sprint LGPD/Compliance-4** (2026-05-07): `ComplianceRequirementStatus` MVP
+  implementado (commit `d782013`). Status indicativo por requisito derivado de
+  `ComplianceEvidence` e `RequirementFindingLink`. Recompute REST explícito com
+  idempotência estrita. Histórico append-only (`ComplianceRequirementStatusHistory`).
+  Campos de revisão humana somente leitura. Isolamento modular e linguagem
+  conservadora preservados: sem conformidade automática, sem FK cruzada, sem
+  import de `audit`, `lgpd`, `retention`. 433 testes passando.
+- [x] **Sprint Compliance-4 Docs** (2026-05-07): Revisão de consistência documental
+  pós-Compliance-4. Ajuste do blueprint regulatório e do roadmap para refletir
+  o estado real das sprints Compliance-2, Compliance-3 e Compliance-4.
+  Exclusivamente documental — sem alteração de código, testes ou migrations.
+- [ ] **Document Registry-0 — CNPFE-GO Normative Matrix Blueprint**: próxima frente
+  prioritária (exclusivamente documental/normativa, sem código). Objetivo: mapear
+  documentos, livros, acervo, arquivos, pastas e classificadores esperados pela
+  serventia conforme o Código de Normas e Procedimentos do Foro Extrajudicial de
+  Goiás (CNPFE-GO). O futuro módulo `document_registry` será dono da matriz
+  documental e do inventário institucional; `compliance` não assume essa
+  responsabilidade e deverá consumi-la por referência fraca quando implementada.
+- [ ] **Document Registry-1 — Expected Documents MVP**: futuro. Implementação da
+  matriz de documentos esperados, candidatos encontrados pelo `audit`,
+  conciliação e summary. Depende de Document Registry-0.
+- [ ] **Compliance-5 — Operational Reporting MVP**: futuro, após Document Registry-0/1.
+  Relatórios operacionais indicativos consolidando `compliance` + `document_registry`.
+- [ ] **Compliance-6 — Human Review MVP**: futuro. Revisão humana explícita:
+  preenchimento de `review_note`, `reviewed_by`, `reviewed_at`; uso efetivo
+  de `UNDER_REVIEW`.
 
 ### F — Dossiê
 
@@ -402,9 +434,9 @@ A adequação ao Provimento CNJ 213/2026 impacta diretamente o roadmap do sistem
 ```
 Etapa A (Audit docs) ✅
   ↓
-Etapa B (Audit CRUD: AuditFinding) → próxima
+Etapa B (Audit CRUD: AuditFinding) ✅
   ↓
-Etapa C (Auth básica: usuários, perfis, sessões) ← antecipada
+Etapa C (Auth básica: usuários, perfis, sessões) ← próxima (antecipada)
   ↓
 Etapa D (Monthly Closing + logs de domínio)
   ↓

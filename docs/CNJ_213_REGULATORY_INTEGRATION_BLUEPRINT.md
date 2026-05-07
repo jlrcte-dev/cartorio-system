@@ -5,17 +5,17 @@
 > humana antes de implementação. Status indicativo nunca equivale a declaração de
 > conformidade.
 
-Última atualização: 2026-05-06  
-Versão: 1.2 — Sprint LGPD/Compliance-3 concluída  
-Estado: Em implementação — RequirementFindingLink MVP entregue
+Última atualização: 2026-05-07
+Versão: 1.4 — Documentação Compliance-4 e preparação Document Registry-0
+Estado: Em implementação — ComplianceRequirementStatus MVP entregue; próxima: Document Registry-0
 
 ---
 
 ## 1. Objetivo
 
-Este documento define as **fronteiras, responsabilidades, contratos futuros e
-roadmap de implementação** para a integração entre os módulos regulatórios do
-Cartório System:
+Este documento registra as **fronteiras adotadas, decisões arquiteturais tomadas,
+contratos futuros pendentes e roadmap de implementação** para os módulos regulatórios
+do Cartório System:
 
 ```
 audit       → diagnóstico documental e técnico
@@ -24,10 +24,10 @@ lgpd        → operacionalização do plano de proteção de dados
 compliance  → consolidação regulatória (Provimento CNJ nº 213/2026)
 ```
 
-O objetivo principal é **reduzir risco de retrabalho** antes de implementar
-evidências reais, vínculos com achados, status indicativo e dossiê técnico.
-Esta sprint é exclusivamente documental e arquitetural: nenhuma tabela, endpoint,
-migration ou código de produção é alterado.
+As sprints Compliance-2, Compliance-3 e Compliance-4 já foram implementadas;
+as seções correspondentes refletem o estado real do código.
+Seções marcadas como "futuro" ou "não implementar" descrevem especificações
+conceituais ainda não materializadas em código.
 
 ---
 
@@ -105,6 +105,7 @@ na dimensão de proteção de dados pessoais conforme Plano INOVA.
 - LGPD/Compliance-1 — Matriz INOVA V1, read-only (2026-05-06)
 - LGPD/Compliance-2 — `ComplianceEvidence` MVP (2026-05-06)
 - LGPD/Compliance-3 — `RequirementFindingLink` MVP (2026-05-06)
+- LGPD/Compliance-4 — `ComplianceRequirementStatus` MVP (2026-05-07, commit `d782013`)
 
 **O que existe:**
 - `ComplianceRequirement` — 32 requisitos normativos mapeados
@@ -118,20 +119,34 @@ na dimensão de proteção de dados pessoais conforme Plano INOVA.
   fraca. Enums `ComplianceLinkSourceModule`, `ComplianceLinkSourceType`,
   `ComplianceLinkRiskLevel`. UniqueConstraint por origem. POST/GET/PATCH.
   Sem FK cruzada com `audit`, `retention` ou `lgpd` (ADR-002).
+- `ComplianceRequirementStatus` — status indicativo derivado por requisito.
+  "View materializada conceitual": reconstruível por recompute REST explícito.
+  Campos: `status`, contadores de evidência e link, `human_review_required`,
+  `status_note` conservadora, `computed_at`, e campos de revisão humana
+  (`review_note`, `reviewed_by`, `reviewed_at`) somente leitura nesta sprint.
+  Enum `ComplianceRequirementStatusValue`: `EVIDENCE_PENDING`, `EVIDENCE_AVAILABLE`,
+  `HAS_OPEN_FINDINGS`, `NEEDS_HUMAN_REVIEW`, `UNDER_REVIEW` (reservado).
+- `ComplianceRequirementStatusHistory` — histórico append-only de mutações de
+  status e contadores. FK somente para `compliance_requirements.id`. Sem FK
+  para o status atual. Sem `UPDATE`, sem `DELETE`.
 - Seed determinístico e idempotente da Matriz INOVA V1
 - Endpoints: GET (requisitos, políticas, etapas, summary) +
-  POST/GET/PATCH (evidências) + POST/GET/PATCH (requirement-links)
+  POST/GET/PATCH (evidências) + POST/GET/PATCH (requirement-links) +
+  GET/POST-recompute (status indicativo)
 
 **O que não existe ainda:**
 
 - `ComplianceAction` — ação corretiva regulatória
-- Status de conformidade calculado por requisito (`ComplianceStatus`)
-- Dossiê técnico consolidado
+- `PATCH` humano para campos de revisão (`review_note`, `reviewed_by`, `reviewed_at`)
 - Upload de arquivos de evidência (hash SHA-256, armazenamento binário)
+- Auto-recompute de status ao criar evidência ou vínculo
 - Integração real bidirecional com audit, lgpd ou retention (apenas referência fraca)
+- Dossiê técnico consolidado
+- Módulo `document_registry` (planejado; fora do escopo de `compliance`)
 
 **Fronteira estrita:** nenhum import de `audit`, `lgpd` ou `retention` no código
-(ADR-001, ADR-002).
+(ADR-001, ADR-002). `ComplianceRequirementStatus` não possui FK cruzada com
+nenhum outro módulo.
 
 ---
 
@@ -214,8 +229,8 @@ administrativa ou do gestor. Todo relatório deve incluir nota conservadora.
 
 ## 5. Propriedade das evidências regulatórias
 
-**Decisão proposta:** `ComplianceEvidence` é a entidade central de evidência
-regulatória real, pertencente ao módulo `compliance`.
+**Decisão adotada (implementada na Compliance-2):** `ComplianceEvidence` é a
+entidade central de evidência regulatória real, pertencente ao módulo `compliance`.
 
 ### Justificativa
 
@@ -246,16 +261,37 @@ regulatória real, pertencente ao módulo `compliance`.
 
 ## 6. Estratégia de referência fraca entre módulos
 
-**Decisão proposta:** a integração inicial entre `compliance` e os demais módulos
-ocorre por **referência fraca textual**, não por foreign key direta.
+**Decisão adotada (implementada nas Compliance-2 e Compliance-3):** a integração
+entre `compliance` e os demais módulos ocorre por **referência fraca**, não por
+foreign key direta entre módulos.
 
-### Modelo proposto de referência fraca
+### Modelo conceitual de referência fraca
+
+O padrão conceitual de referência fraca usa três campos:
 
 ```
-source_module : str   →  "audit" | "retention" | "lgpd" | "external" | "manual"
-source_type   : str   →  "finding" | "temp_signal" | "lgpd_action" | "document" | "other"
-source_ref    : str   →  "DIAG-004" | "TEMP-002" | "AC-15" | "98-PSI.docx" | ...
+source_module  →  identifica o módulo de origem
+source_type    →  identifica a natureza da referência
+source_ref     →  código textual livre que aponta ao recurso externo
 ```
+
+A materialização desse padrão varia por entidade:
+
+- **`ComplianceEvidence`**: `source_module` é enum (`ComplianceEvidenceSourceModule`),
+  `source_type` é string livre (`str(64)`), `source_ref` é string livre (`str(200)`).
+- **`RequirementFindingLink`**: `source_module` é enum (`ComplianceLinkSourceModule`),
+  `source_type` é enum (`ComplianceLinkSourceType`), `source_ref` é string obrigatória
+  (`str(200)`).
+
+Exemplos de valores para orientação:
+
+```
+source_module : "AUDIT" | "RETENTION" | "LGPD" | "EXTERNAL" | "MANUAL"
+source_type   : "FINDING" | "SIGNAL" | "ACTION" | "DOCUMENT" | "MANUAL_NOTE" | ...
+source_ref    : "DIAG-004" | "TEMP-002" | "AC-15" | "98-PSI.docx" | ...
+```
+
+Em nenhum caso há FK entre tabelas de módulos distintos.
 
 ### Comparação: referência fraca vs. FK direta
 
@@ -275,72 +311,109 @@ A FK direta pode ser introduzida futuramente se:
 - A equipe confirmar que a inviolabilidade do `finding_id` é garantida
 - O benefício de integridade automática superar o custo de acoplamento
 
-Até então, a verificação de existência do `source_ref` é responsabilidade do
-service de `compliance` em tempo de execução.
+Até então, a verificação operacional do `source_ref` é responsabilidade do
+operador humano no momento do registro; não há validação cruzada automática
+contra módulos externos nesta fase (ADR-002).
 
 ---
 
-## 7. Modelo futuro de `ComplianceEvidence`
+## 7. `ComplianceEvidence` — implementado na Compliance-2 e evolução futura
 
-> **Não implementar.** Especificação para sprint futura (LGPD/Compliance-2 ou posterior).
+> **Implementado (MVP).** Commit `4ccf50c` — Sprint LGPD/Compliance-2 (2026-05-06).
+> A seção abaixo descreve primeiro o que existe no MVP e depois o que ainda é
+> especificação futura.
 
-### Proposta de campos
+### 7.1 Campos implementados no MVP
 
 ```
 ComplianceEvidence
-├── id                  UUID        PK
-├── requirement_id      UUID        FK → compliance_requirements.id (NOT NULL)
-├── template_id         UUID        FK → compliance_evidence_templates.id (nullable)
-│                                   referência à evidência sugerida pela Matriz
-├── title               str(200)    NOT NULL — descrição curta
-├── description         text        NOT NULL — detalhamento
-├── evidence_type       enum        NOT NULL — ver EvidenceType abaixo
-├── source_module       str(50)     NOT NULL — "audit" | "retention" | "lgpd" |
-│                                              "external" | "manual"
-├── source_type         str(100)    nullable — "finding" | "temp_signal" |
-│                                              "lgpd_action" | "document" | "other"
-├── source_ref          str(200)    nullable — código de referência (ex: "DIAG-004")
-├── file_reference      str(500)    nullable — caminho relativo em _VISTORIA/
-├── responsible         str(200)    nullable — quem coletou/validou
-├── collected_at        datetime    NOT NULL — data de coleta
-├── status              enum        NOT NULL — ver EvidenceStatus abaixo
-├── notes               text        nullable — observações do revisor
-├── created_at          datetime    automático
-└── updated_at          datetime    automático
+├── id                    Integer     PK autoincrement
+├── requirement_id        Integer     FK → compliance_requirements.id (NOT NULL, CASCADE)
+├── evidence_template_id  Integer     FK → compliance_evidence_templates.id (nullable, SET NULL)
+│                                     referência à evidência sugerida pela Matriz
+├── title                 str(300)    NOT NULL — descrição curta
+├── description           text        NOT NULL — detalhamento
+├── evidence_type         enum        NOT NULL — ComplianceEvidenceType
+├── status                enum        NOT NULL — ComplianceEvidenceStatus (default COLLECTED)
+├── source_module         enum        NOT NULL — ComplianceEvidenceSourceModule (default MANUAL)
+├── source_type           str(64)     nullable — natureza da referência (string livre)
+├── source_ref            str(200)    nullable — código de referência (ex: "DIAG-004")
+├── file_reference        str(500)    nullable — caminho relativo em _VISTORIA/
+├── responsible_name      str(200)    nullable — quem coletou/validou
+├── collected_at          datetime    nullable — data de coleta
+├── reviewed_at           datetime    nullable — data de revisão
+├── notes                 text        nullable — observações
+├── created_at            datetime    automático
+└── updated_at            datetime    automático
 ```
 
-### Enum `EvidenceType`
+### 7.2 Enum `ComplianceEvidenceType` (implementado)
 
 ```
-OBSERVATION      → observação direta (texto)
-SCREENSHOT       → captura de tela
-DOCUMENT         → documento formal (PDF, DOCX)
-POLICY           → política ou procedimento versionado
-REPORT           → relatório gerado pelo sistema
-AUDIT_FINDING    → achado técnico do módulo audit
-TEMP_SIGNAL      → sinal de temporalidade do módulo retention
-LGPD_ACTION      → ação concluída do plano LGPD
-SCAN_RESULT      → resultado de varredura de arquivos
-EXTERNAL         → documento externo (contrato, ATA, e-mail)
-OTHER            → outros
+DOCUMENT          → documento formal (PDF, DOCX, contrato)
+POLICY            → política ou procedimento versionado
+REPORT            → relatório gerado pelo sistema
+SCREENSHOT        → captura de tela
+LOG               → log de sistema
+DECLARATION       → declaração formal
+CONTRACT          → contrato ou instrumento formal
+CERTIFICATE       → certificado ou atestado
+MEETING_MINUTES   → ata de reunião
+CONFIGURATION     → configuração de sistema documentada
+EXTERNAL_REFERENCE → referência externa
+OTHER             → outros
 ```
 
-### Enum `EvidenceStatus`
+### 7.3 Enum `ComplianceEvidenceStatus` (implementado)
 
 ```
-DRAFT            → rascunho; não considerada para cálculo de status
-PENDING_REVIEW   → coletada; aguarda revisão humana
-ACCEPTED         → revisada e aceita como válida
-REJECTED         → revisada e rejeitada (motivo em notes)
-EXPIRED          → válida por prazo, prazo vencido
+COLLECTED      → registrada; estado inicial padrão
+UNDER_REVIEW   → em revisão humana
+ACCEPTED       → revisada e aceita
+REJECTED       → revisada e rejeitada (motivo em notes)
+EXPIRED        → prazo vencido
+NEEDS_UPDATE   → válida, mas requer atualização
 ```
 
-### O que `ComplianceEvidence` não deve fazer
+> **Nota de MVP:** no cálculo de status indicativo (Compliance-4), todas as
+> evidências contam independentemente do status — inclusive `REJECTED` e `EXPIRED`.
+> Distinções por status de evidência ficam para Compliance-5+.
 
-- Não deve replicar dados de outras tabelas (não copiar `title` do `AuditFinding`)
-- Não deve ser o único critério automático de status de requisito
-- Não deve ser criada por processos automáticos sem revisão humana posterior
-- Não deve armazenar dados pessoais de titulares (apenas metadados)
+### 7.4 Enum `ComplianceEvidenceSourceModule` (implementado)
+
+```
+MANUAL     → registrada manualmente pelo gestor
+EXTERNAL   → documento externo (sem referência a módulo interno)
+AUDIT      → referência a achado do módulo audit
+RETENTION  → referência a sinal do módulo retention
+LGPD       → referência a ação do módulo lgpd
+SYSTEM     → gerada pelo próprio sistema
+```
+
+### 7.5 Endpoints implementados (MVP)
+
+- `POST /compliance/evidences` — registra evidência; status inicial `COLLECTED`.
+- `GET /compliance/evidences` — lista, filtrável por `requirement_code`, `status`,
+  `source_module`.
+- `GET /compliance/evidences/{id}` — detalhe com campo `evidence_note` conservador.
+- `PATCH /compliance/evidences/{id}` — atualização parcial. DELETE não exposto.
+
+### 7.6 O que `ComplianceEvidence` não deve fazer (invariante)
+
+- Não deve replicar dados de outras tabelas (não copiar `title` do `AuditFinding`).
+- Não deve ser o único critério automático de status de requisito.
+- Não deve ser criada por processos automáticos sem revisão humana posterior.
+- Não deve armazenar dados pessoais de titulares (apenas metadados).
+
+### 7.7 Evolução futura — não implementado no MVP
+
+- Upload de arquivo binário com hash SHA-256 e armazenamento controlado.
+- Validação cruzada de `source_ref` contra módulo de origem (decidido como
+  referência fraca intencional — ver ADR-002; pode mudar em sprint futura).
+- Status `DRAFT` não existe no MVP; se necessário, avaliar antes de Compliance-5.
+- Distinção de cálculo de status por `evidence_status` (apenas `ACCEPTED` conta)
+  — avaliação pendente para Compliance-5+.
+- Geração de dossiê a partir de evidências.
 
 ---
 
@@ -382,7 +455,7 @@ duplicados da mesma origem para o mesmo requisito.
 | `link_type` (GAP/RISK/etc.) | Previsto | **Não implementado** — substituído por `risk_level` (INFO/LOW/MEDIUM/HIGH/CRITICAL), mais flexível para sprint conservadora |
 | `created_by` | Previsto | **Não implementado** — aguarda autenticação multiusuário |
 | Validação de `source_ref` | Prevista | **Não implementada** — referência fraca intencional; validação seria acoplamento |
-| Status indicativo | Previsto após criação de link | **Não implementado** — sprint Compliance-4 |
+| Status indicativo | Previsto após criação de link | **Implementado na Compliance-4** — recompute REST explícito; link com `risk_level` HIGH/CRITICAL gera `HAS_OPEN_FINDINGS` |
 
 ### Fronteiras mantidas (ADR-002)
 
@@ -439,53 +512,95 @@ Existe risco real de uma ação LGPD (AC-04) e uma ação corretiva regulatória
 ### Recomendação para sprint futura
 
 Implementar `ComplianceAction` somente após:
-- `ComplianceEvidence` estar em produção e validada
-- `RequirementFindingLink` estar em produção
+
+- `ComplianceEvidence` e `RequirementFindingLink`, embora já existentes como MVPs,
+  estarem validados com casos de uso operacionais reais na serventia
 - Haver ao menos um caso real que exige ação corretiva regulatória não
   coberta pelo plano LGPD
 
 ---
 
-## 10. Modelo futuro de `ComplianceStatus`
+## 10. Modelo implementado de `ComplianceRequirementStatus`
 
-> **Não implementar.** Especificação para sprint futura.
+> **Implementado.** Commit `d782013` — Sprint LGPD/Compliance-4 (2026-05-07).
 
-### Enums propostos
+A seção a seguir documenta o que foi efetivamente implementado, contrastando com
+a especificação original onde houve divergências de escopo conservadoras.
 
-```
-NOT_STARTED      → requisito identificado; nenhuma ação ou evidência associada
-MAPPED_ONLY      → mapeado na Matriz INOVA; sem evidências ou ações iniciadas
-EVIDENCE_PENDING → tem ações ou links; sem evidências aceitas
-PARTIAL_EVIDENCE → tem pelo menos uma evidência ACCEPTED; mas há lacunas
-UNDER_REVIEW     → evidências coletadas; aguardando revisão humana
-EVIDENCED        → evidências suficientes aceitas; aguarda validação jurídica
-NEEDS_REVIEW     → evidências aceitas anteriormente; algo mudou (prazo, regra)
-EXPIRED          → prazo de adequação vencido sem evidências suficientes
-```
-
-### Regras obrigatórias de linguagem
-
-- **Proibido:** `COMPLIANT`, `CONFORME`, `APROVADO` como status automático
-- **Permitido:** `EVIDENCED` + nota conservadora de que exige validação jurídica
-- Todo endpoint que expõe status deve incluir `status_note` com texto:
-  > "Status calculado pelo sistema com base nas evidências registradas.
-  > Não constitui declaração de conformidade jurídica ou administrativa."
-
-### Cálculo indicativo (regra sugerida)
+### Enum implementado: `ComplianceRequirementStatusValue`
 
 ```
-NOT_STARTED     → sem RequirementFindingLink e sem ComplianceEvidence
-MAPPED_ONLY     → sem link, sem evidência (apenas mapeado na Matriz)
-EVIDENCE_PENDING → tem link GAP mas sem evidência ACCEPTED
-PARTIAL_EVIDENCE → ≥1 evidência ACCEPTED mas template_count não satisfeito
-UNDER_REVIEW    → evidências em PENDING_REVIEW
-EVIDENCED       → ≥N evidências ACCEPTED (N = count de templates sugeridos)
-NEEDS_REVIEW    → evidência ACCEPTED existe mas collected_at < prazo revisão
-EXPIRED         → prazo C3 vencido e status não é EVIDENCED
+EVIDENCE_PENDING   → sem evidência registrada e sem achado vinculado
+EVIDENCE_AVAILABLE → uma ou mais evidências registradas; sem achados vinculados
+HAS_OPEN_FINDINGS  → há link com risk_level CRITICAL ou HIGH
+NEEDS_HUMAN_REVIEW → há link com risk_level MEDIUM, LOW, INFO ou NULL
+UNDER_REVIEW       → reservado para sprint futura; não emitido pelo recompute atual
 ```
 
-O cálculo acima é sugestão inicial; a lógica real deve ser validada com
-a consultoria INOVA antes de implementação.
+**Diferenças em relação à especificação original (seção 10 anterior):**
+
+| Aspecto | Proposta original | Implementado |
+| ------- | ----------------- | ------------ |
+| `NOT_STARTED` | Previsto | **Não implementado** — sem evidência e sem link resulta em `EVIDENCE_PENDING` |
+| `MAPPED_ONLY` | Previsto | **Não implementado** — mesclado em `EVIDENCE_PENDING` (MVP conservador) |
+| `PARTIAL_EVIDENCE` | Previsto | **Não implementado** — MVP não conta templates satisfeitos |
+| `EVIDENCED` | Previsto | **Não implementado** — evita qualquer semântica de "cumprimento" automático |
+| `NEEDS_REVIEW` | Previsto | **Não implementado** — aguarda lógica de prazo definida |
+| `EXPIRED` | Previsto | **Não implementado** — aguarda definição de prazo de expiração de evidência |
+| `UNDER_REVIEW` | Previsto | **Reservado** — existe no enum; não emitido pelo recompute nesta sprint |
+
+A simplificação do MVP é intencional e conservadora: evita qualquer semântica que
+possa ser interpretada como afirmação de conformidade.
+
+### Regras de cálculo implementadas
+
+```
+risk_level CRITICAL ou HIGH em qualquer link → HAS_OPEN_FINDINGS  (human_review_required=True)
+qualquer outro link (MEDIUM/LOW/INFO/NULL)   → NEEDS_HUMAN_REVIEW (human_review_required=True)
+evidência(s) presente(s), sem links          → EVIDENCE_AVAILABLE  (human_review_required=False)
+sem evidência e sem link                     → EVIDENCE_PENDING    (human_review_required=False)
+```
+
+Notas de implementação:
+
+- `NULL risk_level` é tratado como equivalente a `INFO`.
+- Todas as evidências contam no MVP, independentemente do status
+  (`COLLECTED`, `REJECTED`, `EXPIRED`, etc.).
+- `last_evidence_at` usa `MAX(COALESCE(collected_at, created_at))`.
+- `last_link_at` usa `MAX(created_at)` de `RequirementFindingLink`.
+
+### Regras obrigatórias de linguagem (mantidas)
+
+- **Proibido como status automático:** `COMPLIANT`, `CONFORME`, `APROVADO`,
+  `CUMPRIDO`, `REGULAR`, `CERTIFIED`, `VALIDADO COMO CONFORME`.
+- `status_note` é validada contra essa lista em tempo de execução; presença de
+  termo proibido levanta `RuntimeError` antes de persistir.
+- Todo endpoint que expõe status inclui disclaimer fixo:
+  > "Este status é indicativo e não representa declaração automática de
+  > conformidade. A conclusão depende de revisão humana e validação documental."
+
+### Idempotência e histórico
+
+- Recompute redundante não cria histórico, não toca `computed_at`, `updated_at`
+  ou `status_note`, e não marca o objeto SQLAlchemy como dirty.
+- Primeira computação cria history com `previous_status=NULL`.
+- Mudança de status ou contadores cria history com `change_reason` descritivo.
+- `ComplianceRequirementStatusHistory` é append-only: sem `UPDATE`, sem `DELETE`,
+  sem FK para o snapshot de status atual.
+
+### Campos de revisão humana (somente leitura nesta sprint)
+
+`review_note`, `reviewed_by`, `reviewed_at` existem no modelo e são expostos nas
+respostas. Sem endpoint de escrita nesta sprint. O recompute nunca os altera.
+`UNDER_REVIEW` como status de revisão humana está reservado para **Compliance-6**.
+
+### Limitações remanescentes desta sprint
+
+- Não há auto-recompute ao criar evidência ou vínculo.
+- Não há `PATCH` humano para campos de revisão.
+- Não há `DELETE` de status ou histórico.
+- Não há dashboard, relatório, PDF ou dossiê.
+- Não há FK cruzada com outros módulos.
 
 ---
 
@@ -516,14 +631,14 @@ DossieTecnico (por etapa do Provimento)
 │
 ├── findings_relacionados[]                → via RequirementFindingLink
 │   ├── source_module, source_type, source_ref
-│   └── link_type, notes
+│   └── risk_level, notes                  ← (link_type não existe; usar risk_level)
 │
 ├── acoes_lgpd_relacionadas[]              → referência fraca a LgpdAction
 │   ├── action_code, title, status
 │   └── completed_date
 │
-├── pendencias[]                           → requisitos sem evidência suficiente
-├── riscos[]                               → findings do tipo GAP ou RISK
+├── pendencias[]                           → requisitos com status EVIDENCE_PENDING
+├── riscos[]                               → links com risk_level HIGH ou CRITICAL
 │
 ├── declaracao_observacoes      text       → espaço para declaração do gestor
 └── nota_conservadora           text       → nota fixa sobre status indicativo
@@ -551,24 +666,29 @@ dados dos módulos que agrega.
 1. Operador executa DocumentDiagnosis via CLI
 2. DocumentAnalyzer gera DiagnosisResult com finding DIAG-004
 3. Gestor revisita o finding e decide que é lacuna regulatória real
-4. Gestor (via interface futura de compliance) cria RequirementFindingLink:
-     requirement_id = REQ-013 (ex: controle de acesso documental)
-     source_module  = "audit"
-     source_type    = "finding"
-     source_ref     = "DIAG-004"
-     link_type      = GAP
-5. Status do REQ-013 passa de MAPPED_ONLY → EVIDENCE_PENDING
+4. Gestor cria RequirementFindingLink via POST /compliance/requirement-links:
+     requirement_code = "REQ-013" (ex: controle de acesso documental)
+     source_module    = "AUDIT"
+     source_type      = "FINDING"
+     source_ref       = "DIAG-004"
+     risk_level       = "HIGH"   ← (ou CRITICAL, MEDIUM, LOW, INFO conforme severidade)
+5. Gestor executa recompute: POST /compliance/requirements/REQ-013/status/recompute
+   → risk_level HIGH resulta em status HAS_OPEN_FINDINGS (human_review_required=True)
 6. Gestor inicia ação corretiva (manual ou via ComplianceAction futura)
-7. Após correção, gestor cria ComplianceEvidence:
-     evidence_type  = AUDIT_FINDING
-     source_module  = "audit"
-     source_ref     = "DIAG-004"
-     status         = PENDING_REVIEW
-8. Revisor marca a evidência como ACCEPTED
-9. Status do REQ-013 pode evoluir para PARTIAL_EVIDENCE ou EVIDENCED
+7. Após tratamento, gestor cria ComplianceEvidence via POST /compliance/evidences:
+     requirement_code = "REQ-013"
+     evidence_type    = "DOCUMENT"  ← (tipo conforme o artefato coletado)
+     source_module    = "AUDIT"
+     source_ref       = "DIAG-004"
+     status           = "COLLECTED" ← status inicial padrão
+8. Gestor executa recompute novamente; o status é recalculado
+   → enquanto o link HIGH permanecer, status continua HAS_OPEN_FINDINGS
+   → se o link for atualizado para risk_level baixo, pode evoluir para NEEDS_HUMAN_REVIEW
+9. Revisão humana decide o encaminhamento final
 ```
 
 **Nota:** audit não sabe dos passos 4..9. A tabela `audit_findings` não é alterada.
+O recompute é sempre explícito via REST — não há trigger automático.
 
 ---
 
@@ -579,14 +699,20 @@ dados dos módulos que agrega.
 2. Regra TEMP-002 emite finding para arquivo aparentemente vencido
 3. Gestor revisa o finding com responsável jurídico/documental
 4. Decisão: arquivo deve ser encaminhado para guarda intermediária
-5. Gestor (via compliance, futuro) cria RequirementFindingLink:
-     source_module = "retention"
-     source_type   = "temp_signal"
+5. Gestor cria RequirementFindingLink via POST /compliance/requirement-links:
+     requirement_code = "REQ-XXX" (requisito de temporalidade relevante)
+     source_module    = "RETENTION"
+     source_type      = "SIGNAL"
+     source_ref       = "TEMP-002"
+     risk_level       = "HIGH"   ← (conforme avaliação humana do risco)
+6. Gestor executa recompute: POST /compliance/requirements/REQ-XXX/status/recompute
+   → risk_level HIGH resulta em HAS_OPEN_FINDINGS (human_review_required=True)
+7. Ação corretiva documentada manualmente (fora do sistema por ora)
+8. Após resolução: ComplianceEvidence criada via POST /compliance/evidences:
+     evidence_type = "DOCUMENT"  ← (conforme artefato comprobatório disponível)
+     source_module = "RETENTION"
      source_ref    = "TEMP-002"
-     link_type     = RISK
-6. Ação corretiva documentada manualmente (fora do sistema por ora)
-7. Após resolução: ComplianceEvidence criada como OBSERVATION
-8. Tabela retention_rules não é alterada; findings TEMP não são deletados
+9. Tabela retention_rules não é alterada; signals TEMP não são deletados
 ```
 
 ---
@@ -596,21 +722,25 @@ dados dos módulos que agrega.
 ```
 1. Gestor registra AC-15 como COMPLETED (módulo lgpd)
 2. Módulo lgpd registra completed_date em lgpd_actions
-3. Gestor identifica que AC-15 (nomeação do DPO) atende ao REQ-005
+3. Gestor identifica que AC-15 (nomeação do DPO) é relevante para REQ-005
    (ex: designação de responsável pela proteção de dados)
-4. Gestor cria ComplianceEvidence em compliance:
-     requirement_id = id do REQ-005
-     evidence_type  = LGPD_ACTION
-     source_module  = "lgpd"
-     source_type    = "lgpd_action"
-     source_ref     = "AC-15"
-     status         = PENDING_REVIEW
-5. Revisor analisa e marca como ACCEPTED
-6. Status do REQ-005 evolui para EVIDENCED ou PARTIAL_EVIDENCE
+4. Gestor cria ComplianceEvidence via POST /compliance/evidences:
+     requirement_code = "REQ-005"
+     evidence_type    = "DECLARATION"  ← (ou DOCUMENT; não existe LGPD_ACTION no enum)
+     source_module    = "LGPD"
+     source_type      = "lgpd_action"  ← (string livre)
+     source_ref       = "AC-15"
+     status           = "COLLECTED"    ← status inicial padrão
+5. Gestor executa recompute: POST /compliance/requirements/REQ-005/status/recompute
+   → sem links, com evidência → status EVIDENCE_AVAILABLE (human_review_required=False)
+6. Revisão humana decide o encaminhamento final; o status indicativo é sinalização
+   operacional, não declaração de conformidade
 ```
 
-**Nota:** lgpd_actions não recebe campo compliance_evidence_id. O vínculo
+**Nota:** `lgpd_actions` não recebe campo `compliance_evidence_id`. O vínculo
 existe apenas na direção compliance → lgpd, por referência fraca.
+No MVP, todas as evidências contam para o status, independentemente de `status`.
+A distinção por `evidence_status = ACCEPTED` é evolução futura (Compliance-5+).
 
 ---
 
@@ -620,48 +750,72 @@ existe apenas na direção compliance → lgpd, por referência fraca.
 1. GET /compliance/requirements/REQ-005 retorna evidence_templates[]
      template: "Ata de designação do DPO assinada pelo responsável"
 2. Gestor coleta o documento real
-3. Gestor cria ComplianceEvidence:
-     requirement_id = REQ-005
-     template_id    = id do template
-     evidence_type  = DOCUMENT
-     source_module  = "external"
-     file_reference = "_VISTORIA/01_Governanca/Atas/ata_dpo.pdf"
-     status         = PENDING_REVIEW
-4. Revisão → ACCEPTED
+3. Gestor cria ComplianceEvidence via POST /compliance/evidences:
+     requirement_code      = "REQ-005"
+     evidence_template_id  = id do template  ← (opcional; associa ao template sugerido)
+     evidence_type         = "DOCUMENT"
+     source_module         = "EXTERNAL"
+     file_reference        = "_VISTORIA/01_Governanca/Atas/ata_dpo.pdf"
+     status                = "COLLECTED"     ← status inicial padrão
+4. Gestor executa recompute: POST /compliance/requirements/REQ-005/status/recompute
+5. Revisão humana atualiza o status da evidência via PATCH /compliance/evidences/{id}
 ```
 
-O `template_id` é opcional: evidências sem template correspondente também
+O `evidence_template_id` é opcional: evidências sem template correspondente também
 são válidas (ex: evidência não prevista pela Matriz INOVA).
 
 ---
 
-### 12.5 Evidence real → status indicativo
+### 12.5 Evidence real → status indicativo (recompute explícito)
 
 ```
-1. ComplianceService calcula status do requisito:
-   - Busca ComplianceEvidence WHERE requirement_id = REQ-005 AND status = ACCEPTED
-   - Conta quantos templates sugeridos têm evidência correspondente
-   - Aplica lógica de status (seção 10)
-2. Retorna status_indicativo com status_note conservadora
-3. Status é exposto na API e no dossiê; nunca é persistido como "CONFORME"
+1. Gestor chama POST /compliance/requirements/REQ-005/status/recompute
+2. ComplianceService aplica as regras de cálculo (seção 10):
+   - Conta RequirementFindingLink com risk_level CRITICAL/HIGH → HAS_OPEN_FINDINGS
+   - Conta quaisquer outros links (MEDIUM/LOW/INFO/NULL) → NEEDS_HUMAN_REVIEW
+   - Conta ComplianceEvidence (todas, independente de status) → EVIDENCE_AVAILABLE
+   - Sem evidência e sem link → EVIDENCE_PENDING
+3. Persiste ComplianceRequirementStatus com status_note conservadora
+4. Cria ComplianceRequirementStatusHistory se houve mutação
+5. Retorna: { mutated, status, change_reason, ... }
+6. Status é exposto em GET /compliance/requirements/REQ-005/status
+   Toda resposta inclui disclaimer: "Este status é indicativo e não representa
+   declaração automática de conformidade. A conclusão depende de revisão humana
+   e validação documental."
 ```
+
+**Nota:** não há cálculo automático ao criar evidência. O recompute é sempre
+explícito. Não há contagem de templates satisfeitos no MVP. Todas as evidências
+contam, independentemente de `evidence_status`.
 
 ---
 
-### 12.6 Status indicativo → dossiê técnico
+### 12.6 Status indicativo → dossiê técnico (fluxo futuro — não implementado)
+
+> **Não implementado.** Este fluxo é especificação conceitual para sprint futura
+> (Sprint DossieTecnico). As referências abaixo refletem o modelo atual implementado.
 
 ```
 1. Operador solicita geração de DossieTecnico para ETAPA_1
-2. DossieService lê:
+2. DossieService (futuro) lê:
    - ComplianceRequirement WHERE stage = "ETAPA_1"
-   - ComplianceEvidence (ACCEPTED) de cada requisito
-   - RequirementFindingLink de cada requisito
-   - LgpdAction (por referência fraca de evidências com source_module = "lgpd")
-3. Consolida pendências: requisitos sem evidência suficiente
-4. Consolida riscos: links do tipo GAP ou RISK
+   - ComplianceRequirementStatus de cada requisito (já computados via recompute)
+   - ComplianceEvidence de cada requisito (todas as evidências registradas)
+   - RequirementFindingLink de cada requisito, com seu risk_level
+   - LgpdAction (por referência fraca de evidências com source_module = "LGPD")
+3. Consolida sinalização operacional:
+   - Requisitos com status EVIDENCE_PENDING → sem evidência ou vínculo
+   - Requisitos com status HAS_OPEN_FINDINGS → links CRITICAL/HIGH pendentes
+   - Requisitos com status NEEDS_HUMAN_REVIEW → links de risco médio/baixo
+4. Consolida links por risk_level (HIGH/CRITICAL como prioridade de revisão)
 5. Gera JSON + Markdown com nota conservadora obrigatória
 6. Nenhuma tabela é modificada durante a geração
 ```
+
+**Nota:** o dossiê não deve usar `link_type` (campo não implementado); usa
+`risk_level`. Não deve filtrar evidências por `status = ACCEPTED` (distinção
+por evidence_status é evolução futura). Deve incluir disclaimer conservador
+em toda saída.
 
 ---
 
@@ -669,13 +823,13 @@ são válidas (ex: evidência não prevista pela Matriz INOVA).
 
 | Risco | Impacto | Probabilidade | Mitigação |
 |-------|---------|---------------|-----------|
-| `AuditFinding` renomeado/removido | Referências orphãs em `ComplianceEvidence` | Baixa (achados imutáveis) | Validação em service ao criar evidência |
-| `LgpdAction` removida | Referência órfã em evidência | Muito baixa (ações imutáveis) | Validação em service; `source_ref` preservado |
+| `AuditFinding` renomeado/removido | Referências orphãs em `ComplianceEvidence` | Baixa (achados imutáveis) | Revisão humana e rastreabilidade operacional; `source_ref` preservado no registro; sem validação cruzada automática nesta fase |
+| `LgpdAction` removida | Referência órfã em evidência | Muito baixa (ações imutáveis) | Rastreabilidade operacional; `source_ref` preservado no registro; integridade é responsabilidade do operador humano (ADR-002) |
 | `RetentionRule.codigo` alterado | Referência TEMP-* inconsistente | Baixa | `source_ref` guarda código no momento de criação |
 | FK cruzada criada prematuramente | Migration de um módulo bloqueia outro | Média | Princípio: referência fraca até modelo estabilizar |
 | Duplicidade `LgpdAction` + `ComplianceAction` | Retrabalho operacional | Alta | Não criar `ComplianceAction` até avaliar casos reais |
 | Status automático interpretado como conformidade | Risco jurídico | Alta | `status_note` conservadora obrigatória em todo output |
-| Dossiê gerado com dados desatualizados | Informação incorreta para vistoria | Média | Incluir `data_geracao` e instruir revisão antes de envio |
+| Dossiê gerado com dados desatualizados | Informação incorreta para vistoria | Média | Executar recompute antes de gerar dossiê; incluir `data_geracao` e instruir revisão antes de envio |
 
 ---
 
@@ -702,46 +856,117 @@ são válidas (ex: evidência não prevista pela Matriz INOVA).
   - Sem ComplianceStatus, sem FK cruzada, sem DELETE
               │
               ▼
-Sprint Compliance-4 — ComplianceStatus — status indicativo
-  - Cálculo de status por requisito (regra da seção 10)
-  - Exposto nos endpoints de requirement
-  - status_note conservadora obrigatória
+[concluída]  Sprint Compliance-4 — ComplianceRequirementStatus MVP (commit d782013)
+  - ComplianceRequirementStatus: status indicativo derivado por requisito
+  - ComplianceRequirementStatusHistory: histórico append-only
+  - Recompute REST explícito: bulk (lotes de 100) e individual
+  - Idempotência estrita: sem history em recompute redundante
+  - Campos humanos somente leitura; UNDER_REVIEW reservado
+  - Disclaimer conservador obrigatório em todo output de status
+  - Testes: model, service, routes, isolamento, history (433 passed)
+  - Sem PATCH humano, sem DELETE, sem auto-recompute, sem FK cruzada
               │
               ▼
-LGPD-2 — Evidências, hash, políticas versionadas, treinamentos
-  (pode ser paralela às sprints de compliance acima)
+[próxima — documental/normativa]
+  Document Registry-0 — CNPFE-GO Normative Matrix Blueprint
+  - Sem implementação de código
+  - Mapeamento normativo de documentos, livros, acervo, arquivos,
+    pastas e classificadores esperados (CNPFE-GO)
+  - Definição da arquitetura conceitual do módulo document_registry
+  - document_registry será dono da matriz documental e do inventário
+    institucional; compliance consumirá por referência fraca
               │
               ▼
-Sprint DossieTecnico — consolidação por etapa
+[futuro]  Document Registry-1 — Expected Documents MVP
+  - Matriz de documentos esperados
+  - Candidatos encontrados pelo audit
+  - Conciliação entre esperado e observado; lacunas documentais
+              │
+              ▼
+[futuro]  Compliance-5 — Operational Reporting MVP
+  - Relatórios operacionais indicativos
+  - Consolidação de compliance + document_registry
+  - Depende de Document Registry-0/1
+              │
+              ▼
+[futuro]  Compliance-6 — Human Review MVP
+  - PATCH humano: review_note, reviewed_by, reviewed_at
+  - Uso efetivo de UNDER_REVIEW
+  - Workflow de revisão humana explícita
+              │
+              ▼
+[futuro]  LGPD-2 — Evidências, hash, políticas versionadas, treinamentos
+              │
+              ▼
+[futuro]  Sprint DossieTecnico — consolidação por etapa
   - DossieService: leitura de compliance, referências fracas a audit/lgpd
   - Saída: JSON + Markdown por etapa
   - Sem PDF nesta sprint
               │
               ▼
-Sprint PDF/Vistoria — exportação para Sistema Justiça Aberta
+[futuro]  Sprint PDF/Vistoria — exportação para Sistema Justiça Aberta
   - Geração de PDF do dossiê
   - Estrutura _VISTORIA/ consolidada
   - Checklist de prontidão para vistoria
 ```
 
+### Relação futura entre módulos
+
+```text
+audit
+  → encontra arquivos, caminhos, metadados, duplicidades,
+    localização inadequada e achados documentais (DIAG-*)
+
+document_registry  ← próxima frente prioritária (Document Registry-0/1)
+  → compara arquivos encontrados pelo audit com a matriz normativa
+    de documentos esperados (CNPFE-GO)
+  → dono da matriz documental e do inventário institucional
+  → não deve ser confundido com compliance
+
+retention
+  → aplica temporalidade, guarda, destinação e eliminação documental
+    quando aplicável (TEMP-*)
+
+lgpd
+  → avalia privacidade, dados pessoais, sigilo e risco ao titular (AC-*)
+
+compliance
+  → consolida evidências, lacunas e achados contra requisitos regulatórios
+  → não declara conformidade automática
+  → consumirá document_registry por referência fraca:
+      source_module: "document_registry"
+      source_type:   "expected_document_match" | "missing_expected_document"
+      source_ref:    "DOCMATCH-000123" | "DOCGAP-000045"
+
+reports (futuro)
+  → visão operacional e gerencial para diretoria e equipe
+```
+
+> **Nota:** O módulo `document_registry` ainda não foi implementado.
+> Document Registry-0 é exclusivamente documental/normativo — sem código.
+> A integração entre `compliance` e `document_registry` ocorrerá por referência
+> fraca, seguindo ADR-002, preservando o isolamento modular.
+
 ---
 
 ## 15. Critérios de aceite para próximas sprints
 
-### LGPD/Compliance-2 — ComplianceEvidence MVP
+### LGPD/Compliance-2 — ComplianceEvidence MVP ✅ concluída (commit `4ccf50c`)
 
-- [ ] `ComplianceEvidence` criada via `POST` com todos os campos do modelo
-- [ ] Listagem por `requirement_id` com filtro por `status`
-- [ ] `source_module = "audit"` → service valida que `source_ref` corresponde a
-      um finding existente (busca por DIAG-* no serviço de audit) antes de aceitar
-- [ ] `source_module = "lgpd"` → service valida que `source_ref` corresponde a
-      um `action_code` existente antes de aceitar
-- [ ] Nenhuma FK direta para tabelas de audit, lgpd ou retention
-- [ ] Status inicial sempre `DRAFT` ou `PENDING_REVIEW`
-- [ ] `status_note` conservadora incluída em toda resposta
-- [ ] Testes de isolamento: nenhum import de `audit`, `lgpd`, `retention` em
+- [x] `ComplianceEvidence` criada via `POST` com campos do modelo MVP
+- [x] Listagem por `requirement_code` com filtro por `status` e `source_module`
+- [x] Nenhuma FK direta para tabelas de `audit`, `lgpd` ou `retention`
+- [x] Status inicial padrão `COLLECTED` (não `DRAFT` — enum diferente da proposta original)
+- [x] Campo `evidence_note` conservador incluído em toda resposta de detalhe
+- [x] Testes de isolamento: nenhum import de `audit`, `lgpd`, `retention` em
       `app/modules/compliance/`
-- [ ] Ruff clean; testes passando
+- [x] Ruff clean; testes passando
+- [~] Validação forte de `source_ref` contra módulo de origem — **decisão
+      arquitetural: não implementar** (ADR-002). Referência fraca é a estratégia
+      adotada. Integridade referencial entre módulos é responsabilidade do
+      operador humano, não do banco de dados.
+- [~] Status `DRAFT` — **decisão: não implementar no MVP**; avaliar em
+      Compliance-5+ somente se surgir caso de uso específico.
 
 ### Sprint Compliance-3 — RequirementFindingLink ✅ concluída (commit c588bc2)
 
@@ -755,20 +980,40 @@ Sprint PDF/Vistoria — exportação para Sistema Justiça Aberta
 - [x] DELETE não exposto
 - [x] Testes: model, service, routes, isolamento — 376 passed, 1 skipped
 - [x] Ruff clean
-- [ ] `link_type` (GAP/RISK/etc.) — **não implementado**; substituído por
-      `risk_level` (INFO..CRITICAL); decisão conservadora da sprint
-- [ ] Validação de `source_ref` contra módulos externos — **não implementada**;
-      referência fraca intencional (ADR-002)
-- [ ] Status indicativo calculado após criação de link — **não implementado**;
-      aguarda Sprint Compliance-4
+- [~] `link_type` (GAP/RISK/etc.) — **substituído definitivamente por `risk_level`
+      (INFO..CRITICAL)**; decisão conservadora e arquitetural desta sprint
+- [~] Validação forte de `source_ref` contra módulos externos — **decisão
+      arquitetural: não implementar** (ADR-002). Referência fraca intencional.
 
-### Sprint ComplianceStatus
+### Sprint Compliance-4 — ComplianceRequirementStatus ✅ concluída (commit d782013)
 
-- [ ] Status calculado para cada `ComplianceRequirement` via endpoint
-- [ ] Enum `ComplianceStatus` com valores da seção 10
-- [ ] `status_note` com texto conservador fixo em toda resposta
-- [ ] Nenhum status automático com semântica de "conforme" ou "aprovado"
-- [ ] Testes: cada status, transições, casos de borda
+- [x] `ComplianceRequirementStatus` criado por recompute REST explícito
+- [x] Enum `ComplianceRequirementStatusValue` com valores conservadores (seção 10)
+- [x] Recompute bulk: `POST /requirement-statuses/recompute` — lotes de 100, savepoint
+- [x] Recompute individual: `POST /requirements/{code}/status/recompute`
+- [x] Leitura paginada: `GET /requirement-statuses` com filtros múltiplos
+- [x] Detalhe: `GET /requirements/{code}/status` — 404 se não computado
+- [x] `status_note` conservadora com validação contra termos proibidos
+- [x] Disclaimer obrigatório em toda resposta de status
+- [x] Idempotência estrita: recompute redundante não cria history nem toca timestamps
+- [x] `ComplianceRequirementStatusHistory` append-only: sem UPDATE, sem DELETE
+- [x] Campos humanos somente leitura; recompute nunca os altera
+- [x] Sem auto-recompute ao criar evidência ou vínculo
+- [x] Nenhum status com semântica de "conforme" ou "aprovado"
+- [x] Isolamento modular: sem import de `audit`, `lgpd`, `retention`; sem FK cruzada
+- [x] Testes: model, service, routes, history, isolamento — 433 passed, 1 skipped
+- [x] Ruff clean
+- [ ] `UNDER_REVIEW` — **reservado**; não emitido pelo recompute; aguarda Compliance-6
+- [ ] `PATCH` humano para `review_note`, `reviewed_by`, `reviewed_at` — aguarda Compliance-6
+- [ ] Auto-recompute ao criar evidência/vínculo — **não implementado** (recompute é explícito)
+
+### Document Registry-0 — CNPFE-GO Normative Matrix Blueprint
+
+- [ ] Mapeamento normativo de documentos, livros, acervo, arquivos e pastas esperados
+      conforme CNPFE-GO
+- [ ] Definição da arquitetura conceitual do módulo `document_registry`
+- [ ] Definição de como `compliance` consumirá `document_registry` por referência fraca
+- [ ] Escopo exclusivamente documental/normativo: sem implementação de código
 
 ---
 
@@ -776,11 +1021,14 @@ Sprint PDF/Vistoria — exportação para Sistema Justiça Aberta
 
 | # | Questão | Impacto | Quando resolver |
 |---|---------|---------|-----------------|
-| D-01 | `ComplianceAction` deve nascer própria ou só referenciar `LgpdAction`? | Evitar duplicidade | Antes de LGPD/Compliance-3 |
-| D-02 | Quantas evidências `ACCEPTED` são suficientes para status `EVIDENCED`? | Cálculo de status | Antes de ComplianceStatus sprint |
+| D-01 | `ComplianceAction` deve nascer própria ou só referenciar `LgpdAction`? | Evitar duplicidade | Antes de implementar ComplianceAction |
+| D-02 | ~~Quantas evidências `ACCEPTED` são suficientes para status `EVIDENCED`?~~ | ✅ Adiado | MVP Compliance-4 não usa `EVIDENCED`; reavaliar em Compliance-5+ |
 | D-03 | Validação jurídica do status indicativo: quem valida e com qual periodicidade? | Risco jurídico | Antes de expor status em relatórios para vistoria |
 | D-04 | Formato do dossiê técnico para Sistema Justiça Aberta: JSON estruturado, PDF, ou ambos? | Sprint DossieTecnico | Antes de sprint DossieTecnico |
-| D-05 | `RetentionEvaluation` (persistida): sprint retention-1C antes ou depois de LGPD/Compliance-2? | Prioridade de roadmap | Próximo ciclo de planejamento |
-| D-06 | Autenticação multiusuário: antecipada para antes de expor evidências via API? | Segurança | Urgente — antes de LGPD/Compliance-2 se evidências forem sensíveis |
-| D-07 | ~~`RequirementFindingLink`: permitir criação por fonte externa (sem `source_ref` de módulo)?~~ | ✅ Resolvido | `source_module=MANUAL` e `source_module=EXTERNAL` implementados; `source_ref` é string livre |
-| D-08 | Prazo de expiração de evidência: sistema calcula com base no prazo do requisito ou é manual? | Enum `EXPIRED` | Antes de ComplianceStatus sprint |
+| D-05 | `RetentionEvaluation` (persistida): sprint retention-1C — prioridade no roadmap? | Prioridade de roadmap | Próximo ciclo de planejamento |
+| D-06 | Autenticação multiusuário: antecipada para antes de expor evidências via API? | Segurança | Avaliar antes de Compliance-5 |
+| D-07 | ~~`RequirementFindingLink`: permitir criação por fonte externa?~~ | ✅ Resolvido | `source_module=MANUAL/EXTERNAL` implementados; `source_ref` é string livre |
+| D-08 | ~~Prazo de expiração de evidência: sistema calcula ou é manual?~~ | ✅ Adiado | MVP Compliance-4 não usa `EXPIRED` em status; reavaliar em Compliance-5+ |
+| D-09 | Escopo de Document Registry-0: CNPFE-GO é a fonte principal da matriz inicial; Provimento 213, Provimento CNJ nº 50/2015 e INOVA entram como integrações complementares/futuras após a base estadual estar mapeada. | Abrangência da matriz | Confirmar no início de Document Registry-0 |
+| D-10 | Como `compliance` referenciará `document_registry` por referência fraca? Códigos `DOCMATCH-*` e `DOCGAP-*` são suficientes? | Integração futura | Durante Document Registry-0 |
+| D-11 | `PATCH` humano para revisão: campos isolados ou payload completo? Quem tem permissão? | Compliance-6 | Antes de Compliance-6 |
