@@ -12,13 +12,13 @@ futuras ocorrem por exports estruturados.
 
 ## Foco atual — Módulo de Auditoria
 
-- [`docs/AUDIT_MODULE_ROADMAP.md`](docs/AUDIT_MODULE_ROADMAP.md) — **Roadmap
+- [`docs/audit/module_roadmap.md`](docs/audit/module_roadmap.md) — **Roadmap
   principal:** 12 fases, Sprint 1 (Scanner Read-Only), critérios de aceite.
 - [`docs/modules/audit.md`](docs/modules/audit.md) — Visão do módulo: princípios,
   estrutura de código, entidades, fases.
 - [`docs/modules/audit_file_scanner.md`](docs/modules/audit_file_scanner.md) —
   Scanner Read-Only: guia de uso, exemplos, saídas, limitações, segurança.
-- [`docs/AUDIT_READ_ONLY_POLICY.md`](docs/AUDIT_READ_ONLY_POLICY.md) — Política
+- [`docs/audit/read_only_policy.md`](docs/audit/read_only_policy.md) — Política
   read-only: o que o sistema pode e não pode fazer.
 
 ## Documentação técnica do sistema
@@ -27,35 +27,32 @@ futuras ocorrem por exports estruturados.
   princípios de design.
 - [`docs/roadmap.md`](docs/roadmap.md) — prioridade atual, etapas concluídas e
   backlog futuro.
-- [`docs/decisions.md`](docs/decisions.md) — decisões técnicas (D-01 a D-22).
-- [`docs/finance.md`](docs/finance.md) — Finance Core v1.2 (backlog futuro).
-- [`docs/how_to_run.md`](docs/how_to_run.md) — instalação, banco, servidor, testes.
-- [`docs/testing.md`](docs/testing.md) — fixtures, isolamento e cobertura por área.
-- [`docs/operations/engegraph.md`](docs/operations/engegraph.md) — Engegraph:
-  contexto operacional, backup, suporte e pendências técnicas.
+- [`docs/decisions/technical_decisions.md`](docs/decisions/technical_decisions.md) — decisões técnicas (D-01 a D-23).
+- [`docs/modules/finance.md`](docs/modules/finance.md) — Finance Core v1.2 (backlog futuro).
+- [`docs/operations/how_to_run.md`](docs/operations/how_to_run.md) — instalação, banco, servidor, testes.
+- [`docs/quality/testing.md`](docs/quality/testing.md) — fixtures, isolamento e cobertura por área.
 
 ## Adequação regulatória (Provimento CNJ nº 213/2026 — Classe 3)
 
-- [`docs/ROADMAP_CNJ213.md`](docs/ROADMAP_CNJ213.md) — Roadmap estratégico: 6
+- [`docs/regulatory/cnj_213/roadmap.md`](docs/regulatory/cnj_213/roadmap.md) — Roadmap estratégico: 6
   trilhas, planos emergencial/30/90/180 dias e maturidade.
-- [`docs/CNJ_213_COMPLIANCE_PLAN.md`](docs/CNJ_213_COMPLIANCE_PLAN.md) — Matriz de
+- [`docs/regulatory/cnj_213/compliance_plan.md`](docs/regulatory/cnj_213/compliance_plan.md) — Matriz de
   45 requisitos Classe 3 com gaps e evidências necessárias.
-- [`docs/CNJ_213_ALIGNMENT.md`](docs/CNJ_213_ALIGNMENT.md) — Como o módulo de
+- [`docs/regulatory/cnj_213/alignment.md`](docs/regulatory/cnj_213/alignment.md) — Como o módulo de
   auditoria apoia diretamente cada requisito do Provimento.
-- [`docs/INFRASTRUCTURE_ROADMAP.md`](docs/INFRASTRUCTURE_ROADMAP.md) — Situação
+- [`docs/infrastructure/infrastructure_roadmap.md`](docs/infrastructure/infrastructure_roadmap.md) — Situação
   atual, VMs sugeridas, VLANs, backup e plano de migração.
-- [`docs/RISK_REGISTER.md`](docs/RISK_REGISTER.md) — Registro de riscos ativos.
-- [`docs/RISK_REGISTER_MODEL.md`](docs/RISK_REGISTER_MODEL.md) — Modelo de campos
+- [`docs/quality/risk_register_model.md`](docs/quality/risk_register_model.md) — Modelo de campos
   e enums para registro de riscos.
-- [`docs/VISITATION_READINESS_CHECKLIST.md`](docs/VISITATION_READINESS_CHECKLIST.md)
+- [`docs/readiness/visitation_readiness_checklist.md`](docs/readiness/visitation_readiness_checklist.md)
   — Checklist de 73 itens para prontidão da vistoria.
-- [`docs/VISITATION_READINESS_PLAN.md`](docs/VISITATION_READINESS_PLAN.md) — Plano
+- [`docs/readiness/visitation_readiness_plan.md`](docs/readiness/visitation_readiness_plan.md) — Plano
   de ação semana a semana para chegar à vistoria preparado.
-- [`docs/TECHNICAL_DOSSIER_STRUCTURE.md`](docs/TECHNICAL_DOSSIER_STRUCTURE.md) —
+- [`docs/readiness/technical_dossier_structure.md`](docs/readiness/technical_dossier_structure.md) —
   Estrutura do dossiê técnico com modelos de ata e índice de hashes.
-- [`docs/OPERATING_FLOWS_AUDIT_PLAN.md`](docs/OPERATING_FLOWS_AUDIT_PLAN.md) —
+- [`docs/readiness/operating_flows_audit_plan.md`](docs/readiness/operating_flows_audit_plan.md) —
   Plano de auditoria de fluxos operacionais da serventia.
-- [`docs/architecture/target_infrastructure.md`](docs/architecture/target_infrastructure.md)
+- [`docs/infrastructure/target_infrastructure.md`](docs/infrastructure/target_infrastructure.md)
   — Arquitetura-alvo: VMs, VLANs, segmentação e plano de restauração.
 
 ## Requisitos

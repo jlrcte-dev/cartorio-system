@@ -103,7 +103,7 @@ python -m app.modules.audit.scanner.cli `
 ```
 
 > Ver procedimento passo a passo completo em
-> [`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](../AUDIT_DEPLOYMENT_AND_OPERATION.md),
+> [`docs/audit/deployment_and_operation.md`](../audit/deployment_and_operation.md),
 > seção 6.
 
 ---
@@ -375,7 +375,7 @@ da serventia. Recomenda-se rodar primeiro em uma pasta de menor risco (como
 Os achados abaixo foram identificados na execução `scan-docs-cartorio` e estão
 prontos para ser registrados como `AuditFinding` assim que a Sprint 2 estiver
 implementada. Cada achado segue o modelo definido em
-[`docs/RISK_REGISTER_MODEL.md`](../RISK_REGISTER_MODEL.md).
+[`docs/quality/risk_register_model.md`](../quality/risk_register_model.md).
 
 > **Importante:** estes são achados preliminares baseados em metadados (nome,
 > extensão, data). Nenhum conteúdo de arquivo foi lido. A confirmação e a
@@ -565,7 +565,7 @@ A Sprint 2 implementa o **AuditFinding CRUD** em `app/modules/audit/findings/`:
 - Endpoints em `/api/v1/audit/findings`
 - Após o scanner identificar riscos, o gestor os registra formalmente como achados
 
-Ver [`docs/AUDIT_MODULE_ROADMAP.md`](../AUDIT_MODULE_ROADMAP.md) para o roadmap completo.
+Ver [`docs/audit/module_roadmap.md`](../audit/module_roadmap.md) para o roadmap completo.
 
 ---
 

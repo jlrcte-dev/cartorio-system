@@ -433,10 +433,10 @@ matriz **não é instalada como código nesta sprint**.
 
 ## Referências
 
-- [Blueprint de Integração Regulatória](../CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md)
+- [Blueprint de Integração Regulatória](../regulatory/cnj_213/regulatory_integration_blueprint.md)
 - [ADR-001 — ComplianceEvidence como entidade central](ADR-001-compliance-evidence-ownership.md)
 - [ADR-002 — Referências fracas entre módulos regulatórios](ADR-002-weak-references-between-regulatory-modules.md)
 - [Blueprint da Matriz Normativa](../document_registry/CNPFE_GO_NORMATIVE_MATRIX_BLUEPRINT.md)
 - [Matriz Inicial CNPFE-GO](../document_registry/EXPECTED_DOCUMENTS_CNPFE_GO_INITIAL_MATRIX.md)
 - [Conceito do módulo Document Registry](../document_registry/DOCUMENT_REGISTRY_MODULE_CONCEPT.md)
-- [`AUDIT_READ_ONLY_POLICY`](../AUDIT_READ_ONLY_POLICY.md)
+- [`AUDIT_READ_ONLY_POLICY`](../audit/read_only_policy.md)

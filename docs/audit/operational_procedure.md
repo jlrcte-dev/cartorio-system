@@ -875,7 +875,7 @@ assert actual_hash == manifest.output_files.file_inventory_json.sha256, \
 | **Testabilidade** | Testes usam inventories sintéticos em memória — sem disco real |
 | **Portabilidade** | O inventory pode ser copiado para outro ambiente e analisado offline |
 
-Ver [`docs/decisions.md`](decisions.md) — D-23 para registro formal.
+Ver [`docs/decisions/technical_decisions.md`](../decisions/technical_decisions.md) — D-23 para registro formal.
 
 ---
 
@@ -904,8 +904,8 @@ seguindo a decisão D-23: entrada é o artefato, não o servidor.
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [`AUDIT_DEPLOYMENT_AND_OPERATION.md`](AUDIT_DEPLOYMENT_AND_OPERATION.md) | Guia geral de deployment e operação (elaborado antes da Sprint 2.5) |
-| [`modules/audit_file_scanner.md`](modules/audit_file_scanner.md) | Documentação técnica do scanner; inclui execuções reais validadas |
-| [`modules/audit_findings.md`](modules/audit_findings.md) | Campos, endpoints e exemplos de AuditFinding |
-| [`AUDIT_MODULE_ROADMAP.md`](AUDIT_MODULE_ROADMAP.md) | Roadmap das fases; Sprint 2.5 registrada como Fase 1c |
-| [`decisions.md`](decisions.md) | D-23: DocumentDiagnosis analisa artefatos, não servidor |
+| [`deployment_and_operation.md`](deployment_and_operation.md) | Guia geral de deployment e operação (elaborado antes da Sprint 2.5) |
+| [`../modules/audit_file_scanner.md`](../modules/audit_file_scanner.md) | Documentação técnica do scanner; inclui execuções reais validadas |
+| [`../modules/audit_findings.md`](../modules/audit_findings.md) | Campos, endpoints e exemplos de AuditFinding |
+| [`module_roadmap.md`](module_roadmap.md) | Roadmap das fases; Sprint 2.5 registrada como Fase 1c |
+| [`../decisions/technical_decisions.md`](../decisions/technical_decisions.md) | D-23: DocumentDiagnosis analisa artefatos, não servidor |

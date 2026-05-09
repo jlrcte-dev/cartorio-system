@@ -12,10 +12,11 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Banco de dados local
+# Banco de dados local e dumps — nunca versionar
 *.db
 *.sqlite
 *.sqlite3
+*.dump
 
 # Build / dist
 dist/
@@ -80,3 +81,9 @@ exports/audit/
 **/document_diagnosis.csv
 **/document_diagnosis.md
 **/diagnosis_manifest.json
+
+# ---------------------------------------------------------------------------
+# Artefatos gerados — apresentações, relatórios compilados, exports visuais
+# ---------------------------------------------------------------------------
+apresentacao_executiva_cartorio_system_mvp.html
+docs/reports/*.pdf

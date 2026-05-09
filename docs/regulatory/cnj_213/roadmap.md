@@ -158,7 +158,7 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
 
 ### F — Dossiê
 
-- [ ] Consolidar matriz gerencial de conformidade CNJ 213/2026 Classe 3 (ver `CNJ_213_COMPLIANCE_PLAN.md`)
+- [ ] Consolidar matriz gerencial de conformidade CNJ 213/2026 Classe 3 (ver `compliance_plan.md`)
 - [ ] Criar registro de riscos inicial (ver `RISK_REGISTER.md`)
 - [ ] Documentar topologia de rede atual com diagrama
 
@@ -188,7 +188,7 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
 - [ ] PCN (Plano de Continuidade de Negócios) versão 1.0 elaborado
 - [ ] PRD (Plano de Recuperação de Desastres) versão 1.0 elaborado com RTO ≤8h e RPO ≤4h
 - [ ] Contingência energética avaliada: nobreaks, autonomia, gerador (avaliação de viabilidade)
-- [ ] Arquitetura-alvo de virtualização aprovada pelo gestor (ver `INFRASTRUCTURE_ROADMAP.md`)
+- [ ] Arquitetura-alvo de virtualização aprovada pelo gestor (ver `../../infrastructure/infrastructure_roadmap.md`)
 - [ ] Plano de migração para VMs elaborado
 
 ### C — Segurança
@@ -215,8 +215,8 @@ O roadmap é organizado em seis trilhas paralelas com dependências explícitas.
 - [ ] **Blueprint de integração regulatória** (Sprint 2026-05-06): fronteiras,
   modelos futuros e roadmap definidos para `audit`, `retention`, `lgpd` e
   `compliance`. Ver
-  [`CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md`](CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md)
-  e ADRs em [`docs/decisions/`](decisions/).
+  [`regulatory_integration_blueprint.md`](regulatory_integration_blueprint.md)
+  e ADRs em [`docs/decisions/`](../../decisions/).
 - [x] **Sprint LGPD/Compliance-2** (2026-05-06): `ComplianceEvidence` MVP
   implementado. Evidências regulatórias reais podem ser registradas e
   vinculadas a requisitos da Matriz INOVA V1. Integração por referência fraca
@@ -471,12 +471,10 @@ Etapas seguintes (Obrigações, Relatórios, etc.)
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [CNJ_213_COMPLIANCE_PLAN.md](CNJ_213_COMPLIANCE_PLAN.md) | Matriz de conformidade Classe 3 |
-| [INFRASTRUCTURE_ROADMAP.md](INFRASTRUCTURE_ROADMAP.md) | Infraestrutura e virtualização |
-| [RISK_REGISTER.md](RISK_REGISTER.md) | Registro de riscos detalhado |
-| [VISITATION_READINESS_CHECKLIST.md](VISITATION_READINESS_CHECKLIST.md) | Checklist de prontidão para vistoria |
-| [TECHNICAL_DOSSIER_STRUCTURE.md](TECHNICAL_DOSSIER_STRUCTURE.md) | Estrutura do dossiê técnico |
-| [architecture/target_infrastructure.md](architecture/target_infrastructure.md) | Arquitetura-alvo de virtualização |
-| [operations/engegraph.md](operations/engegraph.md) | Contexto operacional do Engegraph |
-| [modules/audit.md](modules/audit.md) | Módulo de auditoria do Cartório System |
-| [roadmap.md](roadmap.md) | Roadmap técnico do Cartório System |
+| [compliance_plan.md](compliance_plan.md) | Matriz de conformidade Classe 3 |
+| [../../infrastructure/infrastructure_roadmap.md](../../infrastructure/infrastructure_roadmap.md) | Infraestrutura e virtualização |
+| [../../readiness/visitation_readiness_checklist.md](../../readiness/visitation_readiness_checklist.md) | Checklist de prontidão para vistoria |
+| [../../readiness/technical_dossier_structure.md](../../readiness/technical_dossier_structure.md) | Estrutura do dossiê técnico |
+| [../../infrastructure/target_infrastructure.md](../../infrastructure/target_infrastructure.md) | Arquitetura-alvo de virtualização |
+| [../../modules/audit.md](../../modules/audit.md) | Módulo de auditoria do Cartório System |
+| [../../roadmap.md](../../roadmap.md) | Roadmap técnico do Cartório System |

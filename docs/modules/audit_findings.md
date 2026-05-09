@@ -341,4 +341,4 @@ Sprint 3 implementa o **Diagnóstico Documental Inicial** (Fase 2 do roadmap):
 - Geração de achados candidatos (`AuditFinding`) a partir do inventário
 - Vinculação automática via `scanner_run_id`
 
-Ver [`docs/AUDIT_MODULE_ROADMAP.md`](../AUDIT_MODULE_ROADMAP.md) para o roadmap completo.
+Ver [`docs/audit/module_roadmap.md`](../audit/module_roadmap.md) para o roadmap completo.

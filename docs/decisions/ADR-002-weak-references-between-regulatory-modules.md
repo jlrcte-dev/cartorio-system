@@ -212,7 +212,7 @@ forem atendidos:
 
 ## Referências
 
-- [Blueprint de Integração Regulatória](../CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md) — Seção 6
+- [Blueprint de Integração Regulatória](../regulatory/cnj_213/regulatory_integration_blueprint.md) — Seção 6
 - [ADR-001 — ComplianceEvidence como entidade central](ADR-001-compliance-evidence-ownership.md)
 - [docs/modules/compliance.md](../modules/compliance.md) — Fronteiras atuais do módulo
-- Decisão D-23 em [decisions.md](../decisions.md) — DocumentDiagnosis analisa artefatos, não servidor diretamente
+- Decisão D-23 em [technical_decisions.md](technical_decisions.md) — DocumentDiagnosis analisa artefatos, não servidor diretamente

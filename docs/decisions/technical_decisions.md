@@ -336,5 +336,5 @@ O diagnóstico valida o hash do inventory via `scan_manifest.json` antes de proc
    Cada fase consome apenas a saída da anterior, nunca a fonte primária.
 
 Ver procedimento completo em
-[`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](AUDIT_DEPLOYMENT_AND_OPERATION.md),
+[`docs/audit/deployment_and_operation.md`](../audit/deployment_and_operation.md),
 seção 12.

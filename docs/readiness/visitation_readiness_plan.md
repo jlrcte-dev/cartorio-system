@@ -1,6 +1,6 @@
 # Plano de Prontidão para Vistoria — Provimento CNJ nº 213/2026
 
-> Complementa o `VISITATION_READINESS_CHECKLIST.md`. Enquanto o checklist
+> Complementa o `visitation_readiness_checklist.md` (neste diretório). Enquanto o checklist
 > lista o que precisa existir, este documento descreve o plano de ação para
 > chegar lá. Não constitui garantia de conformidade.
 
@@ -113,7 +113,7 @@ Com base no Provimento CNJ 213/2026, o vistoriador verifica:
 
 Para cada gap ainda não resolvido, ter:
 
-1. O gap identificado formalmente (no `CNJ_213_COMPLIANCE_PLAN.md` ou `RISK_REGISTER.md`)
+1. O gap identificado formalmente (no `../regulatory/cnj_213/compliance_plan.md` ou `RISK_REGISTER.md`)
 2. O plano de tratamento com prazo
 3. A justificativa técnica ou operacional da limitação atual
 

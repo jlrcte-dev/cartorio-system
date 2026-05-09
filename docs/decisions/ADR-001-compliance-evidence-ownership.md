@@ -152,6 +152,6 @@ Adicionar um campo opcional `compliance_requirement_id` no `AuditFinding`.
 
 ## Referências
 
-- [Blueprint de Integração Regulatória](../CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md) — Seções 5, 7, 12.3
+- [Blueprint de Integração Regulatória](../regulatory/cnj_213/regulatory_integration_blueprint.md) — Seções 5, 7, 12.3
 - [ADR-002 — Referências fracas entre módulos](ADR-002-weak-references-between-regulatory-modules.md)
 - [docs/modules/compliance.md](../modules/compliance.md) — Estado atual do módulo

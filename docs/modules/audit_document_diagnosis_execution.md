@@ -496,10 +496,10 @@ Este workflow apoia os requisitos:
 | Tópico | Referência |
 |---|---|
 | Scanner (Sprint 1) | `docs/modules/audit_file_scanner.md` |
-| Decisão arquitetural | `docs/decisions.md` (D-23) |
-| Roadmap módulo auditoria | `docs/AUDIT_MODULE_ROADMAP.md` |
-| Política read-only | `docs/AUDIT_READ_ONLY_POLICY.md` |
-| Deployment e operação | `docs/AUDIT_DEPLOYMENT_AND_OPERATION.md` |
+| Decisão arquitetural | `docs/decisions/technical_decisions.md` (D-23) |
+| Roadmap módulo auditoria | `docs/audit/module_roadmap.md` |
+| Política read-only | `docs/audit/read_only_policy.md` |
+| Deployment e operação | `docs/audit/deployment_and_operation.md` |
 
 ---
 

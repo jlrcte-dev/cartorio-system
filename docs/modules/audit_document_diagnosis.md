@@ -62,7 +62,7 @@ Razões:
 3. **Segurança:** o diagnóstico nunca precisa de permissão de acesso ao servidor.
 4. **Testabilidade:** testes usam inventories sintéticos, sem caminhos reais.
 
-Ver `docs/decisions.md` (D-23) e `docs/AUDIT_DEPLOYMENT_AND_OPERATION.md` (seção 12).
+Ver `docs/decisions/technical_decisions.md` (D-23) e `docs/audit/deployment_and_operation.md` (seção 12).
 
 ---
 

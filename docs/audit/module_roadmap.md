@@ -102,12 +102,12 @@ Um scanner read-only entrega isso em horas de uso. Um CRUD financeiro expandido,
 
 **Saídas:**
 
-- `docs/AUDIT_MODULE_ROADMAP.md` (este documento)
-- `docs/AUDIT_READ_ONLY_POLICY.md`
-- `docs/CNJ_213_ALIGNMENT.md`
-- `docs/RISK_REGISTER_MODEL.md`
-- `docs/OPERATING_FLOWS_AUDIT_PLAN.md`
-- `docs/VISITATION_READINESS_PLAN.md`
+- `docs/audit/module_roadmap.md` (este documento)
+- `docs/audit/read_only_policy.md`
+- `docs/regulatory/cnj_213/alignment.md`
+- `docs/quality/risk_register_model.md`
+- `docs/readiness/operating_flows_audit_plan.md`
+- `docs/readiness/visitation_readiness_plan.md`
 - `docs/roadmap.md` atualizado
 - `docs/modules/audit.md` atualizado
 
@@ -200,11 +200,11 @@ e a decisão arquitetural sobre o DocumentDiagnosis.
 
 **Saídas produzidas:**
 
-- [`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](AUDIT_DEPLOYMENT_AND_OPERATION.md) —
+- [`docs/audit/deployment_and_operation.md`](deployment_and_operation.md) —
   procedimento completo: modos A/B, sequência depth2→depth4→full, checklists
   pré/pós execução, fluxo scanner→artefatos→diagnóstico→candidatos→AuditFinding→dossiê,
   política de segurança, DA-23.
-- `decisions.md` (D-23) — decisão arquitetural: DocumentDiagnosis analisa
+- `docs/decisions/technical_decisions.md` (D-23) — decisão arquitetural: DocumentDiagnosis analisa
   artefatos do scanner, nunca o servidor diretamente.
 - [`docs/modules/audit.md`](../modules/audit.md) — fluxo operacional atualizado.
 - [`docs/modules/audit_file_scanner.md`](../modules/audit_file_scanner.md) —
@@ -226,8 +226,8 @@ desorganizadas, possíveis duplicatas.
 
 **Decisão arquitetural (D-23):** O `DocumentDiagnosis` analisa o
 `file_inventory.json` — nunca acessa o servidor ou caminhos de disco diretamente.
-Ver [`docs/decisions.md`](decisions.md) (D-23) e
-[`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](AUDIT_DEPLOYMENT_AND_OPERATION.md) (seção 12).
+Ver [`docs/decisions/technical_decisions.md`](../decisions/technical_decisions.md) (D-23) e
+[`docs/audit/deployment_and_operation.md`](deployment_and_operation.md) (seção 12).
 
 **Sprint 3 entradas:** `inventory.json` da Fase 1
 
@@ -657,7 +657,7 @@ do gestor, alertas automáticos e comparação com execuções anteriores.
 
 **Status:** Concluída  
 **Entrega:** Fase 1c — Documentação operacional completa  
-**Evidência:** [`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](AUDIT_DEPLOYMENT_AND_OPERATION.md), D-23  
+**Evidência:** [`docs/audit/deployment_and_operation.md`](deployment_and_operation.md), D-23  
 
 ---
 

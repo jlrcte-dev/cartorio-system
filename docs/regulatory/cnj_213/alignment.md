@@ -35,7 +35,7 @@ módulo produz evidências, diagnósticos e artefatos que a serventia usa para:
 | Fase 9 — Motor de riscos | Todos | `risk_matrix.md`, `action_plan.md` |
 | Fase 10 — Dossiê | D-01 a D-05 (dossiê e portabilidade) | `dossier_index.json` |
 
-> Códigos de requisito referem-se à `CNJ_213_COMPLIANCE_PLAN.md`.
+> Códigos de requisito referem-se à `compliance_plan.md` (neste diretório).
 
 ---
 
@@ -60,7 +60,7 @@ módulo produz evidências, diagnósticos e artefatos que a serventia usa para:
 **Como o módulo apoia:**
 - Fase 4 verifica se há registros de testes anteriores (por nome/data de arquivos)
 - Gera checklist de pré-requisitos para o teste
-- Fornece modelo de ata de restauração (ver `TECHNICAL_DOSSIER_STRUCTURE.md`)
+- Fornece modelo de ata de restauração (ver `../../readiness/technical_dossier_structure.md`)
 - O teste em si é executado manualmente — o módulo prepara e documenta
 
 ---
@@ -111,7 +111,7 @@ hora, operação e proteção contra alteração.
 - Fase 10 consolida todos os artefatos das fases anteriores
 - Gera `dossier_index.json` com hash SHA-256 de cada documento
 - Produz `dossier_report.md` com resumo executivo
-- Verifica completude em relação ao `VISITATION_READINESS_CHECKLIST.md`
+- Verifica completude em relação ao `../../readiness/visitation_readiness_checklist.md`
 - Todos os artefatos são assinados digitalmente ou têm hash registrado
 
 ---

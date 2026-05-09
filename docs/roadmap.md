@@ -1,10 +1,10 @@
 # Roadmap
 
 > Para o roadmap estratégico completo de adequação ao Provimento CNJ nº 213/2026
-> (Classe 3), ver [`docs/ROADMAP_CNJ213.md`](ROADMAP_CNJ213.md).
+> (Classe 3), ver [`docs/regulatory/cnj_213/roadmap.md`](regulatory/cnj_213/roadmap.md).
 >
 > Para o roadmap detalhado do Módulo de Auditoria (12 fases + Sprint 1),
-> ver [`docs/AUDIT_MODULE_ROADMAP.md`](AUDIT_MODULE_ROADMAP.md).
+> ver [`docs/audit/module_roadmap.md`](audit/module_roadmap.md).
 
 ---
 
@@ -62,7 +62,7 @@ Ver [`docs/modules/audit_findings.md`](modules/audit_findings.md).
 
 Analisa o `file_inventory.json` coletado na Sprint 1 para identificar
 padrões problemáticos. **Entrada: artefatos do scanner — não o servidor diretamente.**
-(Ver decisão D-23 em [`docs/decisions.md`](decisions.md).)
+(Ver decisão D-23 em [`docs/decisions/technical_decisions.md`](decisions/technical_decisions.md).)
 
 - Módulo `app/modules/audit/diagnosis/`
 - `DocumentDiagnosis.from_inventory(path)` — recebe inventory, valida hash
@@ -72,11 +72,11 @@ padrões problemáticos. **Entrada: artefatos do scanner — não o servidor dir
 
 Pré-requisito: executar scanner no acervo real da serventia ao menos uma vez
 antes de iniciar a sprint. Ver procedimento em
-[`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](AUDIT_DEPLOYMENT_AND_OPERATION.md).
+[`docs/audit/deployment_and_operation.md`](audit/deployment_and_operation.md).
 
 ### Sprints futuras (Fases 2-10)
 
-Ver [`docs/AUDIT_MODULE_ROADMAP.md`](AUDIT_MODULE_ROADMAP.md) para todas as 12 fases.
+Ver [`docs/audit/module_roadmap.md`](audit/module_roadmap.md) para todas as 12 fases.
 
 ---
 

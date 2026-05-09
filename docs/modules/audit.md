@@ -23,10 +23,10 @@ Ele permite:
 A construção é incremental e **read-only first**: cada fase entrega valor utilizável
 ao final do desenvolvimento, e a fase inicial não modifica nenhum arquivo do servidor.
 
-Ver [`docs/AUDIT_MODULE_ROADMAP.md`](../AUDIT_MODULE_ROADMAP.md) para o roadmap
+Ver [`docs/audit/module_roadmap.md`](../audit/module_roadmap.md) para o roadmap
 detalhado com todas as 12 fases, Sprint 1 e critérios de aceite.
 
-Ver [`docs/AUDIT_READ_ONLY_POLICY.md`](../AUDIT_READ_ONLY_POLICY.md) para a política
+Ver [`docs/audit/read_only_policy.md`](../audit/read_only_policy.md) para a política
 de operação read-only e o que o sistema pode e não pode fazer.
 
 ---
@@ -117,9 +117,9 @@ app/modules/audit/
 Para saber como executar o scanner no servidor real, organizar artefatos,
 gerar evidências e executar o diagnóstico, ver:
 
-- [`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](../AUDIT_DEPLOYMENT_AND_OPERATION.md)
+- [`docs/audit/deployment_and_operation.md`](../audit/deployment_and_operation.md)
   — procedimento completo, modos de execução, checklists, fluxo de evidências
-- [`docs/decisions.md`](../decisions.md) (D-23) — decisão arquitetural: DocumentDiagnosis
+- [`docs/decisions/technical_decisions.md`](../decisions/technical_decisions.md) (D-23) — decisão arquitetural: DocumentDiagnosis
   analisa artefatos, não o servidor diretamente
 - [`docs/modules/audit_document_diagnosis_execution.md`](audit_document_diagnosis_execution.md)
   — guia completo para executar DocumentDiagnosis em dados reais, validar candidatos
@@ -153,7 +153,7 @@ os artefatos gerados pelo scanner. Ver D-23 em `decisions.md`.
 72 testes passando. Validado em ambiente real (1.539 arquivos, 0,428 s).
 Ver guia completo em [`audit_file_scanner.md`](audit_file_scanner.md).
 
-Para executar no servidor real, ver [`docs/AUDIT_DEPLOYMENT_AND_OPERATION.md`](../AUDIT_DEPLOYMENT_AND_OPERATION.md).
+Para executar no servidor real, ver [`docs/audit/deployment_and_operation.md`](../audit/deployment_and_operation.md).
 
 ---
 
@@ -315,9 +315,9 @@ exports/audit/
 
 | Documento | Conteúdo |
 | ----------- | ---------- |
-| [`AUDIT_MODULE_ROADMAP.md`](../AUDIT_MODULE_ROADMAP.md) | Roadmap detalhado: 12 fases, Sprint 1 completa |
-| [`AUDIT_READ_ONLY_POLICY.md`](../AUDIT_READ_ONLY_POLICY.md) | Política de operação: o que pode e não pode |
-| [`CNJ_213_ALIGNMENT.md`](../CNJ_213_ALIGNMENT.md) | Como o módulo apoia a adequação ao Provimento |
-| [`RISK_REGISTER_MODEL.md`](../RISK_REGISTER_MODEL.md) | Modelo de campos para AuditFinding |
-| [`OPERATING_FLOWS_AUDIT_PLAN.md`](../OPERATING_FLOWS_AUDIT_PLAN.md) | Plano de auditoria de fluxos operacionais |
+| [`audit/module_roadmap.md`](../audit/module_roadmap.md) | Roadmap detalhado: 12 fases, Sprint 1 completa |
+| [`audit/read_only_policy.md`](../audit/read_only_policy.md) | Política de operação: o que pode e não pode |
+| [`regulatory/cnj_213/alignment.md`](../regulatory/cnj_213/alignment.md) | Como o módulo apoia a adequação ao Provimento |
+| [`quality/risk_register_model.md`](../quality/risk_register_model.md) | Modelo de campos para AuditFinding |
+| [`readiness/operating_flows_audit_plan.md`](../readiness/operating_flows_audit_plan.md) | Plano de auditoria de fluxos operacionais |
 | [`operations/engegraph.md`](../operations/engegraph.md) | Contexto e pendências técnicas do Engegraph |

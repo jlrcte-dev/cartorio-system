@@ -386,7 +386,7 @@ roadmap de integração entre `audit`, `retention`, `lgpd` e `compliance`.
 
 Documentos produzidos:
 
-- [CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md](../CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md)
+- [CNJ_213_REGULATORY_INTEGRATION_BLUEPRINT.md](../regulatory/cnj_213/regulatory_integration_blueprint.md)
   — fronteiras, fluxos conceituais, modelos futuros, roadmap
 - [ADR-001 — ComplianceEvidence como entidade central](../decisions/ADR-001-compliance-evidence-ownership.md)
   — `ComplianceEvidence` pertence ao módulo `compliance`; outros módulos são

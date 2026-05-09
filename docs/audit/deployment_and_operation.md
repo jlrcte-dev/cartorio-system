@@ -630,11 +630,11 @@ aqui para que a Sprint 3 não os antecipe.
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [`AUDIT_MODULE_ROADMAP.md`](AUDIT_MODULE_ROADMAP.md) | Roadmap das 12 fases com critérios de aceite |
-| [`AUDIT_READ_ONLY_POLICY.md`](AUDIT_READ_ONLY_POLICY.md) | Política formal de operação read-only |
-| [`modules/audit.md`](modules/audit.md) | Visão geral do módulo, princípios, estrutura de código |
-| [`modules/audit_file_scanner.md`](modules/audit_file_scanner.md) | Documentação técnica do scanner (CLI, saídas, exemplos) |
-| [`modules/audit_findings.md`](modules/audit_findings.md) | Documentação técnica dos AuditFindings (endpoints, campos) |
-| [`CNJ_213_ALIGNMENT.md`](CNJ_213_ALIGNMENT.md) | Como o módulo apoia a adequação ao Provimento |
-| [`decisions.md`](decisions.md) | Registro de decisões técnicas (ver D-23) |
-| [`roadmap.md`](roadmap.md) | Roadmap geral do projeto com estado atual das sprints |
+| [`module_roadmap.md`](module_roadmap.md) | Roadmap das 12 fases com critérios de aceite |
+| [`read_only_policy.md`](read_only_policy.md) | Política formal de operação read-only |
+| [`../modules/audit.md`](../modules/audit.md) | Visão geral do módulo, princípios, estrutura de código |
+| [`../modules/audit_file_scanner.md`](../modules/audit_file_scanner.md) | Documentação técnica do scanner (CLI, saídas, exemplos) |
+| [`../modules/audit_findings.md`](../modules/audit_findings.md) | Documentação técnica dos AuditFindings (endpoints, campos) |
+| [`../regulatory/cnj_213/alignment.md`](../regulatory/cnj_213/alignment.md) | Como o módulo apoia a adequação ao Provimento |
+| [`../decisions/technical_decisions.md`](../decisions/technical_decisions.md) | Registro de decisões técnicas (ver D-23) |
+| [`../roadmap.md`](../roadmap.md) | Roadmap geral do projeto com estado atual das sprints |
