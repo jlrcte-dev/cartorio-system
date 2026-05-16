@@ -87,3 +87,49 @@ exports/audit/
 # ---------------------------------------------------------------------------
 apresentacao_executiva_cartorio_system_mvp.html
 docs/reports/*.pdf
+
+# ---------------------------------------------------------------------------
+# Módulo RI — dados operacionais locais — NUNCA versionar
+# Matrículas, Indicadores Reais, exports e bancos do inventário RI.
+# ---------------------------------------------------------------------------
+
+# Bancos de dados locais do RI
+*.duckdb
+_local_data/ri_inventory/
+data/raw/
+data/processed/
+data/matriculas/
+data/indicadores_reais/
+
+# Relatórios e exports operacionais do RI
+exports/ri/
+exports/matriculas/
+reports/generated/
+relatorios/generated/
+outputs/
+tmp/
+temp/
+scratch/
+.ai_tmp/
+
+# Arquivos de análise com dados reais de matrículas/Indicadores Reais
+*_matriculas*.json
+*_matriculas*.csv
+*_indicadores*.json
+*_indicadores*.csv
+*_rural*.json
+*_rural*.csv
+*_urbanas*.json
+*_urbanas*.csv
+*_verificacao*.csv
+*_consolidado*.csv
+*_ieri*.json
+*_ieri*.csv
+*_sig_ri*.json
+*_sig_ri*.csv
+*_sanitized*.json
+*_sanitized*.csv
+*_summary*.md
+
+# Scripts local_tools: __pycache__ coberto acima (__pycache__/)
+# Os scripts .py em scripts/local_tools/ são código — versionados normalmente
