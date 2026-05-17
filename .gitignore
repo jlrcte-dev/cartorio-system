@@ -36,11 +36,14 @@ htmlcov/
 # Mypy
 .mypy_cache/
 
-# IDEs
+# IDEs e ferramentas de desenvolvimento local
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# Claude Code — estado local da sessão (permissões, cache, configuração de projeto)
+.claude/
 
 # macOS
 .DS_Store
