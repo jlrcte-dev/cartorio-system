@@ -46,6 +46,11 @@ Arquivo: [`technical_decisions.md`](technical_decisions.md)
 | [ADR-001](ADR-001-compliance-evidence-ownership.md) | ComplianceEvidence como entidade central de evidência regulatória | Aceito |
 | [ADR-002](ADR-002-weak-references-between-regulatory-modules.md) | Referências fracas entre módulos regulatórios | Aceito |
 | [ADR-003](ADR-003-document-registry-ownership.md) | Document Registry — ownership e fronteiras do módulo | Aceito |
+| [ADR-004](ADR-004-separacao-knowledge-base-ai-gateway.md) | Separação entre Knowledge Base e AI Gateway | Proposto |
+| [ADR-005](ADR-005-knowledge-base-antes-de-ia-externa.md) | Knowledge Base Normativa Precede Qualquer IA Externa | Proposto |
+| [ADR-006](ADR-006-dados-permitidos-e-proibidos-para-ia.md) | Política Inicial de Dados para Uso em IA | Proposto |
+| [ADR-007](ADR-007-mcp-e-agentes-fora-das-fases-iniciais.md) | MCP e Agentes Autônomos Fora das Fases Iniciais | Proposto |
+| [ADR-008](ADR-008-saida-de-ia-e-rascunho-sujeito-a-revisao.md) | Toda Saída de IA é Rascunho Sujeito à Revisão Humana | Proposto |
 
 ---
 
