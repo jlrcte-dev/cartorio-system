@@ -2,7 +2,7 @@
 
 **Status:** MINUTA OPERACIONAL — DEPENDE DE VALIDAÇÃO PRÁTICA no Portal RI Digital  
 **Referência:** Anexo III da Manifestação — PROAD nº 202509000672377  
-**Versão:** 1.0 | **Aprovação:** Márcia Maria da Silva Costa Teixeira  
+**Versão:** 1.0 | **Aprovação prevista:** Márcia Maria da Silva Costa Teixeira  
 **Atualizado em:** 2026-05-16
 
 > **Atenção:** Este POP é uma minuta operacional. Os fluxos devem ser validados na prática após o início das operações no Portal RI Digital. Campos marcados com `[___]` devem ser preenchidos antes da aprovação final.
@@ -56,10 +56,10 @@ Aplica-se a todas as atividades do setor de Registro de Imóveis relacionadas ao
 
 | Função | Nome |
 |---|---|
-| Responsável geral / Aprovação | Márcia Maria da Silva Costa Teixeira (Oficial Registradora e Tabeliã) |
-| Responsável operacional principal | `[NOME_DO_COLABORADOR_DESIGNADO]` — Portaria nº 01/2026-RI |
-| Responsável substituto | `[___]` — Portaria nº 01/2026-RI |
-| Profissional técnico habilitado (SIG-RI) | `[___]` — a contratar/credenciar junto ao ONR |
+| Responsável geral / Autoridade aprovadora | Márcia Maria da Silva Costa Teixeira (Oficial Registradora e Tabeliã) |
+| Responsável operacional principal | André (Suboficial) — Portaria nº 01/2026-RI |
+| Responsável substituto | [a designar] — a ser definido pela Oficial Registradora; enquanto não designado, supervisão direta pela Oficial Registradora |
+| Profissional técnico habilitado (SIG-RI) | [a confirmar] |
 
 ---
 
@@ -67,7 +67,7 @@ Aplica-se a todas as atividades do setor de Registro de Imóveis relacionadas ao
 
 **Para o IERI-e (alimentação mensal):**
 - Livro 1 (Protocolo) — registro de todos os atos praticados no mês
-- Livro 2 (Indicador Real) — dados dos imóveis
+- Livro 4 (Indicador Real) — dados dos imóveis
 - Sistema Engegraph — exportação dos atos registrais conforme layout do ONR
 - Matrículas e transcrições — especialidade objetiva e subjetiva
 
@@ -121,7 +121,7 @@ Preencher e arquivar a cada envio:
 a) Registrar no Relatório Mensal Interno;  
 b) Corrigir antes do envio, se possível;  
 c) Se a inconsistência decorrer de limitação do Engegraph, comunicar formalmente ao fornecedor e ao ONR;  
-d) Enviar os dados disponíveis dentro do prazo e complementar no mês seguinte.
+d) Submeter apenas dados que possam ser validados conforme o canal operacional do ONR. Quando houver impedimento técnico, registrar a pendência, buscar orientação formal do ONR/fornecedor e manter evidência no Dossiê IERI-e/SIG-RI.
 
 ---
 
@@ -178,14 +178,30 @@ O envio observa o Manual Técnico Operacional ONR v1.3 (25/02/2026). Canais disp
 
 ---
 
-## 13. Revisão e aprovação
+## 13. Rotina correlata — ITN 003/2025
+
+> **Status:** Pendente de validação operacional — fluxo a ser confirmado junto ao ONR e ao fornecedor Engegraph.
+
+A ITN 003/2025 (Instrução Técnica Normativa — módulo "Incluir Atos e Dados") é obrigação correlata e distinta do IERI-e/SIG-RI, com vigência a partir de 09/03/2026. Aplica-se a imóveis rurais e imóveis urbanos da União.
+
+| Etapa | Ação |
+|---|---|
+| T.1 | Identificar os atos registrais abrangidos pela ITN 003/2025 (imóveis rurais e urbanos da União) |
+| T.2 | Verificar, para cada ato, se o imóvel é rural ou urbano da União conforme os critérios da ITN |
+| T.3 | Conferir os campos obrigatórios no módulo "Incluir Atos e Dados" do Portal RI Digital |
+| T.4 | Registrar o envio realizado ou o impedimento técnico no Dossiê IERI-e/SIG-RI |
+| T.5 | Revisar mensalmente as pendências relacionadas à ITN 003/2025 |
+
+---
+
+## 14. Revisão e aprovação
 
 | Item | Dado |
 |---|---|
 | Versão | 1.0 |
-| Data de elaboração | `[mês/2026]` |
-| Próxima revisão | `[mai/2027]` ou quando o ONR publicar nova versão do Manual Técnico |
-| Aprovação | Márcia Maria da Silva Costa Teixeira — Oficial Registradora e Tabeliã |
+| Data de elaboração | [mês/2026] |
+| Próxima revisão | [mai/2027] ou quando o ONR publicar nova versão do Manual Técnico |
+| Aprovação prevista | Márcia Maria da Silva Costa Teixeira — Oficial Registradora e Tabeliã |
 
 ---
 

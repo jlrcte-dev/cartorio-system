@@ -1,10 +1,10 @@
 # Minuta — Portaria Interna nº 01/2026-RI
 
-**Status:** MINUTA — Substituir `[NOME_DO_COLABORADOR_DESIGNADO]` e assinar em 18/05/2026  
+**Status:** MINUTA — Preencher campo de responsável substituto ([a designar]) e assinar em 18/05/2026  
 **Referência:** Anexo II da Manifestação — PROAD nº 202509000672377  
 **Data prevista de expedição:** 18/05/2026
 
-> **Atenção:** Este documento é uma minuta. Antes da assinatura, substituir todos os campos marcados com `[___]` e `[NOME_DO_COLABORADOR_DESIGNADO]` pelos dados reais.
+> **Atenção:** Este documento é uma minuta. Antes da assinatura, preencher os campos pendentes: responsável substituto ([a designar]) e data de elaboração. O responsável principal (André — Sub-Oficial) já está designado pela Portaria nº 01/2026-RI.
 
 ---
 
@@ -50,14 +50,14 @@ A **OFICIAL REGISTRADORA E TABELIÃ** do Tabelionato de Notas, de Protesto de T�
 - III. A inserção gradual dos imóveis georreferenciados no SIG-RI;
 - IV. O saneamento progressivo das irregularidades identificadas;
 - V. A produção e guarda de evidências auditáveis de cumprimento;
-- VI. A elaboração de relatórios mensais internos e semestrais para a Corregedoria.
+- VI. A elaboração de relatórios mensais internos e de relatório semestral de cumprimento, com arquivamento no Dossiê IERI-e/SIG-RI e apresentação à Corregedoria quando solicitado ou quando houver determinação específica.
 
 ---
 
 **Art. 2º** DESIGNAR como **RESPONSÁVEL OPERACIONAL PRINCIPAL** pelo cumprimento das obrigações do IERI-e e do SIG-RI o(a) serventuário(a):
 
-> **Nome:** `[NOME_DO_COLABORADOR_DESIGNADO]`  
-> **Cargo:** `[___]`
+> **Nome:** André  
+> **Cargo:** Sub-Oficial
 
 **Parágrafo único.** O(A) responsável principal ficará incumbido(a) de:
 
@@ -73,8 +73,10 @@ A **OFICIAL REGISTRADORA E TABELIÃ** do Tabelionato de Notas, de Protesto de T�
 
 **Art. 3º** DESIGNAR como **RESPONSÁVEL SUBSTITUTO(A)**, para atuar na ausência ou impedimento do responsável principal:
 
-> **Nome:** `[___]`  
-> **Cargo:** `[___]`
+> **Nome:** [a designar] — a ser definido pela Oficial Registradora  
+> **Cargo:** [a definir]
+
+**Parágrafo único.** Enquanto não houver substituto formalmente designado, a Oficial Registradora exercerá a supervisão direta em caso de ausência ou impedimento do responsável principal designado no art. 2º.
 
 ---
 
@@ -82,7 +84,7 @@ A **OFICIAL REGISTRADORA E TABELIÃ** do Tabelionato de Notas, de Protesto de T�
 
 - I. Supervisão geral do cumprimento das obrigações;
 - II. Revisão e aprovação dos dados antes de cada envio mensal ao IERI-e;
-- III. Assinatura dos relatórios semestrais a serem enviados à Corregedoria;
+- III. Assinatura dos relatórios semestrais de cumprimento, a serem arquivados no Dossiê IERI-e/SIG-RI e apresentados à Corregedoria quando solicitado ou quando houver determinação específica;
 - IV. Decisão sobre os procedimentos de saneamento de irregularidades;
 - V. Revisão e atualização anual do Plano de Ação.
 
@@ -90,15 +92,15 @@ A **OFICIAL REGISTRADORA E TABELIÃ** do Tabelionato de Notas, de Protesto de T�
 
 **Art. 5º** FIXAR como **ROTINA MENSAL** para cumprimento do IERI-e:
 
-- I. Coleta dos dados dos atos registrais praticados no mês anterior — prazo: até o dia `[___]` de cada mês;
-- II. Conferência interna dos dados — prazo: até o dia `[___]` de cada mês;
+- I. Coleta dos dados dos atos registrais praticados no mês anterior — prazo: até o dia [10] de cada mês;
+- II. Conferência interna dos dados — prazo: até o dia [20] de cada mês;
 - III. Envio ao ONR conforme layout e especificações técnicas — prazo: até o último dia útil do mês subsequente (art. 5º, §único, Provimento CNJ nº 195/2025);
 - IV. Arquivamento do comprovante de envio e da planilha de conferência — no mesmo dia do envio;
 - V. Elaboração do relatório mensal interno de cumprimento — até 5 dias úteis após o envio.
 
 ---
 
-**Art. 6º** DETERMINAR a elaboração de **RELATÓRIO SEMESTRAL DE CUMPRIMENTO**, a ser arquivado na serventia e disponibilizado à Corregedoria-Geral da Justiça mediante solicitação:
+**Art. 6º** DETERMINAR a elaboração de **RELATÓRIO SEMESTRAL DE CUMPRIMENTO**, com arquivamento no Dossiê IERI-e/SIG-RI e apresentação à Corregedoria-Geral da Justiça quando solicitado ou quando houver determinação específica:
 
 | Item | Dado |
 |---|---|
@@ -148,5 +150,5 @@ Comarca de Goianápolis — Estado de Goiás
 
 | Função | Nome | Data | Assinatura |
 |---|---|---|---|
-| Responsável principal | `[NOME_DO_COLABORADOR_DESIGNADO]` | ___________ | ___________ |
-| Responsável substituto | `[___]` | ___________ | ___________ |
+| Responsável principal | André | ___________ | ___________ |
+| Responsável substituto | [a designar] | ___________ | ___________ |

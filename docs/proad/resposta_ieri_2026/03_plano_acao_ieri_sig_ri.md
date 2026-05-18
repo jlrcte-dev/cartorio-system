@@ -18,7 +18,7 @@
 | Comarca / Distrito | Comarca de Goianápolis / Distrito Judiciário de Terezópolis |
 | PROAD | Nº 202509000672377 |
 | Norma de referência | Provimento CNJ nº 195/2025 (vigente a partir de 01/09/2025) |
-| Data de elaboração | `[___] de [mês] de 2026` |
+| Data de elaboração | [___] de [mês] de 2026 |
 | Versão | 1.0 |
 
 ---
@@ -27,7 +27,7 @@
 
 O presente Plano de Ação tem por objetivos:
 
-**2.1.** Adequar a serventia às exigências do Provimento CNJ nº 195/2025, mediante:
+**2.1.** Promover a adequação progressiva da serventia às exigências do Provimento CNJ nº 195/2025, mediante:
 
 a) Alimentação mensal ao ONR dos atos registrais praticados, conforme layout e especificações técnicas definidos pela entidade (art. 5º e parágrafo único);
 
@@ -55,38 +55,39 @@ O levantamento diagnóstico encontra-se **em andamento**. Os campos indicados co
 
 | Livro | Situação |
 |---|---|
-| Livro 1 — Protocolo (em uso) | `[a apurar — Nº atual]` |
-| Livro 2 — Indicador Real | `[a apurar — situação]` |
-| Livro 3 — Indicador Pessoal | `[a apurar — situação]` |
-| Livro 4 — Registro Geral (Matrículas) | `[a apurar — Nº atual]` |
-| Outros livros auxiliares | `[a apurar]` |
+| Livro 1 — Protocolo (em uso) | [a apurar — Nº atual] |
+| Livro 2 — Registro Geral / Matrículas | [a apurar — Nº atual] |
+| Livro 3 — Registro Auxiliar | [a apurar — situação] |
+| Livro 4 — Indicador Real | [a apurar — situação] |
+| Livro 5 — Indicador Pessoal | [a apurar — situação] |
+| Livros auxiliares / controles correlatos | [a apurar] |
 
 **Matrículas:**
 
 | Campo | Situação |
 |---|---|
-| Total de matrículas abertas no acervo | `[a apurar]` |
-| Matrículas ativas (não encerradas) | `[a apurar]` |
-| Matrículas encerradas | `[a apurar]` |
-| Matrículas com imóvel georreferenciado | `[a apurar]` |
+| Total de matrículas abertas no acervo | [a apurar] |
+| Matrículas ativas (não encerradas) | [a apurar] |
+| Matrículas encerradas | [a apurar] |
+| Matrículas com imóvel georreferenciado | [a apurar] |
 
 **Transcrições:**
 
 | Campo | Situação |
 |---|---|
-| Total de transcrições no acervo | `[a apurar]` |
-| Transcrições com imóvel sem matrícula aberta | `[a apurar]` |
+| Total de transcrições no acervo | [a apurar] |
+| Transcrições com imóvel sem matrícula aberta | [a apurar] |
 
 ### 3.2. Situação dos imóveis georreferenciados
 
 | Categoria | Quantidade |
 |---|---|
-| Rurais com georreferenciamento certificado INCRA/SIGEF | `[a apurar]` |
-| Rurais com georreferenciamento sem certificação INCRA | `[a apurar]` |
-| Urbanos georreferenciados via Reurb | `[a apurar]` |
-| Urbanos georreferenciados fora do Reurb | `[a apurar]` |
-| Imóveis sem qualquer georreferenciamento | `[a apurar]` |
-| **Total de imóveis georreferenciados (estimativa)** | **`[a apurar]`** |
+| Rurais com georreferenciamento certificado INCRA/SIGEF | [a apurar] |
+| Rurais com georreferenciamento sem certificação INCRA | [a apurar] |
+| Urbanos georreferenciados via Reurb | [a apurar] |
+| Urbanos georreferenciados fora do Reurb | [a apurar] |
+| Imóveis sem qualquer georreferenciamento | [a apurar] |
+| **Total de imóveis georreferenciados (estimativa)** | **[a apurar]** |
 
 ### 3.3. Sistema de automação e integração
 
@@ -103,20 +104,20 @@ O levantamento diagnóstico encontra-se **em andamento**. Os campos indicados co
 
 | Tipo | Quantidade |
 |---|---|
-| Sobreposições de área identificadas | `[a apurar]` |
-| Duplicidades de matrícula identificadas | `[a apurar]` |
-| Transcrições a encerrar gradualmente | `[a apurar]` |
-| Matrículas com especialidade objetiva incompleta | `[a apurar]` |
-| Outras irregularidades identificadas | `[a apurar]` |
+| Sobreposições de área identificadas | [a apurar] |
+| Duplicidades de matrícula identificadas | [a apurar] |
+| Transcrições a encerrar gradualmente | [a apurar] |
+| Matrículas com especialidade objetiva incompleta | [a apurar] |
+| Outras irregularidades identificadas | [a apurar] |
 
 ### 3.5. Capacidade operacional
 
 | Item | Situação |
 |---|---|
-| Serventuários do Registro de Imóveis | `[a preencher — nº de colaboradores]` |
-| Responsável designado para IERI-e/SIG-RI | `[NOME_DO_COLABORADOR_DESIGNADO]` — designado pela Portaria nº 01/2026-RI de 18/05/2026 |
-| Substituto em caso de ausência | `[a designar por Portaria]` |
-| Profissional técnico habilitado/credenciado ONR | Em processo de identificação e contratação |
+| Serventuários do Registro de Imóveis | 1 colaborador |
+| Responsável designado para IERI-e/SIG-RI | André (Suboficial) — designado pela Portaria nº 01/2026-RI de 18/05/2026 |
+| Substituto em caso de ausência | [a designar] — a ser definido pela Oficial Registradora; enquanto não designado, supervisão direta pela Oficial Registradora |
+| Profissional técnico habilitado/credenciado ONR | [a confirmar] |
 
 ---
 
@@ -132,7 +133,7 @@ O levantamento diagnóstico encontra-se **em andamento**. Os campos indicados co
 | 6 | Inserção gradual dos imóveis georreferenciados no SIG-RI | Operadores + profissional habilitado | 0–48 meses (até 01/09/2029) | Registros de inserção + relatório semestral |
 | 7 | Identificação e priorização de irregularidades do legado | Oficial + equipe técnica | 6–24 meses | Relatório de irregularidades |
 | 8 | Saneamento progressivo das irregularidades | Oficial Registradora | 6–48 meses (até 01/09/2029) | Autos de procedimento + atos de saneamento |
-| 9 | Elaboração e envio de relatório semestral | Oficial Registradora | A cada 6 meses (1º: nov/2026) | Relatório semestral arquivado |
+| 9 | Elaboração de relatório semestral de cumprimento, com arquivamento no Dossiê IERI-e/SIG-RI e apresentação à Corregedoria quando solicitado ou quando houver determinação específica | Oficial Registradora | A cada 6 meses (1º: nov/2026) | Relatório semestral arquivado no Dossiê IERI-e/SIG-RI |
 | 10 | Revisão e atualização do Plano de Ação | Oficial Registradora | Anual (1ª revisão: mai/2027) | Plano de Ação revisado (versão 2.0) |
 
 ---
@@ -208,7 +209,7 @@ A serventia reconhece a existência da Instrução Técnica Normativa ITN 003/20
 | Início de obrigatoriedade | 09/03/2026 |
 | Canal | Módulo "Incluir Atos e Dados" no Portal RI Digital |
 
-A serventia incluirá rotina interna específica para a ITN 003/2025 (itens a–e do POP-RI-001).
+A serventia incluirá rotina interna específica para a ITN 003/2025, conforme Seção 13 do POP-RI-001 — Rotina correlata — ITN 003/2025 (pendente de validação operacional).
 
 ### 6.4. Pendências externas registradas
 
@@ -226,14 +227,14 @@ A serventia incluirá rotina interna específica para a ITN 003/2025 (itens a–
 | Código | Indicador | Meta |
 |---|---|---|
 | IND-01 | % de atos do mês alimentados ao IERI-e no prazo | 100% |
-| IND-02 | Número de matrículas do acervo analisadas no levantamento diagnóstico | `[a definir]` |
-| IND-03 | % do legado levantado e diagnosticado | `[a definir]` |
-| IND-04 | % do legado saneado (irregularidades corrigidas / total identificado) | `[a definir]` |
-| IND-05 | Número de imóveis georreferenciados identificados no acervo | `[a apurar]` |
-| IND-06 | Número de imóveis georreferenciados inseridos/validados no SIG-RI | `[a definir]` |
-| IND-07 | % do acervo georreferenciado inserido no SIG-RI | `[a definir]` |
-| IND-08 | Número de irregularidades (sobreposições, duplicidades etc.) identificadas | `[a apurar]` |
-| IND-09 | Número de irregularidades saneadas | `[a definir]` |
+| IND-02 | Número de matrículas do acervo analisadas no levantamento diagnóstico | [a definir] |
+| IND-03 | % do legado levantado e diagnosticado | [a definir] |
+| IND-04 | % do legado saneado (irregularidades corrigidas / total identificado) | [a definir] |
+| IND-05 | Número de imóveis georreferenciados identificados no acervo | [a apurar] |
+| IND-06 | Número de imóveis georreferenciados inseridos/validados no SIG-RI | [a definir] |
+| IND-07 | % do acervo georreferenciado inserido no SIG-RI | [a definir] |
+| IND-08 | Número de irregularidades (sobreposições, duplicidades etc.) identificadas | [a apurar] |
+| IND-09 | Número de irregularidades saneadas | [a definir] |
 | IND-10 | Relatórios semestrais emitidos e arquivados | Conforme calendário |
 
 ---
@@ -245,11 +246,11 @@ A serventia incluirá rotina interna específica para a ITN 003/2025 (itens a–
 | Função | Nome |
 |---|---|
 | Responsável geral / Supervisão | Márcia Maria da Silva Costa Teixeira |
-| Responsável operacional — IERI-e | `[NOME_DO_COLABORADOR_DESIGNADO]` (Portaria 01/2026-RI, 18/05/2026) |
-| Responsável operacional — SIG-RI | `[NOME_DO_COLABORADOR_DESIGNADO]` ou designado específico |
+| Responsável operacional — IERI-e | André (Portaria 01/2026-RI, 18/05/2026) |
+| Responsável operacional — SIG-RI | André ou designado específico |
 | Conferência e validação mensal | Oficial Registradora |
-| Substituto em caso de ausência | `[a designar na Portaria]` |
-| Profissional técnico habilitado (SIG-RI) | Em processo de identificação e contratação |
+| Substituto em caso de ausência | [a designar] — a ser definido pela Oficial Registradora; enquanto não designado, supervisão direta pela Oficial Registradora |
+| Profissional técnico habilitado (SIG-RI) | [a confirmar] |
 
 ### 8.2. Reuniões e monitoramento
 
@@ -264,18 +265,18 @@ A serventia incluirá rotina interna específica para a ITN 003/2025 (itens a–
 | Item | Definição |
 |---|---|
 | Pasta física | Dossiê IERI-e/SIG-RI — na serventia |
-| Pasta digital | `[a definir — servidor local ou nuvem institucional]` |
+| Pasta digital | [a definir — servidor local ou nuvem institucional] |
 | Período de retenção mínimo | 5 anos (ou conforme normativo da Corregedoria) |
 
 ---
 
 ## 9. Declaração de compromisso
 
-Eu, **MÁRCIA MARIA DA SILVA COSTA TEIXEIRA**, na qualidade de Oficial Registradora e Tabeliã desta serventia, declaro que o presente Plano de Ação reflete as medidas que serão adotadas para o integral cumprimento do Provimento CNJ nº 195/2025 e das determinações da Corregedoria do Foro Extrajudicial do Tribunal de Justiça do Estado de Goiás, comprometendo-me a cumprir os prazos, produzir as evidências e manter a governança interna previstas neste documento.
+Eu, **MÁRCIA MARIA DA SILVA COSTA TEIXEIRA**, na qualidade de Oficial Registradora e Tabeliã desta serventia, declaro que o presente Plano de Ação reflete as medidas que serão adotadas para promover a adequação progressiva da serventia ao Provimento CNJ nº 195/2025 e às determinações da Corregedoria do Foro Extrajudicial do Tribunal de Justiça do Estado de Goiás, comprometendo-me a adotar as medidas de cumprimento, produzir as evidências e manter a governança interna previstas neste documento, observadas as confirmações técnicas externas e os dados a serem apurados.
 
 ---
 
-*`[___] de [mês] de 2026`*
+*[___] de [mês] de 2026*
 
 _______________________________________________________________  
 **MÁRCIA MARIA DA SILVA COSTA TEIXEIRA**  

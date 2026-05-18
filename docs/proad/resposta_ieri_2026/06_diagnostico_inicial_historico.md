@@ -1,15 +1,15 @@
 # Relatório de Diagnóstico Inicial do Acervo — Documento Histórico
 
-**Status:** HISTÓRICO  
+**Status:** MINUTA DIAGNÓSTICA PRELIMINAR — DOCUMENTO BASE  
 **Referência:** Anexo IV da Manifestação — PROAD nº 202509000672377  
 **Versão:** 1.0 — Preliminar  
-**Responsável:** `[NOME_DO_COLABORADOR_DESIGNADO]` (após designação pela Portaria nº 01/2026-RI)  
+**Responsável:** André (Portaria nº 01/2026-RI — Suboficial)  
 **Supervisão:** Márcia Maria da Silva Costa Teixeira — Oficial Registradora e Tabeliã
 
 ---
 
 > **AVISO IMPORTANTE:**  
-> Este documento é preservado por valor histórico e como base estrutural do Anexo IV da manifestação ao PROAD. Os campos marcados com `[a apurar]` devem ser preenchidos pelo responsável designado nos **30 dias seguintes à expedição da Portaria nº 01/2026-RI (prevista para 18/05/2026)**.  
+> Este documento constitui a base estrutural do Anexo IV da manifestação ao PROAD, representando o diagnóstico preliminar da situação do acervo antes do levantamento operacional completo. Os campos marcados com `[a apurar]` devem ser preenchidos pelo responsável designado nos **30 dias seguintes à expedição da Portaria nº 01/2026-RI (prevista para 18/05/2026)**.  
 >
 > **Não protocolar este documento como versão final** sem antes preencher todos os campos `[a apurar]` com dados validados diretamente no sistema Engegraph e nos livros do Registro de Imóveis. Conclusões definitivas sobre totais de matrículas, georreferenciamentos e pendências dependem desse levantamento.
 
@@ -41,7 +41,7 @@ e) Registrar limitações atuais e definir próximos passos.
 
 | Campo | Dado |
 |---|---|
-| Acervo histórico | Desde a instalação da serventia `[ano a verificar]` até a data deste relatório |
+| Acervo histórico | Desde a instalação da serventia (2014) até a data deste relatório |
 | Atos correntes | A partir de 01/09/2025 (vigência do Provimento CNJ nº 195/2025) |
 
 ---
@@ -63,11 +63,11 @@ e) Registrar limitações atuais e definir próximos passos.
 
 | Fonte | Situação |
 |---|---|
-| Livros físicos do RI | `[a verificar — acesso aos livros]` |
-| Sistema Engegraph (relatórios) | `[a verificar — exportação e consulta]` |
-| Livro de Protocolo | `[a verificar]` |
-| Indicador Real e Pessoal | `[a verificar]` |
-| SIGEF/INCRA (imóveis rurais) | `[a consultar]` |
+| Livros físicos do RI | [a verificar — acesso aos livros] |
+| Sistema Engegraph (relatórios) | [a verificar — exportação e consulta] |
+| Livro de Protocolo | [a verificar] |
+| Indicador Real e Pessoal | [a verificar] |
+| SIGEF/INCRA (imóveis rurais) | [a consultar] |
 | Portal RI Digital (ONR) | Disponível — acesso verificar |
 
 ---
@@ -78,34 +78,35 @@ e) Registrar limitações atuais e definir próximos passos.
 
 | Livro | Número atual / Situação |
 |---|---|
-| Livro 1 — Protocolo (em uso) | `[a apurar]` |
-| Livro 2 — Indicador Real | `[a apurar]` |
-| Livro 3 — Indicador Pessoal | `[a apurar]` |
-| Livro 4 — Registro Geral (Matrículas) | `[a apurar]` |
-| Outros livros auxiliares | `[a apurar]` |
+| Livro 1 — Protocolo (em uso) | [a apurar] |
+| Livro 2 — Registro Geral / Matrículas | [a apurar] |
+| Livro 3 — Registro Auxiliar | [a apurar] |
+| Livro 4 — Indicador Real | [a apurar] |
+| Livro 5 — Indicador Pessoal | [a apurar] |
+| Livros auxiliares / controles correlatos | [a apurar] |
 
 ### 4.2. Matrículas
 
 | Campo | Quantidade |
 |---|---|
-| Total de matrículas abertas no acervo | `[a apurar]` |
-| Matrículas ativas (não encerradas) | `[a apurar]` |
-| Matrículas encerradas | `[a apurar]` |
-| Matrículas com imóvel georreferenciado | `[a apurar]` |
+| Total de matrículas abertas no acervo | [a apurar] |
+| Matrículas ativas (não encerradas) | [a apurar] |
+| Matrículas encerradas | [a apurar] |
+| Matrículas com imóvel georreferenciado | [a apurar] |
 
 ### 4.3. Transcrições
 
 | Campo | Quantidade |
 |---|---|
-| Total de transcrições no acervo | `[a apurar]` |
-| Transcrições com imóvel sem matrícula aberta | `[a apurar]` |
+| Total de transcrições no acervo | [a apurar] |
+| Transcrições com imóvel sem matrícula aberta | [a apurar] |
 
 ### 4.4. Indicadores
 
 | Campo | Situação |
 |---|---|
-| Indicador Real (atualizado?) | `[a apurar]` |
-| Indicador Pessoal (atualizado?) | `[a apurar]` |
+| Indicador Real (atualizado?) | [a apurar] |
+| Indicador Pessoal (atualizado?) | [a apurar] |
 
 ---
 
@@ -113,12 +114,12 @@ e) Registrar limitações atuais e definir próximos passos.
 
 | Categoria | Quantidade |
 |---|---|
-| Rurais com georreferenciamento certificado INCRA/SIGEF | `[a apurar]` |
-| Rurais com georreferenciamento sem certificação INCRA | `[a apurar]` |
-| Urbanos georreferenciados via Reurb | `[a apurar]` |
-| Urbanos georreferenciados fora do Reurb | `[a apurar]` |
-| Imóveis sem qualquer georreferenciamento | `[a apurar]` |
-| **Total georreferenciados (estimativa)** | **`[a apurar]`** |
+| Rurais com georreferenciamento certificado INCRA/SIGEF | [a apurar] |
+| Rurais com georreferenciamento sem certificação INCRA | [a apurar] |
+| Urbanos georreferenciados via Reurb | [a apurar] |
+| Urbanos georreferenciados fora do Reurb | [a apurar] |
+| Imóveis sem qualquer georreferenciamento | [a apurar] |
+| **Total georreferenciados (estimativa)** | **[a apurar]** |
 
 > **Nota:** A classificação segue os grupos do art. 343-C, II, alíneas a–e do Provimento CNJ nº 195/2025.
 
@@ -128,11 +129,11 @@ e) Registrar limitações atuais e definir próximos passos.
 
 | Tipo de irregularidade | Quantidade |
 |---|---|
-| Sobreposições de área identificadas | `[a apurar]` |
-| Duplicidades de matrícula identificadas | `[a apurar]` |
-| Transcrições a encerrar gradualmente | `[a apurar]` |
-| Matrículas com especialidade objetiva incompleta | `[a apurar]` |
-| Outras irregularidades identificadas | `[a apurar]` |
+| Sobreposições de área identificadas | [a apurar] |
+| Duplicidades de matrícula identificadas | [a apurar] |
+| Transcrições a encerrar gradualmente | [a apurar] |
+| Matrículas com especialidade objetiva incompleta | [a apurar] |
+| Outras irregularidades identificadas | [a apurar] |
 
 ---
 
@@ -140,13 +141,13 @@ e) Registrar limitações atuais e definir próximos passos.
 
 | Tipo de ato | Quantidade (set/2025–abr/2026) |
 |---|---|
-| Registros de transmissão | `[a apurar]` |
-| Averbações diversas | `[a apurar]` |
-| Registros de ônus e gravames | `[a apurar]` |
-| Abertura de novas matrículas | `[a apurar]` |
-| Encerramento de matrículas | `[a apurar]` |
-| Retificações | `[a apurar]` |
-| **Total de atos correntes** | **`[a apurar]`** |
+| Registros de transmissão | [a apurar] |
+| Averbações diversas | [a apurar] |
+| Registros de ônus e gravames | [a apurar] |
+| Abertura de novas matrículas | [a apurar] |
+| Encerramento de matrículas | [a apurar] |
+| Retificações | [a apurar] |
+| **Total de atos correntes** | **[a apurar]** |
 
 ---
 
@@ -164,15 +165,15 @@ e) Registrar limitações atuais e definir próximos passos.
 
 | Ação | Prazo | Responsável |
 |---|---|---|
-| Preencher todos os campos `[a apurar]` | 30 dias após portaria (18/05/2026) | `[NOME_DO_COLABORADOR_DESIGNADO]` |
-| Validar dados com Engegraph e livros físicos | 30 dias após portaria | `[NOME_DO_COLABORADOR_DESIGNADO]` |
-| Elaborar versão 2.0 do Diagnóstico com dados reais | 30 dias após portaria | `[NOME_DO_COLABORADOR_DESIGNADO]` |
+| Preencher todos os campos [a apurar] | 30 dias após portaria (18/05/2026) | André (Portaria nº 01/2026-RI) |
+| Validar dados com Engegraph e livros físicos | 30 dias após portaria | André (Portaria nº 01/2026-RI) |
+| Elaborar versão 2.0 do Diagnóstico com dados reais | 30 dias após portaria | André (Portaria nº 01/2026-RI) |
 | Revisar e assinar o diagnóstico final | 30 dias após portaria | Oficial Registradora |
 
 ---
 
-*Data de elaboração: `[___] de [mês] de 2026`*
+*Data de elaboração: [___] de [mês] de 2026*
 
 _______________________________________________________________  
-`[NOME_DO_COLABORADOR_DESIGNADO]` — Responsável operacional  
+André (Portaria nº 01/2026-RI) — Responsável operacional  
 Revisão: Márcia Maria da Silva Costa Teixeira — Oficial Registradora e Tabeliã
