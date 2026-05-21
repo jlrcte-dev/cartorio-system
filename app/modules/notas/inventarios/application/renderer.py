@@ -160,20 +160,28 @@ def render_resumo_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
 def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     """Gera a minuta-base da escritura pública de inventário e partilha em Markdown.
 
-    Espelha o template
-    ``infrastructure/templates/inventario_extrajudicial_padrao.md.j2`` — fonte
-    canônica da estrutura textual. A renderização é feita em Python puro (sem
-    Jinja2) para não introduzir dependência. Placeholders pessoais usam o
-    formato ``[QUALIFICAÇÃO DO …]`` ou ``[DADO]`` e devem ser substituídos
-    manualmente pelo tabelião com auxílio do Engegraph.
+    Esta função é a **fonte executável** da minuta-base — o template
+    ``infrastructure/templates/inventario_extrajudicial_padrao.md.j2`` é
+    mantido apenas como espelho textual para referência humana e auditoria,
+    sem ser interpretado em runtime. A renderização é feita em Python puro
+    para não introduzir dependência de Jinja2.
 
-    O documento **não** é a minuta final assinada. É um rascunho que carrega:
+    A redação aproxima-se do modelo padrão da serventia (Cartório Costa
+    Teixeira) — Resolução 35/2007 CNJ, Provimento 46/2020 CGJ-GO, Provimento
+    134/2022 CNJ, IN SRFB 1.112/2010 — mas **nada substitui a revisão do
+    tabelião**. Placeholders pessoais usam o formato ``[QUALIFICAÇÃO DO …]``
+    ou ``[DADO]``; a substituição é responsabilidade do Engegraph + revisão
+    humana antes da lavratura.
 
-    - texto fixo das cláusulas (§§ 14, 15, 17, 18, 19, 20);
-    - placeholders explícitos para qualificações;
+    O documento carrega:
+
+    - cabeçalho + aviso explícito de "minuta-base";
+    - texto fixo das cláusulas conforme legislação aplicável (Resolução 35
+      CNJ, Provimentos 46/2020 e 134/2022 e Decreto 93.240/86);
+    - placeholders explícitos para qualificações e dados externos;
     - cálculos determinísticos (patrimônio, meação, quinhões);
     - alerta técnico de centavos quando aplicável (ADR-009);
-    - bloco final "Campo de revisão humana" para o tabelião carimbar a revisão.
+    - bloco final "Campo de revisão humana" com checklist mínimo.
     """
 
     lines: list[str] = []
@@ -204,6 +212,12 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     for h in inv.herdeiros:
         lines.append(f"- [QUALIFICAÇÃO DO {h.id}]")
     lines.append("")
+    lines.append(
+        "Reconhecidos como os próprios por meio dos documentos apresentados, "
+        "do que dou fé. Declaram não serem pessoas politicamente expostas, no "
+        "conceito e elenco da Resolução COAF nº 29, de 7 de dezembro de 2017."
+    )
+    lines.append("")
     if inv.possui_meeiro:
         lines.append("### 1.2. COMO MEEIRO(A)")
         lines.append("")
@@ -215,28 +229,46 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     lines.append("")
     lines.append("[QUALIFICAÇÃO DO ADVOGADO]")
     lines.append("")
+    lines.append(
+        "Pelos outorgantes e reciprocamente outorgados, devidamente "
+        "acompanhados por seu advogado, a seguir, foi-me requerido seja feito "
+        "o inventário dos bens deixados por falecimento de "
+        "[QUALIFICAÇÃO DO AUTOR DA HERANÇA], e declararam o seguinte:"
+    )
+    lines.append("")
 
     # § 2. Autor da herança
     lines.append("## 2. DO AUTOR DA HERANÇA")
     lines.append("")
-    lines.append("[QUALIFICAÇÃO DO AUTOR DA HERANÇA]")
+    lines.append(
+        "[QUALIFICAÇÃO DO AUTOR DA HERANÇA] — preencher pelo Engegraph com "
+        "nome civil completo, nacionalidade, profissão, data e local de "
+        "nascimento, filiação, número de RG, CPF, estado civil ao tempo do "
+        "óbito e regime de bens (este último determina se há meeiro(a))."
+    )
     lines.append("")
 
     # § 3. Falecimento
     lines.append("## 3. DO FALECIMENTO")
     lines.append("")
-    lines.append("[CERTIDÃO DE ÓBITO]")
+    lines.append(
+        "[CERTIDÃO DE ÓBITO] — preencher pelo Engegraph com data e hora do "
+        "óbito, cidade/UF, idade do falecido e dados da Certidão de Óbito "
+        "(Cartório de Registro Civil das Pessoas Naturais, livro, folhas, "
+        "termo e data da lavratura)."
+    )
     lines.append("")
 
     # § 4. Inexistência de testamento
     lines.append("## 4. DA INEXISTÊNCIA DE TESTAMENTO")
     lines.append("")
     lines.append(
+        'O "de cujus" não deixou testamento, tendo sido apresentada a '
         "Consulta ao Registro Central de Testamento Online emitida em "
-        "[CENSEC_DATA], pelo Colégio Notarial do Brasil, conforme Provimento "
-        "CNJ 56/2016, onde NÃO CONSTA a lavratura de testamento público, "
-        "aprovação de testamento cerrado ou revogação de testamento em nome "
-        'do "de cujus".'
+        "[CENSEC_DATA], pelo Colégio Notarial do Brasil, conforme determinação "
+        "do Provimento nº 56/2016 do Conselho Nacional de Justiça, onde NÃO "
+        "CONSTA a lavratura de testamento público, aprovação de testamento "
+        'cerrado ou revogação de testamento em nome do "de cujus".'
     )
     lines.append("")
 
@@ -245,7 +277,7 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     lines.append("")
     lines.append(
         f"O falecido deixou {n_herdeiros} ({_numero_por_extenso(n_herdeiros)}) "
-        "herdeiro(s) descendente(s), a saber:"
+        "herdeiro(s) descendente(s), acima qualificado(s), a saber:"
     )
     lines.append("")
     for h in inv.herdeiros:
@@ -256,9 +288,22 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     lines.append("## 6. DO INVENTARIANTE")
     lines.append("")
     lines.append(
-        "Os herdeiros, neste ato, nomeiam como inventariante o herdeiro "
-        "[QUALIFICAÇÃO DO INVENTARIANTE], nos termos dos artigos 617 e 618 "
-        "do Código de Processo Civil em vigor."
+        "Os herdeiros descendentes, neste ato, nomeiam como inventariante do "
+        '"de cujus" o herdeiro descendente [QUALIFICAÇÃO DO INVENTARIANTE], '
+        "já qualificado, nos termos dos artigos 617 e 618 do Código de "
+        "Processo Civil em vigor, conferindo-lhe todos os poderes que se "
+        "fizerem necessários para representar o espólio, ativa e "
+        "passivamente, judicial ou extrajudicialmente, nomear advogado e "
+        "praticar todos os atos que se fizerem necessários à defesa do "
+        "espólio e ao cumprimento de suas eventuais obrigações formais."
+    )
+    lines.append("")
+    lines.append(
+        "O nomeado inventariante declara, neste ato, que aceita este encargo, "
+        "prestando compromisso de cumprir eficazmente seu mister, e declara "
+        "estar ciente da responsabilidade civil e criminal pela declaração "
+        "de bens e herdeiros e pela veracidade de todos os termos aqui "
+        "relatados."
     )
     lines.append("")
 
@@ -274,19 +319,44 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
         lines.append("")
         lines.append(f"Valor avaliado: **{_fmt_money(bem.valor)}**.")
         lines.append("")
-        lines.append(f"Procedência: [PROCEDÊNCIA_{bem.id}].")
-        lines.append("")
-        lines.append(f"Matrícula / identificação registral: [MATRÍCULA DO IMÓVEL {bem.id}].")
+        if bem.tipo.value == "imovel":
+            lines.append(
+                f"Procedência: matrícula nº [MATRÍCULA DO IMÓVEL {bem.id}], do "
+                "Registro Imobiliário de [CIDADE_RI], Comarca de [COMARCA_RI], "
+                "Estado de [UF_RI], conforme Certidão de Inteiro Teor emitida em "
+                f"[DATA_CIT_{bem.id}], selo digital nº [SELO_DIGITAL_{bem.id}]."
+            )
+            lines.append("")
+            lines.append(
+                f'DA PROCEDÊNCIA DA AQUISIÇÃO: o imóvel foi adquirido pelo "de '
+                f'cujus" nos termos de [TÍTULO AQUISITIVO {bem.id}]. A Repartição '
+                f"Pública Competente é [REPARTIÇÃO_{bem.id}] (SEFAZ ou Prefeitura), "
+                f"que lhe atribuiu o valor de **{_fmt_money(bem.valor)}**, "
+                "correspondendo à herança."
+            )
+        else:
+            lines.append(
+                f"Procedência / identificação: [PROCEDÊNCIA_{bem.id}] — "
+                "preencher pelo Engegraph com dados específicos do bem "
+                "(instituição financeira, placa do veículo, número de "
+                "registro, contrato, etc.)."
+            )
         lines.append("")
 
     # § 8. Débitos (placeholder — cálculo avançado fica para sprint futura)
     lines.append("## 8. DOS DÉBITOS DO AUTOR DA HERANÇA")
     lines.append("")
     lines.append(
-        "[DECLARAÇÃO DE DÉBITOS — preencher manualmente. Por padrão, declarar "
-        "inexistência de débitos. Esta sprint NÃO calcula débitos: caso "
-        "existam, o tabelião deve descrever e abater do monte partilhável "
-        "antes da assinatura.]"
+        'Declaram os herdeiros descendentes que o "de cujus" não possuía '
+        "débitos na ocasião da abertura da sucessão, assumindo quaisquer "
+        "responsabilidades acerca desta declaração."
+    )
+    lines.append("")
+    lines.append(
+        "> Caso existam débitos, o tabelião deve substituir o parágrafo "
+        "acima por descrição detalhada (credor, valor, vencimento) e abater "
+        "do monte partilhável antes da assinatura. Esta minuta-base **NÃO** "
+        "calcula débitos automaticamente."
     )
     lines.append("")
 
@@ -294,17 +364,33 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     lines.append("## 9. OUTRAS OBRIGAÇÕES DO AUTOR DA HERANÇA")
     lines.append("")
     lines.append(
-        "[DECLARAÇÃO DE OUTRAS OBRIGAÇÕES — preencher manualmente. Por "
-        "padrão, declarar inexistência.]"
+        'Declaram os herdeiros descendentes que o "de cujus" não possuía '
+        "outras obrigações a serem satisfeitas pelo mesmo na ocasião da "
+        "abertura da sucessão, assumindo quaisquer responsabilidades acerca "
+        "desta declaração."
     )
     lines.append("")
 
     # § 10. Patrimônio (com 10.1 meação se houver, e 10.2 herança)
-    lines.append("## 10. DO PATRIMÔNIO")
+    lines.append("## 10. DO PATRIMÔNIO DO AUTOR DA HERANÇA")
     lines.append("")
-    lines.append(f"Patrimônio total: **{_fmt_money(resumo.patrimonio_total)}**.")
-    lines.append("")
-    lines.append(f"Monte partilhável: **{_fmt_money(resumo.monte_partilhavel)}**.")
+    itens_7 = ", ".join(f"7.{i}" for i in range(1, len(inv.bens) + 1))
+    if inv.possui_meeiro:
+        lines.append(
+            "O patrimônio total do autor da herança, representado pelos bens "
+            f"descritos nos itens {itens_7}, avaliados pela repartição pública "
+            f"competente em **{_fmt_money(resumo.patrimonio_total)}**, "
+            f"corresponde a **{_fmt_money(resumo.valor_meacao)}** à meação e "
+            f"**{_fmt_money(resumo.monte_partilhavel)}** à herança."
+        )
+    else:
+        lines.append(
+            "O patrimônio total do autor da herança, representado pelos bens "
+            f"descritos nos itens {itens_7}, avaliados pela repartição pública "
+            f"competente em **{_fmt_money(resumo.patrimonio_total)}**, "
+            "corresponde integralmente à herança, não havendo meação a "
+            f"apurar — monte partilhável de **{_fmt_money(resumo.monte_partilhavel)}**."
+        )
     lines.append("")
 
     if inv.possui_meeiro:
@@ -313,7 +399,8 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
         lines.append(
             "Caberá ao(à) meeiro(a) [QUALIFICAÇÃO DO MEEIRO], como pagamento "
             f"de sua meação, o valor de **{_fmt_money(resumo.valor_meacao)}**, "
-            f"correspondente a {_fmt_pct(inv.percentual_meacao)} dos bens."
+            f"correspondente a {_fmt_pct(inv.percentual_meacao)} dos bens "
+            f"descritos e caracterizados nos itens {itens_7}."
         )
         lines.append("")
         lines.append("### 10.2. DA HERANÇA")
@@ -324,45 +411,62 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     lines.append("")
     for idx, h in enumerate(inv.herdeiros, start=1):
         quinhao = resumo.quinhao_por_herdeiro.get(h.id, Decimal("0"))
+        subitem = f"10.2.{idx}" if inv.possui_meeiro else f"10.1.{idx}"
         lines.append(
-            f"{idx}. [QUALIFICAÇÃO DO {h.id}] — quinhão hereditário: "
-            f"**{_fmt_money(quinhao)}** ({_fmt_pct(h.percentual_heranca)})."
+            f"**{subitem}.** O(A) herdeiro(a) descendente "
+            f"[QUALIFICAÇÃO DO {h.id}], acima qualificado(a), recebe como "
+            "pagamento de seu quinhão hereditário, o que lhe é de direito, "
+            f"qual seja, o valor de **{_fmt_money(quinhao)}**, correspondente "
+            f"a {_fmt_pct(h.percentual_heranca)} dos bens descritos e "
+            f"caracterizados nos itens {itens_7}."
         )
-    lines.append("")
+        lines.append("")
 
-    # § 11. Plano de partilha
-    lines.append("## 11. DA PARTILHA")
+    # § 11. Plano de partilha — apenas alíneas, conforme padrão da serventia.
+    # Quadros/tabelas ficam restritos ao resumo técnico (inventario_resumo.md)
+    # e ao JSON de validação; a minuta cartorária preserva a prosa em alíneas.
+    lines.append("## 11. DA PARTILHA DO AUTOR DA HERANÇA")
     lines.append("")
     lines.append(
-        "Os bens descritos em § 7 são partilhados conforme o quadro abaixo. "
-        "Os percentuais e valores espelham a distribuição declarada na entrada "
-        "estruturada e os cálculos do sistema; eventual reescrita de partilha "
-        "bem a bem é responsabilidade do tabelião antes da assinatura."
+        "Por todo o exposto, ficará a partilha da seguinte forma. Os "
+        "percentuais e valores são determinísticos a partir da entrada "
+        "estruturada; eventual reescrita bem a bem é responsabilidade do "
+        "tabelião antes da assinatura."
     )
     lines.append("")
-    for idx, bem in enumerate(inv.bens, start=1):
-        lines.append(f"### 11.{idx}. {bem.id}")
+    subitem_idx = 0
+    if inv.possui_meeiro:
+        subitem_idx += 1
+        lines.append(f"### 11.{subitem_idx}. Quinhão do(a) meeiro(a)")
         lines.append("")
-        lines.append("| Beneficiário | % do bem | Valor |")
-        lines.append("|--------------|----------|-------|")
-        resumo_bem = next((r for r in resumo.bens if r.bem_id == bem.id), None)
-        if resumo_bem is not None:
-            for q in resumo_bem.quinhoes:
-                rotulo = (
-                    "[QUALIFICAÇÃO DO MEEIRO]"
-                    if q.beneficiario == BENEFICIARIO_MEEIRO
-                    else f"[QUALIFICAÇÃO DO {q.beneficiario}]"
-                )
-                lines.append(
-                    f"| `{q.beneficiario}` — {rotulo} | "
-                    f"{_fmt_pct(q.percentual)} | {_fmt_money(q.valor)} |"
-                )
+        lines.append(
+            "**Caberá ao(à) meeiro(a) [QUALIFICAÇÃO DO MEEIRO], como pagamento "
+            "de sua meação, o seguinte:**"
+        )
+        lines.append("")
+        _append_descricao_por_beneficiario(lines, inv, resumo, BENEFICIARIO_MEEIRO)
+        lines.append("")
+    for h in inv.herdeiros:
+        subitem_idx += 1
+        lines.append(f"### 11.{subitem_idx}. Quinhão de [QUALIFICAÇÃO DO {h.id}]")
+        lines.append("")
+        lines.append(
+            f"**O(A) herdeiro(a) descendente [QUALIFICAÇÃO DO {h.id}], acima "
+            "qualificado(a), recebe como pagamento de sua herança o "
+            "seguinte:**"
+        )
+        lines.append("")
+        _append_descricao_por_beneficiario(lines, inv, resumo, h.id)
         lines.append("")
 
     # § 12. Certidões
     lines.append("## 12. DAS CERTIDÕES E DOCUMENTOS APRESENTADOS")
     lines.append("")
-    lines.append("Foram apresentadas as seguintes certidões e documentos:")
+    lines.append(
+        'Foram-me apresentadas, em nome do "de cujus" '
+        "[QUALIFICAÇÃO DO AUTOR DA HERANÇA], as seguintes certidões e "
+        "documentos:"
+    )
     lines.append("")
     lines.append("- [CERTIDÕES FISCAIS] — Certidão Negativa de Débitos Inscritos em Dívida Ativa.")
     lines.append("- Certidões Negativas de Débitos Trabalhistas.")
@@ -376,19 +480,33 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     lines.append("## 13. DA CONSULTA DE INDISPONIBILIDADE DE BENS")
     lines.append("")
     lines.append(
-        "[CNIB] — Código HASH: [CNIB_HASH]; data: [CNIB_DATA]; "
-        "STATUS: [CNIB_STATUS]; motivo: [CNIB_MOTIVO]."
+        "Realizada a consulta na base de dados da Central Nacional de "
+        "Indisponibilidade de Bens — CNIB, foi verificado o seguinte:"
     )
+    lines.append("")
+    lines.append("- EM NOME DE: [QUALIFICAÇÃO DO AUTOR DA HERANÇA]")
+    lines.append("- CPF/CNPJ: [CPF_AUTOR_HERANCA]")
+    lines.append("- Código HASH: [CNIB_HASH]")
+    lines.append("- Data: [CNIB_DATA]   Hora: [CNIB_HORA]")
+    lines.append("- STATUS: [CNIB_STATUS]")
+    lines.append("- Motivo: [CNIB_MOTIVO]")
     lines.append("")
 
     # § 14. Declarações das partes
     lines.append("## 14. DAS DECLARAÇÕES DAS PARTES")
     lines.append("")
+    lines.append("As partes declaram:")
+    lines.append("")
     lines.append(
-        "As partes declaram que os bens partilhados encontram-se livres e "
-        "desembaraçados de quaisquer ônus, dívidas ou tributos, e que não "
-        "existem feitos ajuizados fundados em ações reais, pessoais ou "
-        "reipersecutórias que afetem os bens e direitos ora partilhados."
+        "**14.1.** Que os bens ora partilhados encontram-se livres e "
+        "desembaraçados de quaisquer ônus, dívidas ou tributos de quaisquer "
+        "naturezas."
+    )
+    lines.append("")
+    lines.append(
+        "**14.2.** Que não existem feitos ajuizados fundados em ações reais, "
+        "pessoais ou reipersecutórias que afetem os bens e direitos ora "
+        "partilhados."
     )
     lines.append("")
 
@@ -396,44 +514,146 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     lines.append("## 15. DECLARAÇÃO DO ADVOGADO")
     lines.append("")
     lines.append(
-        "[DADOS DO ADVOGADO] / [QUALIFICAÇÃO DO ADVOGADO] declara que "
-        "prestou assistência jurídica e acompanhou a lavratura desta "
-        "escritura pública, na qualidade de advogado das partes."
+        "Na posição de advogado comum das partes, [DADOS DO ADVOGADO] / "
+        "[QUALIFICAÇÃO DO ADVOGADO] declara que prestou assistência jurídica "
+        "e acompanhou a lavratura desta escritura pública de inventário e "
+        "partilha de bens e, na qualidade de advogado, assessorou e "
+        "aconselhou seus constituintes, tendo conferido a correção do "
+        "inventário, da partilha e seus valores, de acordo com a Lei."
     )
     lines.append("")
 
     # § 16. ITCMD
-    lines.append("## 16. DO ITCMD")
+    lines.append('## 16. DO IMPOSTO SOBRE A TRANSMISSÃO "CAUSA MORTIS" E DOAÇÃO — ITCMD')
     lines.append("")
     lines.append(
-        "Demonstrativo de Cálculo do ITCD Causa Mortis nº [GUIA ITCMD] / "
-        "[ITCMD_SPL_N], referente ao ESPÓLIO, emitido pela Secretaria de "
-        "Estado da Economia."
+        "Pelas partes foi-me apresentado o Demonstrativo de Cálculo do ITCD "
+        "Causa Mortis nº [GUIA ITCMD] / [ITCMD_SPL_N], referente ao espólio "
+        "de [QUALIFICAÇÃO DO AUTOR DA HERANÇA], emitido pela Secretaria de "
+        "Estado da Economia, com data da última alteração em [ITCMD_DATA]."
     )
     lines.append("")
 
     # § 17. Outras declarações
     lines.append("## 17. OUTRAS DECLARAÇÕES")
     lines.append("")
-    lines.append("Texto padrão do Provimento 46/2020 CGJ-GO c/c Decreto 93.240/86, art. 1º, § 3º.")
+    lines.append(
+        "As partes afirmam, sob responsabilidade civil e criminal, que os "
+        "fatos aqui relatados e as declarações feitas são a exata expressão "
+        "da verdade. Os herdeiros descendentes, neste ato, declaram a "
+        "inexistência de outras ações reais e pessoais reipersecutórias "
+        "relativas aos imóveis e de outros ônus reais incidentes sobre os "
+        "mesmos, nos termos do artigo 372, inciso VI, do Código de Normas e "
+        "Procedimentos do Foro Extrajudicial da Corregedoria Geral de "
+        "Justiça do Estado de Goiás (Provimento nº 46/2020) cumulado com o "
+        "artigo 1º, parágrafo 3º, do Decreto nº 93.240/86; e ainda, pelo "
+        "mesmo, a seguir, foi-me dito que aceita a presente Escritura "
+        "Pública de Inventário e Partilha de Bens, tal como se contém e "
+        "declaram."
+    )
     lines.append("")
 
     # § 18. Declarações finais
     lines.append("## 18. DECLARAÇÕES FINAIS")
     lines.append("")
-    lines.append("Texto padrão da Resolução 35 CNJ, art. 3º.")
+    lines.append(
+        "Os herdeiros descendentes, pelo presente, autorizam o(a) Oficial(a) "
+        "Registrador(a) da Serventia de Registro de Imóveis competente a "
+        "proceder todas e quaisquer averbações que se fizerem necessárias "
+        "para, posteriormente, efetuar o registro da presente Escritura "
+        "Pública de Inventário e Partilha de Bens, consoante dispõem os "
+        "artigos 167, inciso II, e 246 da Lei nº 6.015/73 (Lei de Registros "
+        "Públicos)."
+    )
+    lines.append("")
+    lines.append(
+        "Aos herdeiros descendentes e ao advogado constituído foi dado "
+        "conhecimento do disposto no artigo 3º da Resolução nº 35 do "
+        'Conselho Nacional de Justiça: "Art. 3º As escrituras públicas de '
+        "inventário e partilha, separação e divórcio consensuais não "
+        "dependem de homologação judicial e são títulos hábeis para o "
+        "registro civil e o registro imobiliário, para a transferência de "
+        "bens e direitos, bem como para promoção de todos os atos "
+        "necessários à materialização das transferências de bens e "
+        "levantamento de valores (DETRAN, Junta Comercial, Registro Civil "
+        "de Pessoas Jurídicas, instituições financeiras, companhias "
+        'telefônicas, etc.)".'
+    )
     lines.append("")
 
     # § 19. Únicos herdeiros
     lines.append("## 19. DA DECLARAÇÃO DE ÚNICOS HERDEIROS")
     lines.append("")
-    lines.append("Texto padrão do art. 21 da Resolução 35 CNJ.")
+    lines.append(
+        "Pelos herdeiros descendentes, acompanhados de seu advogado "
+        "constituído, declaram para os devidos fins e efeitos de direito, "
+        "sob pena de responsabilidade civil e criminal, que são os únicos "
+        "herdeiros do espólio de [QUALIFICAÇÃO DO AUTOR DA HERANÇA], "
+        "consoante dispõe o artigo 21 da Resolução nº 35 do Conselho "
+        "Nacional de Justiça (CNJ), de 24 de abril de 2007."
+    )
+    lines.append("")
+    lines.append(
+        "Aos herdeiros descendentes e ao advogado constituído foi dado "
+        "conhecimento de que a partilha realizada na presente Escritura "
+        "Pública foi feita nos termos acordados entre si, e nos termos do "
+        "Demonstrativo de Cálculo do ITCD Causa Mortis nº [GUIA ITCMD] / "
+        "[ITCMD_SPL_N], referente aos bens deixados pelo espólio de "
+        "[QUALIFICAÇÃO DO AUTOR DA HERANÇA], guia esta devidamente "
+        "homologada, que me foi apresentada e cuja cópia ficará arquivada "
+        "nestas notas, isentando esta Tabeliã de quaisquer responsabilidades "
+        "quanto ao plano de partilha, assumindo os herdeiros descendentes e "
+        "o advogado constituído toda e qualquer responsabilidade civil, "
+        "fiscal e criminal, bem como responsabilidade sob qualquer correção "
+        "que venha a ser exigida pelos órgãos competentes — Cartórios de "
+        "Registros de Imóveis ou outros — arcando assim com todos os "
+        "impostos, custas e emolumentos que porventura vierem a ser cobrados."
+    )
+    lines.append("")
+    lines.append(
+        "Os herdeiros declaram, sob pena de responsabilidade civil e "
+        'criminal, que o "de cujus" não possuía relacionamento que '
+        "configurasse união estável, respondendo, desta forma, pela evicção "
+        "de direito em razão da comunicabilidade prevista no artigo 1.725 do "
+        "Código Civil Brasileiro em vigor."
+    )
     lines.append("")
 
     # § 20. LGPD
     lines.append("## 20. TRATAMENTO DE DADOS PESSOAIS — LGPD")
     lines.append("")
-    lines.append("Cláusula padrão (Lei 13.709/2018; Provimento CNJ 134/2022; CNPFE/2023 TJ-GO).")
+    lines.append(
+        "Em conformidade com a Lei Geral de Proteção de Dados — LGPD (Lei nº "
+        "13.709/2018), com o Provimento nº 134/2022 do Conselho Nacional de "
+        "Justiça e com o Código de Normas e Procedimentos do Foro "
+        "Extrajudicial do Tribunal de Justiça do Estado de Goiás "
+        "(CNPFE/2023 TJ-GO), informa-se que os dados pessoais compartilhados "
+        "com esta serventia serão tratados de forma a cumprir as obrigações "
+        "previstas em leis (Leis nº 6.015/73 e nº 8.935/94) e a atender à "
+        "finalidade pública desta serventia."
+    )
+    lines.append("")
+    lines.append(
+        "As principais hipóteses que legitimam o tratamento de dados pela "
+        "serventia são o cumprimento de obrigação legal e regulatória, a "
+        "execução de contrato e a execução de políticas públicas pela "
+        "administração pública, nos termos do artigo 7º, incisos II, III e "
+        "V, da LGPD. O tratamento é limitado ao mínimo necessário para "
+        "cumprir tais finalidades, e a serventia adota medidas de segurança "
+        "técnicas e administrativas aptas a proteger os dados pessoais "
+        "armazenados, observando os padrões mínimos de tecnologia e "
+        "segurança da informação exigidos pelo Provimento nº 74/2018 do CNJ."
+    )
+    lines.append("")
+    lines.append(
+        "As partes declaram que concordam com o tratamento e o backup dos "
+        "seus dados pessoais para finalidades específicas da LGPD, cientes "
+        "de que o presente instrumento poderá ser reproduzido a pedido de "
+        "qualquer interessado independentemente de autorização expressa das "
+        "partes, bem como demonstração de dados, ambos dentro do limite "
+        "legal, por se tratar de instrumento público nos termos do artigo 16 "
+        "da Lei nº 6.015/73."
+    )
     lines.append("")
 
     # Encerramento
@@ -441,9 +661,33 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     lines.append("")
     lines.append("## ENCERRAMENTO")
     lines.append("")
-    lines.append("EMITIDA A DOI conforme Instrução Normativa SRFB nº 1.112/2010.")
+    lines.append(
+        "Emitida a DOI — Declaração sobre Operações Imobiliárias, conforme "
+        "Instrução Normativa nº 1.112, de 28 de dezembro de 2010, da "
+        "Secretaria da Receita Federal do Brasil."
+    )
+    lines.append("")
+    lines.append(
+        "E por se acharem assim contratados, pediram-me que lhes fizesse a "
+        "presente escritura, que, lida em voz alta, foi por todos aceita, "
+        "outorgada e assinada, dispensando-se as testemunhas na forma legal. "
+        "Eu, [QUALIFICAÇÃO DA TABELIÃ], a escrevi, subscrevi e assino."
+    )
     lines.append("")
     lines.append("Emolumentos: R$ [EMOLUMENTOS]. Taxa Judiciária: R$ [TAXA_JUDICIARIA].")
+    lines.append("")
+    lines.append("### Assinaturas")
+    lines.append("")
+    linha_assinatura = "___________________________________"
+    for h in inv.herdeiros:
+        lines.append(f"{linha_assinatura}  — [QUALIFICAÇÃO DO {h.id}] (Herdeiro(a))")
+        lines.append("")
+    if inv.possui_meeiro:
+        lines.append(f"{linha_assinatura}  — [QUALIFICAÇÃO DO MEEIRO] (Meeiro(a))")
+        lines.append("")
+    lines.append(f"{linha_assinatura}  — [QUALIFICAÇÃO DO ADVOGADO] (Advogado(a))")
+    lines.append("")
+    lines.append(f"{linha_assinatura}  — [QUALIFICAÇÃO DA TABELIÃ] (Tabeliã)")
     lines.append("")
 
     # Alerta de centavos — política ADR-009
@@ -477,7 +721,9 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
         "Esta minuta-base foi produzida pelo Cartório System sem dados "
         "pessoais reais e exige revisão completa antes da lavratura. O "
         "tabelião responsável deve preencher os placeholders, conferir os "
-        "valores apurados e, se necessário, reescrever a partilha."
+        "valores apurados e, se necessário, reescrever a partilha. O "
+        "checklist operacional completo está em "
+        "`docs/modules/notas_inventarios_checklist.md`."
     )
     lines.append("")
     lines.append("| Etapa | Responsável | Data | Observação |")
@@ -487,10 +733,49 @@ def render_minuta_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
     )
     lines.append("| Conferência de valores e cálculos | [PREENCHER] | [PREENCHER] | [PREENCHER] |")
     lines.append("| Validação fiscal (ITCMD/DOI) | [PREENCHER] | [PREENCHER] | [PREENCHER] |")
+    lines.append("| Remoção de placeholders pendentes | [PREENCHER] | [PREENCHER] | [PREENCHER] |")
     lines.append("| Aprovação final do tabelião | [PREENCHER] | [PREENCHER] | [PREENCHER] |")
     lines.append("")
 
     return "\n".join(lines) + "\n"
+
+
+def _append_descricao_por_beneficiario(
+    lines: list[str],
+    inv: Inventario,
+    resumo: ResumoInventario,
+    beneficiario: str,
+) -> None:
+    """Anexa, no estilo cartorário com letras (a, b, c…), a participação de
+    ``beneficiario`` em cada bem.
+
+    Quando o beneficiário não tem participação em nenhum bem, a função emite
+    uma linha explícita; quando há participação em pelo menos um bem,
+    apenas os bens com percentual > 0 são enumerados.
+    """
+
+    letras = "abcdefghijklmnopqrstuvwxyz"
+    linhas_bem: list[str] = []
+    for bem_idx, bem in enumerate(inv.bens, start=1):
+        resumo_bem = next((r for r in resumo.bens if r.bem_id == bem.id), None)
+        if resumo_bem is None:
+            continue
+        quinhao = next(
+            (q for q in resumo_bem.quinhoes if q.beneficiario == beneficiario),
+            None,
+        )
+        if quinhao is None or quinhao.percentual <= Decimal("0"):
+            continue
+        letra = letras[len(linhas_bem)] if len(linhas_bem) < len(letras) else "?"
+        linhas_bem.append(
+            f"  {letra}) {_fmt_pct(quinhao.percentual)} do bem descrito e "
+            f"caracterizado no item 7.{bem_idx} ({bem.id}), avaliado em "
+            f"{_fmt_money(bem.valor)}, correspondendo a {_fmt_money(quinhao.valor)};"
+        )
+    if linhas_bem:
+        lines.extend(linhas_bem)
+    else:
+        lines.append("  — sem participação em bens nesta partilha;")
 
 
 _NUMEROS_POR_EXTENSO = {

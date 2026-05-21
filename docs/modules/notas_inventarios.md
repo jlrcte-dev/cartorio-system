@@ -200,12 +200,31 @@ bens:
         percentual: 25
 ```
 
-### 2.9. Proposta de template genérico seguro
+### 2.9. Fonte executável vs. template .j2 — estado atual
 
-O template versionado em
-`app/modules/notas/inventarios/infrastructure/templates/inventario_extrajudicial_padrao.md.j2`
-contém **apenas placeholders e cláusulas fixas**. Nenhum trecho com dados reais é
-versionado.
+> **Decisão da Sprint NOTAS-INVENTARIO-3:** a fonte executável da minuta-base
+> é `app/modules/notas/inventarios/application/renderer.py`
+> (`render_minuta_markdown`). O arquivo
+> `app/modules/notas/inventarios/infrastructure/templates/inventario_extrajudicial_padrao.md.j2`
+> existe **apenas como espelho textual provisório** — não é interpretado em
+> runtime, não há dependência de Jinja2 instalada e a renderização real é
+> Python puro.
+>
+> **Por quê:** introduzir Jinja2 agora adicionaria dependência sem ganho — o
+> renderer Python já produz o mesmo resultado, com mais controle sobre tipos,
+> placeholders e Decimal. Eventual unificação (Jinja2 ↔ renderer) é decisão
+> de sprint futura e exigirá ADR.
+>
+> **Manutenção:** ao alterar texto cartorário, atualizar `renderer.py`
+> primeiro (a fonte) e refletir manualmente no `.j2` quando a estrutura
+> textual mudar (cabeçalhos, ordem de cláusulas, novos blocos). O `.j2` não
+> precisa espelhar lógica condicional fina — basta indicar onde os blocos
+> aparecem.
+
+O template versionado contém **apenas placeholders e cláusulas fixas**.
+Nenhum trecho com dados reais é versionado, e datas de normas legais aparecem
+por extenso ("7 de dezembro de 2017") para não disparar a verificação
+anti-PII de `tests/test_notas_inventarios_renderer.py`.
 
 Identificadores reservados:
 
@@ -338,17 +357,26 @@ Implementação em [output_dir.py](../../app/modules/notas/inventarios/infrastru
 
 ## 4. Recomendações para a próxima sprint
 
-1. **NOTAS-INVENTARIO-2**: implementar renderização completa do template com Jinja2,
-   ainda sem PII (apenas placeholders).
-2. **NOTAS-INVENTARIO-3**: variações condicionais (sem meeiro, sem débitos, com débitos,
-   advogados múltiplos).
-3. **NOTAS-INVENTARIO-4**: schema Pydantic + validações tipadas + cobertura de testes
-   estendida (golden files).
-4. **NOTAS-INVENTARIO-5**: pacote `infrastructure/exporters/` para gerar `.docx` ou
-   `.odt` a partir do Markdown — preservando placeholders para preenchimento manual.
-5. **ADR obrigatório** quando: definir contrato de import (campos vindos do Engegraph),
-   definir formato de saída versionável (markdown vs odt vs docx), integrar com módulo
-   de selo digital / arquivamento.
+1. **NOTAS-INVENTARIO-2 — CONCLUÍDA:** renderização Markdown da minuta-base em
+   Python puro (sem Jinja2). Commit `47956cc`.
+2. **NOTAS-INVENTARIO-3 — CONCLUÍDA (esta sprint):** revisão cartorária da
+   minuta Markdown (PEP, frase de transição § 1→§ 2, procedência detalhada de
+   imóveis, texto completo dos §§ 6, 14, 17, 18, 19, 20, encerramento com
+   linhas de assinatura) e checklist humano em
+   [`notas_inventarios_checklist.md`](notas_inventarios_checklist.md).
+3. **NOTAS-INVENTARIO-4 (próxima):** variações condicionais reais — débitos
+   declarados (§ 8 com lista de credores), obrigações remanescentes (§ 9),
+   advogados múltiplos (§§ 1.N e 15), e CNIB com status diferente de
+   `NEGATIVO` (alerta antes da assinatura).
+4. **NOTAS-INVENTARIO-5:** schema Pydantic + validações tipadas + cobertura
+   de testes estendida (golden files comparando saída byte a byte).
+5. **NOTAS-INVENTARIO-6:** pacote `infrastructure/exporters/` para gerar
+   `.docx` ou `.odt` a partir do Markdown — preservando placeholders para
+   preenchimento manual. Esta sprint **NÃO** implementa export.
+6. **ADR obrigatório** quando: definir contrato de import (campos vindos do
+   Engegraph), unificar fonte Markdown ↔ Jinja2, definir formato de saída
+   versionável (markdown vs odt vs docx), integrar com módulo de selo digital
+   / arquivamento.
 
 ---
 
@@ -361,6 +389,37 @@ Implementação em [output_dir.py](../../app/modules/notas/inventarios/infrastru
   grandes. Avaliar uso de tolerância proporcional em sprint futura.
 
 ---
+
+## 5.0. Formato do § 11 — apenas alíneas
+
+> **Decisão da Sprint NOTAS-INVENTARIO-3-FINAL:** o § 11 da minuta cartorária
+> (`inventario_minuta.md`) usa **apenas alíneas (a, b, c…)** por beneficiário,
+> preservando o modelo padrão da serventia. Quadros/tabelas de partilha
+> **não aparecem** na minuta.
+>
+> **Por quê:** o modelo da serventia é o padrão cartorário aceito e não pode
+> ser modificado por automação. A minuta-base deve espelhar fielmente esse
+> formato; o tabelião não deve precisar reformatar a partilha após a
+> geração.
+>
+> **Onde os quadros tabulares ainda aparecem:** no resumo técnico
+> `inventario_resumo.md` (§ 3 e § 5) e no JSON de validação
+> `inventario_validacao.json` (`resumo.bens[].quinhoes`). Esses dois
+> artefatos são para conferência interna, não para lavratura.
+
+## 5.1. Checklist de conferência humana
+
+O checklist operacional para revisão da minuta-base antes da lavratura está
+em [`notas_inventarios_checklist.md`](notas_inventarios_checklist.md). Cobre
+18 blocos (identidade do ato, autor da herança, falecimento, testamento,
+meeiro, herdeiros, bens, partilha, débitos, certidões, CNIB, ITCMD,
+advogado, declarações LGPD, alerta de centavos, placeholders pendentes,
+encerramento e aprovação final).
+
+A minuta gerada (`inventario_minuta.md`) inclui no final um bloco "CAMPO
+DE REVISÃO HUMANA" com 5 etapas mínimas (qualificações, cálculos, ITCMD,
+remoção de placeholders, aprovação final) e link explícito para o checklist
+completo.
 
 ## 6. Política de centavos
 

@@ -1,17 +1,32 @@
 {# ===========================================================================
    Template-base para minuta de Escritura Pública de Inventário e Partilha.
 
-   IMPORTANTE
-   ----------
+   ATENÇÃO — referência textual provisória
+   ----------------------------------------
+   A FONTE EXECUTÁVEL desta minuta é
+   `app/modules/notas/inventarios/application/renderer.py`
+   (função `render_minuta_markdown`). Este arquivo .j2 NÃO é interpretado
+   em runtime — existe apenas para inspeção humana e auditoria do esqueleto
+   textual.
+
+   Eventual unificação (renderer em Python ↔ template Jinja2) é decisão de
+   sprint futura e exigirá ADR — ver `docs/modules/notas_inventarios.md`
+   § 6 / § Recomendações.
+
+   REGRAS PERMANENTES
+   ------------------
    - Este template contém APENAS placeholders e texto fixo das cláusulas.
    - Nenhum dado pessoal real do cidadão deve ser inserido aqui.
    - A qualificação completa das partes é responsabilidade do Engegraph.
-   - A renderização efetiva via Jinja2 será implementada em sprint futura.
+   - Datas de normas legais aparecem por extenso para não disparar regex
+     anti-PII (formato "7 de dezembro de 2017", nunca dd/mm/aaaa).
    ============================================================================ #}
 
 # ESCRITURA PÚBLICA DE INVENTÁRIO E PARTILHA DOS BENS DEIXADOS PELO ESPÓLIO DE [QUALIFICAÇÃO DO AUTOR DA HERANÇA]
 
-> **MINUTA-BASE — REVISAR.** Documento gerado sem dados pessoais reais.
+> **MINUTA-BASE — RASCUNHO SUJEITO À REVISÃO HUMANA.** Documento gerado sem
+> dados pessoais reais; depende de preenchimento do Engegraph e de revisão do
+> tabelião antes da lavratura.
 
 SAIBAM quantos esta Escritura Pública de Inventário e Partilha virem, que aos
 [DATA_LAVRATURA], nesta Cidade de [CIDADE_SERVENTIA], Comarca de [COMARCA],
@@ -26,38 +41,69 @@ partes entre si justas e contratadas, a saber:
 - [QUALIFICAÇÃO DO {{ herdeiro.id }}]
 {% endfor %}
 
-### 1.N. COMO ADVOGADO
+Reconhecidos como os próprios por meio dos documentos apresentados, do que dou
+fé. Declaram não serem pessoas politicamente expostas, no conceito e elenco da
+Resolução COAF nº 29, de 7 de dezembro de 2017.
+
+{% if possui_meeiro %}
+### 1.2. COMO MEEIRO(A)
+
+- [QUALIFICAÇÃO DO MEEIRO]
+
+### 1.3. COMO ADVOGADO
+{% else %}
+### 1.2. COMO ADVOGADO
+{% endif %}
 
 [QUALIFICAÇÃO DO ADVOGADO]
 
+Pelos outorgantes e reciprocamente outorgados, devidamente acompanhados por seu
+advogado, a seguir, foi-me requerido seja feito o inventário dos bens deixados
+por falecimento de [QUALIFICAÇÃO DO AUTOR DA HERANÇA], e declararam o seguinte:
+
 ## 2. DO AUTOR DA HERANÇA
 
-[QUALIFICAÇÃO DO AUTOR DA HERANÇA]
+[QUALIFICAÇÃO DO AUTOR DA HERANÇA] — preencher pelo Engegraph com nome civil
+completo, nacionalidade, profissão, data e local de nascimento, filiação, RG,
+CPF, estado civil ao tempo do óbito e regime de bens.
 
 ## 3. DO FALECIMENTO
 
-[CERTIDAO_OBITO]
+[CERTIDÃO DE ÓBITO] — preencher pelo Engegraph com data e hora do óbito,
+cidade/UF, idade do falecido e dados da Certidão de Óbito (RCPN, livro, folhas,
+termo e data da lavratura).
 
 ## 4. DA INEXISTÊNCIA DE TESTAMENTO
 
-Consulta ao Registro Central de Testamento Online emitida em [CENSEC_DATA], pelo
-Colégio Notarial do Brasil, conforme Provimento CNJ 56/2016, onde NÃO CONSTA a
-lavratura de testamento público, aprovação de testamento cerrado ou revogação de
-testamento em nome do "de cujus".
+O "de cujus" não deixou testamento, tendo sido apresentada a Consulta ao
+Registro Central de Testamento Online emitida em [CENSEC_DATA], pelo Colégio
+Notarial do Brasil, conforme determinação do Provimento nº 56/2016 do Conselho
+Nacional de Justiça, onde NÃO CONSTA a lavratura de testamento público,
+aprovação de testamento cerrado ou revogação de testamento em nome do "de
+cujus".
 
 ## 5. DOS HERDEIROS
 
 O falecido deixou {{ herdeiros|length }} ({{ herdeiros|length }}) herdeiro(s)
-descendente(s), a saber:
+descendente(s), acima qualificado(s), a saber:
 {% for herdeiro in herdeiros %}
 - [QUALIFICAÇÃO DO {{ herdeiro.id }}]
 {% endfor %}
 
 ## 6. DO INVENTARIANTE
 
-Os herdeiros, neste ato, nomeiam como inventariante o herdeiro
-[QUALIFICAÇÃO DO INVENTARIANTE], nos termos dos artigos 617 e 618 do Código de
-Processo Civil em vigor.
+Os herdeiros descendentes, neste ato, nomeiam como inventariante do "de cujus"
+o herdeiro descendente [QUALIFICAÇÃO DO INVENTARIANTE], já qualificado, nos
+termos dos artigos 617 e 618 do Código de Processo Civil em vigor,
+conferindo-lhe todos os poderes que se fizerem necessários para representar o
+espólio, ativa e passivamente, judicial ou extrajudicialmente, nomear advogado
+e praticar todos os atos que se fizerem necessários à defesa do espólio e ao
+cumprimento de suas eventuais obrigações formais.
+
+O nomeado inventariante declara, neste ato, que aceita este encargo, prestando
+compromisso de cumprir eficazmente seu mister, e declara estar ciente da
+responsabilidade civil e criminal pela declaração de bens e herdeiros e pela
+veracidade de todos os termos aqui relatados.
 
 ## 7. DOS BENS
 
@@ -70,56 +116,99 @@ O "de cujus" possuía na ocasião da abertura da sucessão os seguintes bens:
 
 Valor avaliado: **{{ bem.valor_formatado }}**.
 
-Procedência: [PROCEDENCIA_{{ bem.id }}].
+{% if bem.tipo == "imovel" %}
+Procedência: matrícula nº [MATRÍCULA DO IMÓVEL {{ bem.id }}], do Registro
+Imobiliário de [CIDADE_RI], Comarca de [COMARCA_RI], Estado de [UF_RI],
+conforme Certidão de Inteiro Teor emitida em [DATA_CIT_{{ bem.id }}], selo
+digital nº [SELO_DIGITAL_{{ bem.id }}].
+
+DA PROCEDÊNCIA DA AQUISIÇÃO: o imóvel foi adquirido pelo "de cujus" nos termos
+de [TÍTULO AQUISITIVO {{ bem.id }}]. A Repartição Pública Competente é
+[REPARTIÇÃO_{{ bem.id }}] (SEFAZ ou Prefeitura), que lhe atribuiu o valor
+correspondente à herança.
+{% else %}
+Procedência / identificação: [PROCEDÊNCIA_{{ bem.id }}] — preencher pelo
+Engegraph com dados específicos do bem.
+{% endif %}
 {% endfor %}
 
 ## 8. DOS DÉBITOS DO AUTOR DA HERANÇA
 
-Declaram os herdeiros que o "de cujus" não possuía débitos na ocasião da abertura
-da sucessão.
+Declaram os herdeiros descendentes que o "de cujus" não possuía débitos na
+ocasião da abertura da sucessão, assumindo quaisquer responsabilidades acerca
+desta declaração.
+
+> Caso existam débitos, substituir por descrição detalhada (credor, valor,
+> vencimento) antes da assinatura. Esta minuta-base não calcula débitos.
 
 ## 9. OUTRAS OBRIGAÇÕES DO AUTOR DA HERANÇA
 
-Declaram os herdeiros que o "de cujus" não possuía outras obrigações a serem
-satisfeitas na ocasião da abertura da sucessão.
+Declaram os herdeiros descendentes que o "de cujus" não possuía outras
+obrigações a serem satisfeitas pelo mesmo na ocasião da abertura da sucessão,
+assumindo quaisquer responsabilidades acerca desta declaração.
 
-## 10. DO PATRIMÔNIO
+## 10. DO PATRIMÔNIO DO AUTOR DA HERANÇA
 
-Patrimônio total: **{{ resumo.patrimonio_total_formatado }}**.
+O patrimônio total do autor da herança, representado pelos bens descritos nos
+itens 7.1, 7.2, [...], avaliados pela repartição pública competente em
+**{{ resumo.patrimonio_total_formatado }}**, corresponde a
+**{{ resumo.valor_meacao_formatado }}** à meação e
+**{{ resumo.monte_partilhavel_formatado }}** à herança.
 
 {% if possui_meeiro %}
 ### 10.1. DA MEAÇÃO
 
-Caberá ao(à) meeiro(a) [QUALIFICAÇÃO DO MEEIRO], como pagamento de sua meação, o
-valor de **{{ resumo.valor_meacao_formatado }}**, correspondente a
-{{ percentual_meacao_formatado }} dos bens.
-{% endif %}
+Caberá ao(à) meeiro(a) [QUALIFICAÇÃO DO MEEIRO], como pagamento de sua meação,
+o valor de **{{ resumo.valor_meacao_formatado }}**, correspondente a
+{{ percentual_meacao_formatado }} dos bens descritos.
 
 ### 10.2. DA HERANÇA
+{% else %}
+> Não há meação a apurar — autor da herança sem meeiro(a).
+
+### 10.1. DA HERANÇA
+{% endif %}
 
 {% for herdeiro in herdeiros %}
-{{ loop.index }}. [QUALIFICAÇÃO DO {{ herdeiro.id }}] — quinhão hereditário:
+**{{ "10.2" if possui_meeiro else "10.1" }}.{{ loop.index }}.** O(A) herdeiro(a)
+descendente [QUALIFICAÇÃO DO {{ herdeiro.id }}], acima qualificado(a), recebe
+como pagamento de seu quinhão hereditário o valor de
 **{{ herdeiro.quinhao_formatado }}** ({{ herdeiro.percentual_formatado }}).
 {% endfor %}
 
-## 11. DA PARTILHA
+## 11. DA PARTILHA DO AUTOR DA HERANÇA
+
+Por todo o exposto, ficará a partilha da seguinte forma. Apenas a redação
+cartorária em alíneas (a, b, c…) é emitida na minuta, preservando o padrão da
+serventia. Quadros/tabelas de partilha ficam restritos ao resumo técnico
+(`inventario_resumo.md`) e ao JSON de validação — nunca aparecem na minuta.
 
 {% if possui_meeiro %}
-### 11.1. Meação
+### 11.1. Quinhão do(a) meeiro(a)
 
-[DESCREVER PARTICIPAÇÃO DO MEEIRO EM CADA BEM — VEJA RESUMO TÉCNICO]
+**Caberá ao(à) meeiro(a) [QUALIFICAÇÃO DO MEEIRO], como pagamento de sua
+meação, o seguinte:**
+
+  a) X% do bem descrito e caracterizado no item 7.1 (BEM_ID), avaliado em
+     R$ NNN, correspondendo a R$ NNN;
+  b) [demais bens em alíneas sequenciais — ver renderer]
 {% endif %}
 
 {% for herdeiro in herdeiros %}
-### 11.{{ loop.index + (1 if possui_meeiro else 0) + 1 }}. Quinhão de [QUALIFICAÇÃO DO {{ herdeiro.id }}]
+### 11.{{ loop.index + (1 if possui_meeiro else 0) }}. Quinhão de [QUALIFICAÇÃO DO {{ herdeiro.id }}]
 
-[DESCREVER PARTICIPAÇÃO EM CADA BEM — VEJA RESUMO TÉCNICO]
+**O(A) herdeiro(a) descendente [QUALIFICAÇÃO DO {{ herdeiro.id }}], acima
+qualificado(a), recebe como pagamento de sua herança o seguinte:**
+
+  a) [participação em cada bem, em alíneas — ver renderer]
 {% endfor %}
 
 ## 12. DAS CERTIDÕES E DOCUMENTOS APRESENTADOS
 
-Foram apresentadas as seguintes certidões e documentos:
-- Certidão Negativa de Débito Inscrito em Dívida Ativa.
+Foram-me apresentadas, em nome do "de cujus" [QUALIFICAÇÃO DO AUTOR DA HERANÇA],
+as seguintes certidões e documentos:
+
+- [CERTIDÕES FISCAIS] — Certidão Negativa de Débito Inscrito em Dívida Ativa.
 - Certidões Negativas de Débitos Trabalhistas.
 - Certidão Negativa de Ações Cíveis.
 - Certidão Negativa de Débitos Relativos aos Tributos Federais e à Dívida Ativa
@@ -127,44 +216,107 @@ Foram apresentadas as seguintes certidões e documentos:
 
 ## 13. DA CONSULTA DE INDISPONIBILIDADE DE BENS
 
-CNIB — Código HASH: [CNIB_HASH]; data: [CNIB_DATA]; STATUS: [CNIB_STATUS];
-motivo: [CNIB_MOTIVO].
+Realizada a consulta na base de dados da Central Nacional de Indisponibilidade
+de Bens — CNIB, foi verificado o seguinte:
+
+- EM NOME DE: [QUALIFICAÇÃO DO AUTOR DA HERANÇA]
+- CPF/CNPJ: [CPF_AUTOR_HERANCA]
+- Código HASH: [CNIB_HASH]
+- Data: [CNIB_DATA]   Hora: [CNIB_HORA]
+- STATUS: [CNIB_STATUS]
+- Motivo: [CNIB_MOTIVO]
 
 ## 14. DAS DECLARAÇÕES DAS PARTES
 
-As partes declaram que os bens partilhados encontram-se livres e desembaraçados
-de quaisquer ônus, dívidas ou tributos, e que não existem feitos ajuizados
-fundados em ações reais, pessoais ou reipersecutórias que afetem os bens e
-direitos ora partilhados.
+As partes declaram:
+
+**14.1.** Que os bens ora partilhados encontram-se livres e desembaraçados de
+quaisquer ônus, dívidas ou tributos de quaisquer naturezas.
+
+**14.2.** Que não existem feitos ajuizados fundados em ações reais, pessoais ou
+reipersecutórias que afetem os bens e direitos ora partilhados.
 
 ## 15. DECLARAÇÃO DO ADVOGADO
 
-[QUALIFICAÇÃO DO ADVOGADO] declara que prestou assistência jurídica e acompanhou
-a lavratura desta escritura pública, na qualidade de advogado das partes.
+Na posição de advogado comum das partes, [DADOS DO ADVOGADO] / [QUALIFICAÇÃO DO
+ADVOGADO] declara que prestou assistência jurídica e acompanhou a lavratura
+desta escritura pública de inventário e partilha de bens e, na qualidade de
+advogado, assessorou e aconselhou seus constituintes, tendo conferido a
+correção do inventário, da partilha e seus valores, de acordo com a Lei.
 
-## 16. DO ITCMD
+## 16. DO IMPOSTO SOBRE A TRANSMISSÃO "CAUSA MORTIS" E DOAÇÃO — ITCMD
 
-Demonstrativo de Cálculo do ITCD Causa Mortis nº [ITCMD_SPL_N], referente ao
-ESPÓLIO, emitido pela Secretaria de Estado da Economia.
+Pelas partes foi-me apresentado o Demonstrativo de Cálculo do ITCD Causa Mortis
+nº [GUIA ITCMD] / [ITCMD_SPL_N], referente ao espólio de [QUALIFICAÇÃO DO AUTOR
+DA HERANÇA], emitido pela Secretaria de Estado da Economia, com data da última
+alteração em [ITCMD_DATA].
 
 ## 17. OUTRAS DECLARAÇÕES
 
-Texto padrão do Prov. 46/2020 CGJ-GO c/c Decreto 93.240/86, art. 1º, § 3º.
+As partes afirmam, sob responsabilidade civil e criminal, que os fatos aqui
+relatados e as declarações feitas são a exata expressão da verdade. Os
+herdeiros descendentes, neste ato, declaram a inexistência de outras ações
+reais e pessoais reipersecutórias relativas aos imóveis e de outros ônus reais
+incidentes sobre os mesmos, nos termos do artigo 372, inciso VI, do Código de
+Normas e Procedimentos do Foro Extrajudicial da Corregedoria Geral de Justiça
+do Estado de Goiás (Provimento nº 46/2020) cumulado com o artigo 1º, parágrafo
+3º, do Decreto nº 93.240/86.
 
 ## 18. DECLARAÇÕES FINAIS
 
-Texto padrão da Resolução 35 CNJ, art. 3º.
+Os herdeiros descendentes, pelo presente, autorizam o(a) Oficial(a)
+Registrador(a) da Serventia de Registro de Imóveis competente a proceder todas
+e quaisquer averbações que se fizerem necessárias para o registro da presente
+Escritura, consoante dispõem os artigos 167, inciso II, e 246 da Lei nº 6.015/73.
+
+Aos herdeiros descendentes e ao advogado constituído foi dado conhecimento do
+artigo 3º da Resolução nº 35 do Conselho Nacional de Justiça (transcrito
+integralmente pelo renderer).
 
 ## 19. DA DECLARAÇÃO DE ÚNICOS HERDEIROS
 
-Texto padrão do art. 21 da Resolução 35 CNJ.
+Pelos herdeiros descendentes, acompanhados de seu advogado constituído,
+declaram sob pena de responsabilidade civil e criminal que são os únicos
+herdeiros do espólio de [QUALIFICAÇÃO DO AUTOR DA HERANÇA], consoante dispõe o
+artigo 21 da Resolução nº 35 do Conselho Nacional de Justiça, de 24 de abril
+de 2007.
+
+[Demais parágrafos — referência ao ITCMD, isenção da Tabeliã, declaração de
+ausência de união estável — ver renderer.]
 
 ## 20. TRATAMENTO DE DADOS PESSOAIS — LGPD
 
-Cláusula padrão (Lei 13.709/18; Prov. CNJ 134/2022; CNPFE/2023 TJ-GO).
+Em conformidade com a Lei Geral de Proteção de Dados — LGPD (Lei nº
+13.709/2018), com o Provimento nº 134/2022 do Conselho Nacional de Justiça e
+com o CNPFE/2023 TJ-GO, informa-se que os dados pessoais compartilhados com
+esta serventia serão tratados conforme as Leis nº 6.015/73 e nº 8.935/94.
+
+[Demais parágrafos — hipóteses de tratamento, medidas de segurança,
+consentimento das partes — ver renderer.]
 
 ---
 
-EMITIDA A DOI conforme Instrução Normativa SRFB nº 1.112/2010.
+## ENCERRAMENTO
+
+Emitida a DOI — Declaração sobre Operações Imobiliárias, conforme Instrução
+Normativa nº 1.112, de 28 de dezembro de 2010, da Secretaria da Receita
+Federal do Brasil.
+
+E por se acharem assim contratados, pediram-me que lhes fizesse a presente
+escritura, que, lida em voz alta, foi por todos aceita, outorgada e assinada,
+dispensando-se as testemunhas na forma legal. Eu, [QUALIFICAÇÃO DA TABELIÃ], a
+escrevi, subscrevi e assino.
 
 Emolumentos: R$ [EMOLUMENTOS]. Taxa Judiciária: R$ [TAXA_JUDICIARIA].
+
+### Assinaturas
+
+{% for herdeiro in herdeiros %}
+___________________________________  — [QUALIFICAÇÃO DO {{ herdeiro.id }}] (Herdeiro(a))
+{% endfor %}
+{% if possui_meeiro %}
+___________________________________  — [QUALIFICAÇÃO DO MEEIRO] (Meeiro(a))
+{% endif %}
+___________________________________  — [QUALIFICAÇÃO DO ADVOGADO] (Advogado(a))
+
+___________________________________  — [QUALIFICAÇÃO DA TABELIÃ] (Tabeliã)
