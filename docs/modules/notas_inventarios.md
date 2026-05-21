@@ -296,11 +296,18 @@ python -m app.modules.notas.inventarios.interfaces.cli \
   --output-dir outputs/inventarios
 ```
 
-Saídas (sempre em `outputs/inventarios/`, gitignorado):
+Saídas padrão (sempre em `outputs/inventarios/`, gitignorado):
 
 - `inventario_validacao.json` — resultado da validação (ok/erros) + resumo dos cálculos.
 - `inventario_resumo.md` — **resumo técnico** legível com placeholders (NÃO é a minuta
-  completa; texto cartorário do §§ 1 a 20 fica para sprint futura).
+  completa).
+
+Com `--render-minuta`, gera adicionalmente:
+
+- `inventario_minuta.md` — **minuta-base** da escritura pública (§§ 1–20 +
+  encerramento + campo de revisão humana). Apenas placeholders; nunca PII real.
+  Só é produzida quando a validação passa (exit 0). Política de centavos
+  seguida pela minuta: [ADR-009](../decisions/ADR-009-inventory-cent-rounding-policy.md).
 
 #### Proteção do `--output-dir`
 
@@ -355,11 +362,17 @@ Implementação em [output_dir.py](../../app/modules/notas/inventarios/infrastru
 
 ---
 
-## 6. Política de centavos — decisão temporária
+## 6. Política de centavos
+
+> **Decisão vigente:** [ADR-009 — Política de centavos em inventários
+> extrajudiciais](../decisions/ADR-009-inventory-cent-rounding-policy.md).
+> A subseção abaixo descreve a regra confirmada pelo ADR; a discussão original
+> e as três alternativas avaliadas (alerta puro, ajuste controlado, distribuição
+> por valor) ficam preservadas no próprio ADR.
 
 A combinação de percentuais (ex.: `33,33% × 3 = 99,99%`) faz com que a soma do
 que é efetivamente distribuído possa diferir do patrimônio total em alguns
-centavos. **Esta sprint não corrige essa diferença automaticamente** — em vez
+centavos. **O sistema não corrige essa diferença automaticamente** — em vez
 disso:
 
 1. O calculador retorna `ResumoInventario.divergencia_centavos` com o valor
@@ -368,16 +381,10 @@ disso:
    `resumo.divergencia_centavos`, e adiciona um objeto `alerta_centavos` no nível
    raiz quando há divergência.
 3. O resumo Markdown inclui uma seção "⚠ Alerta de centavos" quando aplicável.
-4. A CLI imprime um aviso em `stderr` (sem alterar o exit code).
+4. A minuta-base (`inventario_minuta.md`, gerada com `--render-minuta`) inclui
+   uma seção "⚠ AVISO TÉCNICO — DIVERGÊNCIA DE CENTAVOS" quando há resíduo,
+   instruindo o tabelião a revisar a partilha bem a bem antes da assinatura.
+5. A CLI imprime um aviso em `stderr` (sem alterar o exit code).
 
-**Não corrigir silenciosamente é a regra.** A próxima sprint deve decidir entre:
-
-- **(a) Alerta apenas** — fluxo atual; obriga o tabelião a ajustar manualmente
-  por valor (não por percentual) quando a divergência for inaceitável.
-- **(b) Ajuste controlado** — atribuir o centavo residual a um beneficiário
-  pré-definido (ex.: último herdeiro listado) com registro explícito no relatório.
-- **(c) Distribuição por valor** — passar a aceitar entrada por valor absoluto
-  (`R$`) por bem/beneficiário em vez de percentual, eliminando arredondamento.
-
-A escolha entre (a), (b) e (c) impacta contrato de entrada e formato de saída —
-exige **ADR** antes de implementar.
+A próxima reavaliação desta política está condicionada aos critérios listados
+em [ADR-009 § Critérios para revisão futura](../decisions/ADR-009-inventory-cent-rounding-policy.md#crit%C3%A9rios-para-revis%C3%A3o-futura).

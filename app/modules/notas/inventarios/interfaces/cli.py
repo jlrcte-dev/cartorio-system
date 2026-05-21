@@ -11,6 +11,12 @@ Produz dois arquivos em ``--output-dir``:
 - ``inventario_validacao.json`` — resultado da validação + resumo dos cálculos.
 - ``inventario_resumo.md`` — resumo legível (apenas placeholders, nunca PII).
 
+Com ``--render-minuta``, gera adicionalmente:
+
+- ``inventario_minuta.md`` — minuta-base da escritura pública com placeholders;
+  só é gerada quando a validação passa (exit 0). Política de centavos seguida
+  pela minuta: ``docs/decisions/ADR-009-inventory-cent-rounding-policy.md``.
+
 Códigos de saída:
 - 0: validação OK.
 - 1: validação falhou — `inventario_validacao.json` contém a lista de erros.
@@ -30,7 +36,10 @@ from app.modules.notas.inventarios.application.calculator import (
     DECIMAL_TOLERANCIA,
     InventarioCalculator,
 )
-from app.modules.notas.inventarios.application.renderer import render_resumo_markdown
+from app.modules.notas.inventarios.application.renderer import (
+    render_minuta_markdown,
+    render_resumo_markdown,
+)
 from app.modules.notas.inventarios.application.validator import (
     InventarioValidator,
     ValidationResult,
@@ -64,6 +73,15 @@ def _build_parser() -> argparse.ArgumentParser:
         required=True,
         type=Path,
         help="Diretório onde os arquivos de saída serão gravados.",
+    )
+    parser.add_argument(
+        "--render-minuta",
+        action="store_true",
+        help=(
+            "Gera adicionalmente 'inventario_minuta.md' (minuta-base com "
+            "placeholders, sem PII). Só é produzida quando a validação passa "
+            "(exit 0). Política de centavos: ADR-009."
+        ),
     )
     return parser
 
@@ -111,6 +129,12 @@ def main(argv: list[str] | None = None) -> int:
             f"[validacao FALHOU] {len(result.errors)} erro(s). Detalhes em {validacao_path}",
             file=sys.stderr,
         )
+        if args.render_minuta:
+            print(
+                "[minuta] nao gerada: validacao falhou. Ajuste a entrada e "
+                "rode novamente com --render-minuta.",
+                file=sys.stderr,
+            )
         return EXIT_VALIDATION_FAILED
 
     if resumo.divergencia_centavos > Decimal("0"):
@@ -120,6 +144,11 @@ def main(argv: list[str] | None = None) -> int:
             "mas sem ajuste automatico — ver inventario_validacao.json)",
             file=sys.stderr,
         )
+
+    if args.render_minuta:
+        minuta_path = output_dir / "inventario_minuta.md"
+        minuta_path.write_text(render_minuta_markdown(inv, resumo), encoding="utf-8")
+        print(f"[minuta] gerada em {minuta_path}")
 
     print(f"[validacao OK] arquivos gerados em {output_dir}")
     return EXIT_OK
