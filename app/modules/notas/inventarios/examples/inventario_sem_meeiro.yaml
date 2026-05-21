@@ -1,0 +1,40 @@
+# Exemplo fictício — sem dados pessoais reais.
+# Caso de teste: 1 falecido, SEM meeiro, 3 herdeiros, 2 bens.
+
+tipo_ato: inventario_extrajudicial
+possui_meeiro: false
+percentual_meacao: 0
+patrimonio_total: 300000.00
+
+herdeiros:
+  - id: HERDEIRO_1
+    percentual_heranca: 33.33
+  - id: HERDEIRO_2
+    percentual_heranca: 33.33
+  - id: HERDEIRO_3
+    percentual_heranca: 33.34
+
+bens:
+  - id: IMOVEL_1
+    tipo: imovel
+    descricao_generica: "Imóvel rural objeto da matrícula [MATRICULA]"
+    valor: 200000.00
+    distribuicao:
+      - beneficiario: HERDEIRO_1
+        percentual: 33.33
+      - beneficiario: HERDEIRO_2
+        percentual: 33.33
+      - beneficiario: HERDEIRO_3
+        percentual: 33.34
+
+  - id: VEICULO_1
+    tipo: veiculo
+    descricao_generica: "Veículo automotor placa [PLACA]"
+    valor: 100000.00
+    distribuicao:
+      - beneficiario: HERDEIRO_1
+        percentual: 33.33
+      - beneficiario: HERDEIRO_2
+        percentual: 33.33
+      - beneficiario: HERDEIRO_3
+        percentual: 33.34
