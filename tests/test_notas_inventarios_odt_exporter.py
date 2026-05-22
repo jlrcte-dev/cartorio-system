@@ -136,7 +136,8 @@ def test_content_xml_usa_estrutura_opendocument(tmp_path: Path) -> None:
     assert content.startswith('<?xml version="1.0" encoding="UTF-8"?>')
     assert "<office:document-content" in content
     assert "<office:text>" in content
-    # títulos da minuta viram cabeçalhos ODF
+    # o título do documento (não numerado) segue como cabeçalho ODF;
+    # as cláusulas numeradas, não — ver testes de cláusulas corridas abaixo
     assert 'text:outline-level="1"' in content
 
 
@@ -154,6 +155,112 @@ def test_markdown_to_content_xml_escapa_caracteres_especiais() -> None:
     assert "&amp;" in xml
     assert "&lt;tag&gt;" in xml
     assert "<tag>" not in xml.replace("&lt;tag&gt;", "")
+
+
+# ---------------------------------------------------------------------------
+# Padrão cartorário — cláusulas numeradas em texto corrido (NOTAS-INVENTARIO-5B)
+# ---------------------------------------------------------------------------
+
+# Nomes de estilo ODF do padrão cartorário — pinados aqui como contrato:
+# qualquer renomeação no exporter precisa ser revista junto com estes testes.
+ODT_BODY_STYLE = "CartorioBody"
+ODT_CLAUSE_LABEL_STYLE = "ClauseLabel"
+
+# Cláusula numerada: rótulo iniciado por "1.", "1.1.", "10.2." etc.
+_CLAUSULA_NUMERADA = re.compile(r"^\d+(?:\.\d+)*\.\s")
+# Captura o texto de cada <text:h …>…</text:h> do content.xml.
+_HEADING_RE = re.compile(r"<text:h\b[^>]*>(.*?)</text:h>", re.DOTALL)
+
+
+def _styles_xml(odt_path: Path) -> str:
+    with zipfile.ZipFile(odt_path) as zf:
+        return zf.read("styles.xml").decode("utf-8")
+
+
+def _headings(content: str) -> list[str]:
+    return _HEADING_RE.findall(content)
+
+
+def test_clausula_numerada_nao_vira_heading() -> None:
+    """`## 2. …` é cláusula numerada — vira parágrafo de corpo, nunca heading."""
+
+    xml = markdown_to_content_xml("## 2. DO AUTOR DA HERANÇA\n\nNome do autor.\n")
+    assert "<text:h" not in xml, "cláusula numerada não pode virar cabeçalho ODF"
+    assert f'<text:p text:style-name="{ODT_BODY_STYLE}">' in xml
+    assert "2. DO AUTOR DA HERANÇA" in xml
+
+
+def test_clausulas_numeradas_da_minuta_nao_sao_headings(tmp_path: Path) -> None:
+    """Nenhum <text:h> do content.xml pode conter uma cláusula numerada."""
+
+    destino = tmp_path / "minuta.odt"
+    export_inventario_odt(_minuta_markdown_exemplo(), destino)
+    content = _content_xml(destino)
+    for heading in _headings(content):
+        assert not _CLAUSULA_NUMERADA.match(heading.strip()), (
+            f"cláusula numerada renderizada como cabeçalho ODF: {heading!r}"
+        )
+    # cláusulas conhecidas continuam presentes — apenas não como heading
+    for rotulo in ["1. DA QUALIFICAÇÃO", "2. DO AUTOR", "3. DO FALECIMENTO"]:
+        assert rotulo in content, f"cláusula ausente no content.xml: {rotulo!r}"
+
+
+def test_clausula_numerada_e_paragrafo_de_corpo_com_rotulo_destacado(
+    tmp_path: Path,
+) -> None:
+    """A cláusula é um parágrafo de corpo; o rótulo é um span ClauseLabel."""
+
+    destino = tmp_path / "minuta.odt"
+    export_inventario_odt(_minuta_markdown_exemplo(), destino)
+    content = _content_xml(destino)
+    assert (
+        f'<text:p text:style-name="{ODT_BODY_STYLE}">'
+        f'<text:span text:style-name="{ODT_CLAUSE_LABEL_STYLE}">'
+        "1. DA QUALIFICAÇÃO DAS PARTES:</text:span></text:p>"
+    ) in content
+    # subcláusulas (### N.N.) recebem o mesmo tratamento
+    assert (
+        f'<text:span text:style-name="{ODT_CLAUSE_LABEL_STYLE}">10.1. DA MEAÇÃO:</text:span>'
+    ) in content
+
+
+def test_rotulo_da_clausula_tem_estilo_negrito_e_sublinhado(tmp_path: Path) -> None:
+    """O estilo ClauseLabel define negrito e sublinhado ODF."""
+
+    destino = tmp_path / "minuta.odt"
+    export_inventario_odt(_minuta_markdown_exemplo(), destino)
+    styles = _styles_xml(destino)
+    assert f'style:name="{ODT_CLAUSE_LABEL_STYLE}"' in styles
+    assert 'style:family="text"' in styles
+    assert 'fo:font-weight="bold"' in styles
+    assert 'style:text-underline-style="solid"' in styles
+
+
+def test_estilo_de_corpo_nao_tem_aparencia_de_titulo(tmp_path: Path) -> None:
+    """CartorioBody é parágrafo de corpo — sem outline-level / heading."""
+
+    destino = tmp_path / "minuta.odt"
+    export_inventario_odt(_minuta_markdown_exemplo(), destino)
+    styles = _styles_xml(destino)
+    assert f'style:name="{ODT_BODY_STYLE}"' in styles
+    assert 'style:family="paragraph"' in styles
+    assert "outline-level" not in styles, "estilo de corpo não pode ter outline-level"
+    assert "text:h" not in styles, "estilo de corpo não pode herdar de heading"
+
+
+def test_conteudo_da_clausula_permanece_texto_normal(tmp_path: Path) -> None:
+    """O texto após o rótulo não herda negrito/sublinhado: ClauseLabel só
+    aparece dentro do <text:span> do rótulo, nunca em um parágrafo inteiro."""
+
+    destino = tmp_path / "minuta.odt"
+    export_inventario_odt(_minuta_markdown_exemplo(), destino)
+    content = _content_xml(destino)
+    usos = content.count(f'text:style-name="{ODT_CLAUSE_LABEL_STYLE}"')
+    spans = content.count(f'<text:span text:style-name="{ODT_CLAUSE_LABEL_STYLE}">')
+    assert usos == spans, "ClauseLabel deve ser usado apenas em spans de rótulo"
+    assert f'<text:p text:style-name="{ODT_CLAUSE_LABEL_STYLE}"' not in content
+    # parágrafos de conteúdo continuam no estilo de corpo padrão
+    assert '<text:p text:style-name="Standard">' in content
 
 
 # ---------------------------------------------------------------------------

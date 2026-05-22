@@ -640,11 +640,14 @@ monta com a **biblioteca padrão do Python** (`zipfile`,
 | `META-INF/manifest.xml` | manifesto do pacote |
 
 O conversor Markdown→ODT cobre apenas o subconjunto que a minuta usa:
-títulos (`#`/`##`/`###` → cabeçalhos ODF), parágrafos, citações,
-listas, alíneas e a tabela do campo de revisão humana (convertida em
-parágrafos com tabulação). Não é um conversor Markdown completo —
-*conteúdo preservado e arquivo editável* tem prioridade sobre
-formatação perfeita.
+títulos, parágrafos, citações, listas, alíneas e a tabela do campo de
+revisão humana (convertida em parágrafos com tabulação). Títulos
+recebem tratamento diferenciado conforme § 8.5: **cláusulas numeradas**
+viram parágrafos de corpo, e apenas **títulos não numerados** (título
+do documento, `ENCERRAMENTO`, `CAMPO DE REVISÃO HUMANA`) viram
+cabeçalhos ODF. Não é um conversor Markdown completo — *conteúdo
+preservado e arquivo editável* tem prioridade sobre formatação
+perfeita.
 
 Todas as entradas do ZIP usam data fixa e o `meta.xml` não carrega
 timestamps, então o `.odt` é **byte-determinístico** para a mesma
@@ -667,3 +670,49 @@ placeholders e revisa antes da lavratura.
 - Exportação mais rica (DOCX, estilos avançados, tabelas ODF nativas)
   pode ser refinada em sprint futura — o foco atual é um artefato
   mínimo, seguro, editável e testável.
+
+### 8.5. Padrão cartorário — cláusulas em texto corrido
+
+> **Sprint NOTAS-INVENTARIO-5B.** Ajuste visual do `.odt`: as cláusulas
+> numeradas da minuta deixam de ser renderizadas como títulos do
+> LibreOffice Writer.
+
+O modelo da serventia é uma minuta cartorária em **texto corrido** — as
+cláusulas aparecem apenas **numeradas e destacadas**, não como
+cabeçalhos com hierarquia de documento. O exportador segue esse padrão:
+
+- Cláusulas numeradas (`## 1. DA QUALIFICAÇÃO DAS PARTES`,
+  `### 10.1. DA MEAÇÃO`, `### 7.2. …`) são renderizadas como
+  **parágrafos de corpo** (`text:p`), nunca como `text:h`. O ODT **não**
+  aplica estilos de título/cabeçalho do Writer às cláusulas numeradas.
+- O rótulo da cláusula (numeração + título, com `:` ao final) recebe o
+  estilo de texto `ClauseLabel` — **negrito e sublinhado**, tamanho
+  normal. O conteúdo que segue o rótulo permanece texto normal.
+- O parágrafo da cláusula usa o estilo `CartorioBody` — corpo
+  justificado, herdado de `Standard`, **sem `outline-level` e sem
+  espaçamento de título**.
+- Títulos **não numerados** seguem como cabeçalhos ODF: o título do
+  documento (`# ESCRITURA PÚBLICA …`), `ENCERRAMENTO`, `Assinaturas` e
+  `CAMPO DE REVISÃO HUMANA`. São divisores estruturais, não cláusulas.
+
+Os dois estilos vivem em `styles.xml`; a detecção de cláusula numerada
+é feita pelo padrão `^\d+(?:\.\d+)*\.\s` aplicado ao texto do título.
+A regressão é coberta por `tests/test_notas_inventarios_odt_exporter.py`
+(ausência de `text:h` para cláusulas numeradas, estilo de rótulo em
+negrito/sublinhado, conteúdo em texto normal, determinismo preservado).
+
+### 8.6. Diretórios de saída — política de organização
+
+Os artefatos `.md`/`.odt`/`.json`/`.pdf` da minuta **nunca são
+versionados**. Cada diretório de saída tem um papel definido:
+
+| Diretório | Papel | Versionado? |
+|---|---|---|
+| `.ai_tmp/` | Arquivos **temporários** de validação de sprint/agente. Descartável a qualquer momento. | Não — gitignored |
+| `outputs/` | Saídas locais **manuais da CLI**, para o desenvolvedor abrir e conferir (ex.: `outputs/notas_inventarios/manual/`). | Não — gitignored |
+| `exports/atlas/` | **Reservado** à integração futura com o Atlas. Não receber minutas ODT/MD. | Conteúdo gitignored; só `.gitkeep` versionado |
+| `tests/golden/notas_inventarios/` | **Único** local de saídas esperadas versionadas (golden files de regressão — § 7.5). | Sim |
+| `app/modules/notas/inventarios/examples/` | Entradas de exemplo versionadas (§ 2.8). | Sim |
+
+`.ai_tmp/` e `outputs/` já constam do `.gitignore`. Limpar esses
+diretórios é seguro — não há arquivo versionado neles.
