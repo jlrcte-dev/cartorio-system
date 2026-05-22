@@ -1,0 +1,5 @@
+# Golden files do módulo notas/inventarios são fixtures de teste comparadas
+# byte a byte. Sob core.autocrlf=true, um checkout no Windows os converteria
+# para CRLF e quebraria a verificação de EOL. Fixar eol=lf mantém esses
+# arquivos estáveis em qualquer plataforma.
+tests/golden/notas_inventarios/** text eol=lf

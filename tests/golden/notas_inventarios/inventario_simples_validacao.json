@@ -1,0 +1,69 @@
+{
+  "tipo_ato": "inventario_extrajudicial",
+  "validacao": {
+    "ok": true,
+    "erros": []
+  },
+  "alerta_centavos": null,
+  "resumo": {
+    "patrimonio_total": "1000000.00",
+    "valor_meacao": "500000.00",
+    "monte_partilhavel": "500000.00",
+    "divergencia_centavos": "0.00",
+    "quinhao_por_herdeiro": {
+      "HERDEIRO_1": "250000.00",
+      "HERDEIRO_2": "250000.00"
+    },
+    "total_por_beneficiario": {
+      "MEEIRO": "500000.00",
+      "HERDEIRO_1": "250000.00",
+      "HERDEIRO_2": "250000.00"
+    },
+    "bens": [
+      {
+        "id": "IMOVEL_1",
+        "tipo": "imovel",
+        "valor": "600000.00",
+        "quinhoes": [
+          {
+            "beneficiario": "MEEIRO",
+            "percentual": "50.00",
+            "valor": "300000.00"
+          },
+          {
+            "beneficiario": "HERDEIRO_1",
+            "percentual": "25.00",
+            "valor": "150000.00"
+          },
+          {
+            "beneficiario": "HERDEIRO_2",
+            "percentual": "25.00",
+            "valor": "150000.00"
+          }
+        ]
+      },
+      {
+        "id": "SALDO_1",
+        "tipo": "dinheiro",
+        "valor": "400000.00",
+        "quinhoes": [
+          {
+            "beneficiario": "MEEIRO",
+            "percentual": "50.00",
+            "valor": "200000.00"
+          },
+          {
+            "beneficiario": "HERDEIRO_1",
+            "percentual": "25.00",
+            "valor": "100000.00"
+          },
+          {
+            "beneficiario": "HERDEIRO_2",
+            "percentual": "25.00",
+            "valor": "100000.00"
+          }
+        ]
+      }
+    ]
+  }
+}

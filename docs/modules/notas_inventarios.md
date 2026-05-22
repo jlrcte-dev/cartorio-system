@@ -447,3 +447,129 @@ disso:
 
 A próxima reavaliação desta política está condicionada aos critérios listados
 em [ADR-009 § Critérios para revisão futura](../decisions/ADR-009-inventory-cent-rounding-policy.md#crit%C3%A9rios-para-revis%C3%A3o-futura).
+
+---
+
+## 7. Contrato de entrada — schema Pydantic v2
+
+> **Sprint NOTAS-INVENTARIO-4.** O contrato YAML/JSON é validado por um
+> schema Pydantic v2 antes de chegar ao validador de negócio. Estrutura,
+> tipos e ``Decimal`` seguro entram no schema; soma de percentuais e
+> integridade referencial permanecem no
+> [`application/validator.py`](../../app/modules/notas/inventarios/application/validator.py).
+
+### 7.1. Pipeline atual
+
+```
+YAML/JSON
+  └─► loaders.load_inventario   ─ decodifica e protege contra YAML/JSON malformado
+       └─► schemas.parse_inventario_input
+            ├─ InventarioInputSchema  ─ Pydantic v2 (estrutural)
+            │   ├─ extra="forbid"  ─ recusa campo não previsto
+            │   ├─ Literal["inventario_extrajudicial"]
+            │   ├─ Decimal seguro (float convertido via str — sem ruído binário)
+            │   └─ TipoBem validado por field_validator com mensagem "tipo inválido"
+            └─ to_inventario()       ─ converte para os modelos imutáveis do domínio
+                 └─► InventarioValidator (negócio)
+                      └─► InventarioCalculator
+                           └─► renderer.render_resumo_markdown / render_minuta_markdown
+```
+
+### 7.2. O que é validação **estrutural** (Pydantic)
+
+- presença dos campos obrigatórios (`tipo_ato`, `possui_meeiro`, `patrimonio_total`, `herdeiros`, `bens`);
+- tipos: `bool`, `Decimal`, `str`, `TipoBem`, listas;
+- listas não vazias (`herdeiros` e `bens`);
+- `extra="forbid"` em todos os modelos — protege contra digitação criativa
+  no YAML ("nome_real", "matricula_real") que poderia mascarar erro;
+- coerção segura para `Decimal`: aceita `int`, `str` e `float` (float → `str` →
+  `Decimal`, evitando `Decimal(0.1) → 0.10000000000000000555…`);
+- booleano em campo numérico é rejeitado (`Decimal(True) == 1` é armadilha);
+- mensagens de erro agregadas com o caminho do campo (`bens.0.valor: …`)
+  para facilitar diagnóstico via CLI.
+
+### 7.3. O que continua como validação de **negócio** (validator)
+
+- `Σ herdeiros[*].percentual_heranca == 100` (tolerância ±0,01);
+- `Σ bens[*].valor == patrimonio_total` (tolerância ±0,01);
+- `Σ bens[*].distribuicao[*].percentual == 100` por bem;
+- todo `beneficiario` ∈ `{"MEEIRO"} ∪ {ids de herdeiros}`;
+- meeiro proibido quando `possui_meeiro=false`;
+- `percentual_meacao` dentro do intervalo correto conforme `possui_meeiro`;
+- ids únicos e não vazios em `herdeiros[]` e `bens[]`;
+- `MEEIRO` reservado — não pode ser id de herdeiro;
+- política de centavos da [ADR-009](../decisions/ADR-009-inventory-cent-rounding-policy.md).
+
+### 7.4. Exemplos com `Decimal` seguro
+
+Os exemplos versionados foram migrados para **strings decimais** nos campos
+monetários e percentuais, evitando passagem por `float` no parser YAML:
+
+```yaml
+percentual_meacao: "50"
+patrimonio_total: "1000000.00"
+```
+
+Quem montar payloads em Python pode passar tanto `str` quanto `Decimal`;
+floats são aceitos (e convertidos via `str`), mas a recomendação é
+preferir strings decimais para clareza e reprodutibilidade.
+
+### 7.5. Golden files
+
+As três saídas canônicas — `inventario_validacao.json`,
+`inventario_resumo.md` e `inventario_minuta.md` — para os dois exemplos
+canônicos vivem em:
+
+```
+tests/golden/notas_inventarios/
+  inventario_simples_validacao.json
+  inventario_simples_resumo.md
+  inventario_simples_minuta.md
+  inventario_sem_meeiro_validacao.json
+  inventario_sem_meeiro_resumo.md
+  inventario_sem_meeiro_minuta.md
+```
+
+Os goldens são **fixtures versionáveis** — texto, sem PII, sempre em LF
+(o teste verifica e falha se aparecer CRLF). Eles funcionam como teste
+de regressão byte a byte: qualquer mudança no renderer, no validator ou
+no JSON de validação que não seja intencional quebra
+`tests/test_notas_inventarios_golden.py`.
+
+#### Como atualizar um golden manualmente
+
+Quando uma mudança intencional de minuta/resumo/validação for feita
+(cláusula textual nova, campo a mais no JSON, política de centavos
+ajustada):
+
+```powershell
+# 1. Rodar a CLI nos dois exemplos canônicos com a versão nova:
+python -m app.modules.notas.inventarios.interfaces.cli `
+  --input app/modules/notas/inventarios/examples/inventario_simples.yaml `
+  --output-dir .ai_tmp/inv_simples `
+  --render-minuta
+python -m app.modules.notas.inventarios.interfaces.cli `
+  --input app/modules/notas/inventarios/examples/inventario_sem_meeiro.yaml `
+  --output-dir .ai_tmp/inv_sem_meeiro `
+  --render-minuta
+
+# 2. Inspecionar diff dos arquivos gerados vs. golden atual:
+Compare-Object `
+  (Get-Content tests/golden/notas_inventarios/inventario_simples_minuta.md) `
+  (Get-Content .ai_tmp/inv_simples/inventario_minuta.md)
+
+# 3. Copiar para tests/golden/notas_inventarios/, normalizar CRLF→LF,
+#    e commitar junto com a mudança que motivou a regeneração.
+```
+
+A atualização **não** acontece automaticamente durante o teste — a
+política é deliberada: golden files são parte do contrato e exigem
+revisão consciente. Outputs gravados em `outputs/` continuam fora do
+controle de versão.
+
+#### O que os goldens **não** contêm
+
+- nenhum dado pessoal real (CPF, RG, endereço, nome civil);
+- nenhum CPF/CNPJ/CEP/e-mail/data dd/mm/aaaa — o teste anti-PII no
+  conjunto golden recusa qualquer ocorrência;
+- nenhuma referência a documentos físicos da serventia.

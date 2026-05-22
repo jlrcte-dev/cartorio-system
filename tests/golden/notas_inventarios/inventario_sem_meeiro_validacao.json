@@ -1,0 +1,70 @@
+{
+  "tipo_ato": "inventario_extrajudicial",
+  "validacao": {
+    "ok": true,
+    "erros": []
+  },
+  "alerta_centavos": null,
+  "resumo": {
+    "patrimonio_total": "300000.00",
+    "valor_meacao": "0.00",
+    "monte_partilhavel": "300000.00",
+    "divergencia_centavos": "0.00",
+    "quinhao_por_herdeiro": {
+      "HERDEIRO_1": "99990.00",
+      "HERDEIRO_2": "99990.00",
+      "HERDEIRO_3": "100020.00"
+    },
+    "total_por_beneficiario": {
+      "HERDEIRO_1": "99990.00",
+      "HERDEIRO_2": "99990.00",
+      "HERDEIRO_3": "100020.00"
+    },
+    "bens": [
+      {
+        "id": "IMOVEL_1",
+        "tipo": "imovel",
+        "valor": "200000.00",
+        "quinhoes": [
+          {
+            "beneficiario": "HERDEIRO_1",
+            "percentual": "33.33",
+            "valor": "66660.00"
+          },
+          {
+            "beneficiario": "HERDEIRO_2",
+            "percentual": "33.33",
+            "valor": "66660.00"
+          },
+          {
+            "beneficiario": "HERDEIRO_3",
+            "percentual": "33.34",
+            "valor": "66680.00"
+          }
+        ]
+      },
+      {
+        "id": "VEICULO_1",
+        "tipo": "veiculo",
+        "valor": "100000.00",
+        "quinhoes": [
+          {
+            "beneficiario": "HERDEIRO_1",
+            "percentual": "33.33",
+            "valor": "33330.00"
+          },
+          {
+            "beneficiario": "HERDEIRO_2",
+            "percentual": "33.33",
+            "valor": "33330.00"
+          },
+          {
+            "beneficiario": "HERDEIRO_3",
+            "percentual": "33.34",
+            "valor": "33340.00"
+          }
+        ]
+      }
+    ]
+  }
+}
