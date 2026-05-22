@@ -573,3 +573,97 @@ controle de versão.
 - nenhum CPF/CNPJ/CEP/e-mail/data dd/mm/aaaa — o teste anti-PII no
   conjunto golden recusa qualquer ocorrência;
 - nenhuma referência a documentos físicos da serventia.
+
+---
+
+## 8. Export ODT — `--export-odt`
+
+> **Sprint NOTAS-INVENTARIO-5.** A CLI passa a exportar a minuta-base
+> também em `.odt` (OpenDocument Text), para conferência prática no
+> LibreOffice Writer. O exportador vive em
+> [`infrastructure/exporters/odt_exporter.py`](../../app/modules/notas/inventarios/infrastructure/exporters/odt_exporter.py).
+
+### 8.1. Markdown continua sendo a fonte canônica
+
+O `.odt` é um **artefato derivado**. A fonte de verdade da minuta segue
+sendo `inventario_minuta.md`, produzido por `render_minuta_markdown`.
+O pipeline é estritamente unidirecional:
+
+```text
+YAML/JSON → Pydantic → validação de negócio → cálculo
+  → render_minuta_markdown() → inventario_minuta.md
+  → export_inventario_odt(markdown) → inventario_minuta.odt
+```
+
+O ODT **nunca** volta para o pipeline como entrada e **não** substitui o
+Markdown. Qualquer mudança na minuta é feita no `renderer.py`; o ODT é
+regerado a partir do Markdown resultante.
+
+### 8.2. Uso na CLI
+
+```bash
+# Contrato anterior preservado — gera apenas validação + resumo:
+python -m app.modules.notas.inventarios.interfaces.cli \
+  --input app/modules/notas/inventarios/examples/inventario_simples.yaml \
+  --output-dir outputs/inventarios
+
+# --render-minuta: gera também inventario_minuta.md (inalterado):
+python -m app.modules.notas.inventarios.interfaces.cli \
+  --input app/modules/notas/inventarios/examples/inventario_simples.yaml \
+  --output-dir outputs/inventarios --render-minuta
+
+# --export-odt: gera inventario_minuta.md E inventario_minuta.odt:
+python -m app.modules.notas.inventarios.interfaces.cli \
+  --input app/modules/notas/inventarios/examples/inventario_simples.yaml \
+  --output-dir outputs/inventarios --export-odt
+```
+
+- `--export-odt` **implica** a renderização da minuta Markdown — não é
+  preciso passar `--render-minuta` junto.
+- Se a validação falhar: nem o `.md` nem o `.odt` são gerados; a CLI
+  retorna o mesmo exit code de validação (`1`) e imprime mensagem clara.
+- A proteção de `--output-dir` (whitelist `outputs/`, `tmp/`, `.ai_tmp/`
+  ou caminho externo) continua valendo para o `.odt`.
+
+### 8.3. Como o ODT é montado
+
+Um `.odt` é um ZIP com estrutura OpenDocument conhecida. O exportador o
+monta com a **biblioteca padrão do Python** (`zipfile`,
+`xml.sax.saxutils`) — **nenhuma dependência externa foi adicionada**:
+
+| Entrada | Observação |
+|---|---|
+| `mimetype` | primeira entrada do ZIP, **sem compressão**, valor `application/vnd.oasis.opendocument.text` |
+| `content.xml` | texto da minuta convertido de Markdown |
+| `styles.xml` | estrutura de estilos mínima |
+| `meta.xml` | metadados — **sem datas**, para manter o pacote determinístico |
+| `META-INF/manifest.xml` | manifesto do pacote |
+
+O conversor Markdown→ODT cobre apenas o subconjunto que a minuta usa:
+títulos (`#`/`##`/`###` → cabeçalhos ODF), parágrafos, citações,
+listas, alíneas e a tabela do campo de revisão humana (convertida em
+parágrafos com tabulação). Não é um conversor Markdown completo —
+*conteúdo preservado e arquivo editável* tem prioridade sobre
+formatação perfeita.
+
+Todas as entradas do ZIP usam data fixa e o `meta.xml` não carrega
+timestamps, então o `.odt` é **byte-determinístico** para a mesma
+entrada (coberto por teste).
+
+### 8.4. ODT depende de revisão humana — e não é versionado
+
+O `.odt` carrega os mesmos placeholders (`[QUALIFICAÇÃO DO …]`,
+`[CNIB_HASH]`, etc.) e o bloco "CAMPO DE REVISÃO HUMANA" da minuta
+Markdown. Continua sendo um **rascunho**: o tabelião preenche os
+placeholders e revisa antes da lavratura.
+
+- O `.odt` é gravado apenas em `outputs/`, `tmp/`, `.ai_tmp/` ou caminho
+  externo autorizado — **nunca é versionado** (assim como o `.md` de
+  saída).
+- Não há golden binário de `.odt` nesta sprint; a regressão é coberta
+  testando a estrutura interna do pacote (ZIP válido, ordem do
+  `mimetype`, presença de `content.xml`/`manifest.xml`, placeholders,
+  ausência de PII).
+- Exportação mais rica (DOCX, estilos avançados, tabelas ODF nativas)
+  pode ser refinada em sprint futura — o foco atual é um artefato
+  mínimo, seguro, editável e testável.

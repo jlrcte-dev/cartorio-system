@@ -17,6 +17,11 @@ Com ``--render-minuta``, gera adicionalmente:
   só é gerada quando a validação passa (exit 0). Política de centavos seguida
   pela minuta: ``docs/decisions/ADR-009-inventory-cent-rounding-policy.md``.
 
+Com ``--export-odt``, gera ``inventario_minuta.md`` **e**
+``inventario_minuta.odt`` (artefato derivado, editável no LibreOffice
+Writer). A flag implica a renderização da minuta — não é preciso passar
+``--render-minuta`` junto.
+
 Códigos de saída:
 - 0: validação OK.
 - 1: validação falhou — `inventario_validacao.json` contém a lista de erros.
@@ -46,6 +51,7 @@ from app.modules.notas.inventarios.application.validator import (
 )
 from app.modules.notas.inventarios.domain.errors import InventarioInputError
 from app.modules.notas.inventarios.domain.models import Inventario, ResumoInventario
+from app.modules.notas.inventarios.infrastructure.exporters import export_inventario_odt
 from app.modules.notas.inventarios.infrastructure.loaders import load_inventario
 from app.modules.notas.inventarios.infrastructure.output_dir import validate_output_dir
 
@@ -81,6 +87,16 @@ def _build_parser() -> argparse.ArgumentParser:
             "Gera adicionalmente 'inventario_minuta.md' (minuta-base com "
             "placeholders, sem PII). Só é produzida quando a validação passa "
             "(exit 0). Política de centavos: ADR-009."
+        ),
+    )
+    parser.add_argument(
+        "--export-odt",
+        action="store_true",
+        help=(
+            "Gera 'inventario_minuta.md' e 'inventario_minuta.odt' (artefato "
+            "derivado, editável no LibreOffice Writer). Implica a renderização "
+            "da minuta — não exige --render-minuta. Só produzidos quando a "
+            "validação passa (exit 0)."
         ),
     )
     return parser
@@ -124,15 +140,16 @@ def main(argv: list[str] | None = None) -> int:
 
     resumo_md_path.write_text(render_resumo_markdown(inv, resumo), encoding="utf-8")
 
+    quer_minuta = args.render_minuta or args.export_odt
+
     if not result.ok:
         print(
             f"[validacao FALHOU] {len(result.errors)} erro(s). Detalhes em {validacao_path}",
             file=sys.stderr,
         )
-        if args.render_minuta:
+        if quer_minuta:
             print(
-                "[minuta] nao gerada: validacao falhou. Ajuste a entrada e "
-                "rode novamente com --render-minuta.",
+                "[minuta] nao gerada: validacao falhou. Ajuste a entrada e rode novamente.",
                 file=sys.stderr,
             )
         return EXIT_VALIDATION_FAILED
@@ -145,10 +162,16 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
-    if args.render_minuta:
+    if quer_minuta:
+        minuta_md = render_minuta_markdown(inv, resumo)
         minuta_path = output_dir / "inventario_minuta.md"
-        minuta_path.write_text(render_minuta_markdown(inv, resumo), encoding="utf-8")
+        minuta_path.write_text(minuta_md, encoding="utf-8")
         print(f"[minuta] gerada em {minuta_path}")
+
+        if args.export_odt:
+            odt_path = output_dir / "inventario_minuta.odt"
+            export_inventario_odt(minuta_md, odt_path)
+            print(f"[minuta-odt] gerada em {odt_path}")
 
     print(f"[validacao OK] arquivos gerados em {output_dir}")
     return EXIT_OK
