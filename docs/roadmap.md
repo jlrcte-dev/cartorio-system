@@ -143,6 +143,21 @@ com `3.12`, venv recriado.
 
 ---
 
+## Inteligência normativa — preparação documental
+
+A Sprint **KNOWLEDGE-BASE-0** (2026-05-23) entregou apenas documentação
+conceitual da futura base de conhecimento normativo. Não há código,
+banco, migration, endpoint, embeddings, RAG, MCP, agentes nem integração
+com IA externa. Ver
+[`docs/knowledge_base/`](knowledge_base/) — em especial
+[`KNOWLEDGE_BASE_BLUEPRINT.md`](knowledge_base/KNOWLEDGE_BASE_BLUEPRINT.md)
+e [`IMPLEMENTATION_ROADMAP.md`](knowledge_base/IMPLEMENTATION_ROADMAP.md).
+
+A implementação efetiva (KB-1 em diante) depende de aprovação humana
+formal e de ADRs específicas por fase (ADRs 004–008).
+
+---
+
 ## Backlog futuro — módulo financeiro
 
 O módulo financeiro é preservado integralmente. Estas etapas voltam ao roadmap

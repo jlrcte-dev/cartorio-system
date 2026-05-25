@@ -129,3 +129,15 @@
 |-----------|----------|
 | [`analysis/`](analysis/) | Análises de domínio LGPD, matrizes de decisão |
 | [`document_registry/`](document_registry/) | Blueprint CNPFE-GO, conceito do módulo, matriz esperada |
+
+---
+
+## 12. Knowledge Base (preparação documental — sem código)
+
+| Documento | Descrição |
+|-----------|-----------|
+| [`knowledge_base/README.md`](knowledge_base/README.md) | Visão geral da pasta e aviso de que ainda não há módulo implementado |
+| [`knowledge_base/KNOWLEDGE_BASE_BLUEPRINT.md`](knowledge_base/KNOWLEDGE_BASE_BLUEPRINT.md) | Blueprint conceitual da futura base normativa (classificação, metadados, chunks, citações) |
+| [`knowledge_base/PHASE_1_SOURCE_ALLOWLIST.md`](knowledge_base/PHASE_1_SOURCE_ALLOWLIST.md) | Lista explícita de fontes candidatas/autorizadas/bloqueadas para a Fase 1 |
+| [`knowledge_base/GOVERNANCE_DECISIONS.md`](knowledge_base/GOVERNANCE_DECISIONS.md) | Decisões humanas pendentes (DHP-01..10), critérios de aprovação e regras de não regressão |
+| [`knowledge_base/IMPLEMENTATION_ROADMAP.md`](knowledge_base/IMPLEMENTATION_ROADMAP.md) | Roadmap incremental para implementação futura |

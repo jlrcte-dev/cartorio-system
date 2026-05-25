@@ -512,3 +512,19 @@ Todo output de status inclui o texto:
 - **Dossiê técnico**: agregar `ComplianceEvidence` + achados (`audit`) + ações
   (`lgpd`) + sinais (`retention`) em um pacote por etapa para Sistema Justiça Aberta.
   Primeiro formato: JSON + Markdown. PDF em sprint posterior.
+
+---
+
+## Relação com a futura `knowledge_base` (preparação documental)
+
+A Sprint **KNOWLEDGE-BASE-0** entregou apenas o blueprint conceitual da
+futura base normativa do Cartório System. O módulo `compliance` **não
+depende** dessa base nesta fase, e não importa nem é importado por ela.
+A separação entre `knowledge_base` (fonte organizada) e `ai_gateway`
+(consumidor futuro) está formalizada nas
+[ADRs 004–008](../decisions/).
+
+Documentos da knowledge_base:
+
+- [`docs/knowledge_base/KNOWLEDGE_BASE_BLUEPRINT.md`](../knowledge_base/KNOWLEDGE_BASE_BLUEPRINT.md)
+- [`docs/knowledge_base/IMPLEMENTATION_ROADMAP.md`](../knowledge_base/IMPLEMENTATION_ROADMAP.md)
