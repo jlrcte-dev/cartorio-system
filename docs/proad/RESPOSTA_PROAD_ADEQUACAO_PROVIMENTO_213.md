@@ -3,7 +3,7 @@
 **Status:** PRELIMINAR — Em consolidação  
 **PROAD:** Nº 202509000672377  
 **Serventia:** Cartório Costa Teixeira — Terezópolis de Goiás / Comarca de Goianápolis — GO  
-**Atualizado em:** 2026-05-16
+**Atualizado em:** 2026-06-07
 
 > Este documento é uma visão consolidada das providências da serventia para adequação ao Provimento CNJ nº 195/2025. Complementa (mas não substitui) os documentos específicos em `resposta_ieri_2026/`. Não deve ser protocolado diretamente.
 
@@ -15,7 +15,7 @@ Em 03 de junho de 2025, o Conselho Nacional de Justiça publicou o **Provimento 
 
 O provimento entrou em vigor em **01/09/2025**, estabelecendo obrigações imediatas e progressivas para as serventias de Registro de Imóveis em todo o Brasil.
 
-A serventia Cartório Costa Teixeira (Terezópolis de Goiás) responde ao **PROAD nº 202509000672377**, aberto na Corregedoria do Foro Extrajudicial do Tribunal de Justiça do Estado de Goiás, com **prazo vigente de ~10/06/2026** (30 dias a contar do Ofício nº 045/2026/GNP, de 11/05/2026).
+A serventia Cartório Costa Teixeira (Terezópolis de Goiás) responde ao **PROAD nº 202509000672377**, aberto na Corregedoria do Foro Extrajudicial do Tribunal de Justiça do Estado de Goiás, com **prazo estimado em 10/06/2026** (o Ofício nº 045/2026/GNP, assinado eletronicamente em 11/05/2026, concede 30 dias, sem fixar data final expressa; o termo final depende da data de intimação e deve ser confirmado no PROAD).
 
 ---
 
@@ -36,10 +36,10 @@ A serventia Cartório Costa Teixeira (Terezópolis de Goiás) responde ao **PROA
 
 | Item | Situação |
 |---|---|
-| Colaborador responsável definido | Sim — a ser formalizado na portaria |
-| Portaria Interna nº 01/2026-RI | Prevista para **18/05/2026** |
-| Nome do responsável (antes da portaria) | `[NOME_DO_COLABORADOR_DESIGNADO]` |
-| Prazo final PROAD | ~10/06/2026 |
+| Equipe responsável definida (designação) | Sim — André (operacional), Monique (substituta), supervisão da Oficial Registradora |
+| Portaria Interna nº 01/2026-RI | **Assinada em 18/05/2026** — via oficial mantida fora do repositório (doc. 04 é reprodução textual de controle); providência: anexar a via oficial ao pacote |
+| Profissional técnico habilitado (georref) | Pendente — credenciamento ONR (art. 343-G) não comprovado; função distinta da do responsável operacional |
+| Prazo final PROAD | Estimado em 10/06/2026 (Ofício concede 30 dias sem data expressa; a confirmar no PROAD/intimação) |
 | 1º Relatório Semestral | Novembro/2026 |
 
 ---
@@ -52,9 +52,9 @@ A serventia Cartório Costa Teixeira (Terezópolis de Goiás) responde ao **PROA
 | Análise dos manuais ONR (Técnico v1.3, Mapa v2.7, API v1.0, CAD v1.1, rurais estrangeiros v1.2) | Concluída |
 | Extração sanitizada de dados parciais de matrículas/Indicadores Reais | Concluída (dados em `_local_data/`) |
 | Estruturação do pacote documental para juntada no PROAD | Em andamento |
-| Designação do colaborador responsável | Definida — formalização em 18/05/2026 |
-| Elaboração da Portaria Interna nº 01/2026-RI | Minuta concluída |
-| Elaboração do Plano de Ação | Minuta concluída — campos `[a apurar]` pendentes de levantamento |
+| Designação do colaborador responsável | Formalizada pela Portaria nº 01/2026-RI (assinada em 18/05/2026) — André (operacional), Monique (substituta) |
+| Portaria Interna nº 01/2026-RI | Assinada em 18/05/2026 (via oficial externa ao repositório) |
+| Elaboração do Plano de Ação | Minuta concluída — pendências específicas (contagem integral) ressalvadas; números parciais incorporados do Anexo IV |
 | Elaboração do POP-RI-001 | Minuta concluída — validação prática pendente |
 | Elaboração do Relatório de Diagnóstico Inicial | Estrutura concluída — dados a apurar nos 30 dias pós-portaria |
 | Elaboração da Matriz de Evidências e Controles | Em validação |
@@ -65,12 +65,12 @@ A serventia Cartório Costa Teixeira (Terezópolis de Goiás) responde ao **PROA
 
 ### IERI-e — Inventário Estatístico Eletrônico
 - Alimentação mensal obrigatória ao ONR a partir de 01/09/2025
-- Envios de set/2025 a abr/2026 em regularização retroativa (condicionada ao procedimento ONR)
+- Envios de set/2025 a abr/2026: análise do período e envio dos atos pendentes pelo IERI-e, sem condicionamento prévio ao ONR
 - Início da alimentação corrente: jun/2026 (atos de mai/2026)
 - Dependência técnica: exportação do Engegraph no layout do ONR ainda não confirmada
 
 ### SIG-RI — Sistema de Informações Geográficas
-- Inserção gradual dos imóveis georreferenciados — prazo 48 meses (até 01/09/2029)
+- Inserção gradual dos imóveis georreferenciados — durante o prazo de 48 meses previsto no modelo da Corregedoria
 - Prioridade: imóveis rurais com georreferenciamento certificado INCRA/SIGEF
 - Dependência: credenciamento de profissional técnico habilitado junto ao ONR (art. 343-G)
 
@@ -88,13 +88,13 @@ Os dados abaixo são **parciais e preliminares**, extraídos de forma sanitizada
 
 | Campo | Situação |
 |---|---|
-| Total de matrículas | A apurar — levantamento diagnóstico em andamento |
+| Total de matrículas do acervo | 3.534 (informado pela serventia, ativas + encerradas); composição detalhada em consolidação |
 | Matrículas urbanas | Dados parciais disponíveis em `_local_data/` |
 | Matrículas rurais | Dados parciais disponíveis em `_local_data/` |
 | Imóveis georreferenciados INCRA/SIGEF | Parcialmente identificados |
 | Pendências de saneamento | A apurar após diagnóstico completo |
 
-> **Limitação declarada:** Esses dados não podem ser usados como números oficiais sem validação no sistema. O levantamento diagnóstico completo será concluído nos 30 dias seguintes à expedição da Portaria nº 01/2026-RI.
+> **Limitação declarada:** O diagnóstico integral do acervo segue **em andamento** (levantamento progressivo). A linha de base parcial confirmada — total do acervo **3.534** (informado pela serventia), **161** matrículas analisadas (**4,56%**), **122** inseridas/validadas no SIG-RI e **2** sanitizações — consta do Anexo IV (doc. 11) e do Plano de Ação; a contagem detalhada de ativas/encerradas será consolidada progressivamente.
 
 ---
 
@@ -132,13 +132,13 @@ Os dados abaixo são **parciais e preliminares**, extraídos de forma sanitizada
 
 | Prazo | Ação |
 |---|---|
-| **18/05/2026** | Expedir a Portaria Interna nº 01/2026-RI com nome real do colaborador |
-| **Até 22/05/2026** | Iniciar levantamento diagnóstico completo do acervo |
-| **Até 17/06/2026** | Preencher campos `[a apurar]` e finalizar o Relatório Diagnóstico |
+| **Imediato** | Obter e anexar a via oficial assinada da Portaria nº 01/2026-RI (assinada em 18/05/2026) ao pacote |
+| **Progressivo** | Ampliar o levantamento diagnóstico do acervo (equipe já formalizada) |
+| **Progressivo** | Consolidar a contagem integral do acervo e finalizar o diagnóstico integral (o parcial está no Anexo IV — doc. 11) |
 | **Até 05/06/2026** | Revisão final e assinatura de todos os documentos do pacote |
 | **Até 10/06/2026** | Protocolo/juntada do pacote completo nos autos do PROAD |
 | **Jun/2026** | Início da alimentação mensal corrente do IERI-e (atos de mai/2026) |
-| **Até set/2026** | Regularização retroativa dos envios (condicionada ao ONR) |
+| **Até set/2026** | Análise do período set/2025–abr/2026 e envio dos atos pendentes pelo IERI-e (sem condicionamento prévio ao ONR) |
 | **Nov/2026** | Entrega do 1º Relatório Semestral de cumprimento |
 | **Mai/2027** | Revisão do Plano de Ação (versão 2.0) |
 
@@ -148,9 +148,9 @@ Os dados abaixo são **parciais e preliminares**, extraídos de forma sanitizada
 
 | Evidência | Prazo | Status |
 |---|---|---|
-| Portaria Interna nº 01/2026-RI assinada | 18/05/2026 | Pendente |
-| Pacote completo juntado nos autos do PROAD | ~10/06/2026 | Pendente |
-| Relatório Diagnóstico Inicial (campos preenchidos) | 30 dias pós-portaria | Pendente |
+| Portaria Interna nº 01/2026-RI (assinada em 18/05/2026) | Concluída | Via oficial a anexar ao pacote |
+| Pacote completo juntado nos autos do PROAD | Estimado 10/06/2026 (a confirmar) | Pendente |
+| Relatório Diagnóstico Inicial (campos consolidados) | Progressivo (equipe formalizada) | Em andamento |
 | Comprovantes mensais de envio ao ONR (IERI-e) | A partir de jun/2026 | Pendente |
 | Registros de inserção no SIG-RI | A partir de nov/2026 | Pendente |
 | 1º Relatório Semestral de cumprimento | Nov/2026 | Pendente |
@@ -165,4 +165,4 @@ Este documento é de uso interno da serventia. As informações aqui contidas s�
 
 ---
 
-*Atualizado em: 2026-05-16. Revisar após a expedição da portaria e antes da juntada do pacote.*
+*Atualizado em: 2026-06-07. Revisar após a expedição da portaria e antes da juntada do pacote.*

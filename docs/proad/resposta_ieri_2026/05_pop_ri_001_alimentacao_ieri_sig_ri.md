@@ -5,8 +5,6 @@
 **Versão:** 1.0 | **Aprovação prevista:** Márcia Maria da Silva Costa Teixeira  
 **Atualizado em:** 2026-05-16
 
-> **Atenção:** Este POP é uma minuta operacional. Os fluxos devem ser validados na prática após o início das operações no Portal RI Digital. Campos marcados com `[___]` devem ser preenchidos antes da aprovação final.
-
 ---
 
 ## 1. Objetivo
@@ -30,7 +28,7 @@ Aplica-se a todas as atividades do setor de Registro de Imóveis relacionadas ao
 
 - Provimento CNJ nº 195/2025 — Arts. 4º, 5º, 320-O §1º, 343-A a 343-J, 343-F, 343-G, 440-AR a 440-BG
 - Decisão/Ofício Circular nº 103/2025 — Corregedoria-Geral GO
-- Portaria Interna nº 01/2026-RI desta serventia (18/05/2026)
+- Portaria Interna nº 01/2026-RI desta serventia (assinada em 18/05/2026)
 - Manual Técnico Operacional ONR v1.3 (25/02/2026)
 - Manuais complementares: Manual do Mapa (v2.7), Manual da API REST (v1.0), Manual do Mapa Público (v1.0), Manual CAD/ITN 003/2025 (v1.1), Manual Gerenciador de Imóveis Rurais de Estrangeiros (v1.2)
 
@@ -57,9 +55,9 @@ Aplica-se a todas as atividades do setor de Registro de Imóveis relacionadas ao
 | Função | Nome |
 |---|---|
 | Responsável geral / Autoridade aprovadora | Márcia Maria da Silva Costa Teixeira (Oficial Registradora e Tabeliã) |
-| Responsável operacional principal | André (Suboficial) — Portaria nº 01/2026-RI |
-| Responsável substituto | [a designar] — a ser definido pela Oficial Registradora; enquanto não designado, supervisão direta pela Oficial Registradora |
-| Profissional técnico habilitado (SIG-RI) | [a confirmar] |
+| Responsável operacional principal | André (Suboficial) — designado pela Portaria nº 01/2026-RI (assinada em 18/05/2026) |
+| Responsável substituto | Monique — designada como substituta pela Portaria nº 01/2026-RI (assinada em 18/05/2026) |
+| Profissional técnico habilitado (SIG-RI) | Pendente — credenciamento junto ao ONR |
 
 ---
 
@@ -98,7 +96,6 @@ Aplica-se a todas as atividades do setor de Registro de Imóveis relacionadas ao
 | M.8 | Elaborar Relatório Mensal Interno de Cumprimento | Até 5 dias após M.6 | Responsável operacional |
 | M.9 | Revisar e arquivar o Relatório Mensal Interno | Até 5 dias após M.8 | Oficial Registradora |
 
-> **Observação crítica:** Se o Engegraph ainda não disponibilizar exportação automática no layout do ONR, a extração deverá ser feita manualmente (etapa M.2) conforme instruções do Manual Técnico ONR, até que a integração seja viabilizada. Comunicar formalmente ao ONR e ao fornecedor, registrando no Dossiê IERI-e/SIG-RI.
 
 ---
 
@@ -161,9 +158,9 @@ O envio observa o Manual Técnico Operacional ONR v1.3 (25/02/2026). Canais disp
 | L.2 | Consultar Engegraph (relatórios gerenciais) | 0–30 dias após portaria |
 | L.3 | Verificar matrículas com averbação de georreferenciamento | 0–30 dias após portaria |
 | L.4 | Consultar SIGEF/INCRA para rurais certificados | 0–30 dias após portaria |
-| L.5 | Preencher campos `[a apurar]` do Plano de Ação | 0–30 dias após portaria |
+| L.5 | Consolidar as pendências específicas do Plano de Ação (contagem integral do acervo) | 0–30 dias após portaria |
 | L.6 | Identificar e priorizar irregularidades | 6–24 meses |
-| L.7 | Promover saneamento progressivo | 6–48 meses (até 01/09/2029) |
+| L.7 | Promover saneamento progressivo | 6–48 meses (prazo previsto no modelo da Corregedoria) |
 
 ---
 
@@ -171,9 +168,7 @@ O envio observa o Manual Técnico Operacional ONR v1.3 (25/02/2026). Canais disp
 
 | Situação | Ação |
 |---|---|
-| Engegraph não exporta no layout ONR | Fazer envio manual; comunicar formalmente ao fornecedor e ao ONR; registrar no Dossiê |
-| ONR não confirma procedimento de envio retroativo | Aguardar confirmação; registrar pendência; manter envios correntes |
-| Profissional técnico não disponível para SIG-RI | Registrar impossibilidade técnica; manter levantamento em andamento; comunicar à Corregedoria se necessário |
+| Dúvida ou erro técnico concreto durante o envio retroativo | Realizar a análise do período set/2025–abr/2026 e enviar os atos pendentes pelo IERI-e; registrar a ocorrência no Dossiê; buscar orientação do ONR apenas diante de erro/dúvida técnica concreta; manter os envios correntes |
 | Inconsistência identificada após o envio | Registrar; corrigir no envio do mês seguinte; comunicar ao ONR se relevante |
 
 ---
@@ -199,8 +194,8 @@ A ITN 003/2025 (Instrução Técnica Normativa — módulo "Incluir Atos e Dados
 | Item | Dado |
 |---|---|
 | Versão | 1.0 |
-| Data de elaboração | [mês/2026] |
-| Próxima revisão | [mai/2027] ou quando o ONR publicar nova versão do Manual Técnico |
+| Data de elaboração | [DATA DA ASSINATURA] |
+| Próxima revisão | mai/2027 ou quando o ONR publicar nova versão do Manual Técnico |
 | Aprovação prevista | Márcia Maria da Silva Costa Teixeira — Oficial Registradora e Tabeliã |
 
 ---

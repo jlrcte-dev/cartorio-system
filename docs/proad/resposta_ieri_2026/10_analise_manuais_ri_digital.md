@@ -122,7 +122,7 @@ A serventia deve identificar os atos aplicáveis ao escopo da ITN 003/2025 e cri
 | M.01 | Confirmar com ONR o tipo de certificado exigido para geração de chave da API REST (A1 vs. A3) | MÉDIA |
 | M.02 | Divergência nos manuais sobre periodicidade de atualização do SIGEF no Mapa (30 x 60 dias) — confirmar com ONR | MÉDIA |
 | M.03 | Validar acesso da serventia no Portal RI Digital (perfil, cadastro de usuários, aceite do Termo de Uso) | ALTA |
-| M.04 | Confirmar procedimento de envio retroativo do IERI-e (set/2025–abr/2026) junto ao ONR | ALTA |
+| M.04 | Analisar o período set/2025–abr/2026 e enviar os atos pendentes pelo IERI-e; consultar o ONR apenas diante de erro/dúvida técnica concreta | MÉDIA |
 | M.05 | Identificar imóveis rurais de estrangeiros no acervo para cumprimento da obrigação específica | BAIXA |
 | M.06 | Verificar schemas JSON da ITN 003/2025 quando formalmente publicados pelo ONR | MÉDIA |
 
@@ -135,7 +135,7 @@ A serventia deve identificar os atos aplicáveis ao escopo da ITN 003/2025 e cri
 | Plano de Ação (Anexo I) | Pendências M.03 e M.04 devem ser registradas na seção de dependências externas |
 | POP-RI-001 (Anexo III) | Fluxos dos manuais subsidiam as etapas M.1–M.9 (IERI-e) e S.1–S.7 (SIG-RI) |
 | Portaria 01/2026-RI (Anexo II) | Certificado digital da Oficial Registradora deve ser verificado (A1 ou A3) |
-| Matriz de Evidências (Anexo V) | Pendências M.01–M.06 devem ser registradas como condicionais |
+| Matriz de Evidências (documento interno) | Pendências M.01–M.06 devem ser registradas como condicionais |
 
 ---
 

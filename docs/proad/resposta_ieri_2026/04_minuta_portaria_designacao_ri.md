@@ -1,10 +1,10 @@
-# Minuta — Portaria Interna nº 01/2026-RI
+# Portaria Interna nº 01/2026-RI — Reprodução textual para controle documental
 
-**Status:** MINUTA — Preencher campo de responsável substituto ([a designar]) e assinar em 18/05/2026  
+**Status:** ASSINADA EM 18/05/2026 — reprodução textual para controle do projeto  
 **Referência:** Anexo II da Manifestação — PROAD nº 202509000672377  
-**Data prevista de expedição:** 18/05/2026
+**Data de assinatura:** 18/05/2026
 
-> **Atenção:** Este documento é uma minuta. Antes da assinatura, preencher os campos pendentes: responsável substituto ([a designar]) e data de elaboração. O responsável principal (André — Sub-Oficial) já está designado pela Portaria nº 01/2026-RI.
+> **Status:** Portaria assinada em 18/05/2026. Este arquivo é uma reprodução textual mantida para controle do projeto e **não substitui a via oficial assinada**, que será anexada externamente ao pacote final. Designação: responsável principal André (Suboficial) e substituta Monique. Não se trata de minuta pendente de assinatura; a única providência documental remanescente é obter e anexar a via oficial assinada.
 
 ---
 
@@ -33,7 +33,7 @@ A **OFICIAL REGISTRADORA E TABELIÃ** do Tabelionato de Notas, de Protesto de T�
 
 **CONSIDERANDO** a obrigação de alimentação mensal ao Operador Nacional do Sistema de Registro Eletrônico de Imóveis (ONR) dos atos registrais praticados, conforme layout e especificações técnicas, até o último dia útil do mês subsequente (art. 5º do Provimento CNJ nº 195/2025);
 
-**CONSIDERANDO** o prazo de 48 meses, fixado pela Corregedoria-Geral de Justiça do Estado de Goiás, para a integral adequação do acervo (legado) e a inserção dos imóveis georreferenciados no SIG-RI;
+**CONSIDERANDO** o prazo de 48 meses, atribuído à Corregedoria-Geral de Justiça do Estado de Goiás (Decisão/Ofício Circular nº 103/2025, referida no Ofício nº 045/2026/GNP), para a integral adequação do acervo (legado) e a inserção dos imóveis georreferenciados no SIG-RI;
 
 **CONSIDERANDO** a determinação contida no Despacho/Ofício nº 703/2026 do 4º Juiz Auxiliar da Corregedoria-Geral da Justiça e no Ofício nº 045/2026/GNP da Diretoria do Foro da Comarca de Goianápolis, nos autos do PROAD nº 202509000672377;
 
@@ -73,10 +73,10 @@ A **OFICIAL REGISTRADORA E TABELIÃ** do Tabelionato de Notas, de Protesto de T�
 
 **Art. 3º** DESIGNAR como **RESPONSÁVEL SUBSTITUTO(A)**, para atuar na ausência ou impedimento do responsável principal:
 
-> **Nome:** [a designar] — a ser definido pela Oficial Registradora  
-> **Cargo:** [a definir]
+> **Nome:** Monique  
+> **Cargo:** Serventuária designada como substituta
 
-**Parágrafo único.** Enquanto não houver substituto formalmente designado, a Oficial Registradora exercerá a supervisão direta em caso de ausência ou impedimento do responsável principal designado no art. 2º.
+**Parágrafo único.** Na ausência ou impedimento simultâneo do responsável principal (art. 2º) e da responsável substituta, a Oficial Registradora exercerá a supervisão direta das atividades.
 
 ---
 
@@ -106,7 +106,7 @@ A **OFICIAL REGISTRADORA E TABELIÃ** do Tabelionato de Notas, de Protesto de T�
 |---|---|
 | Periodicidade | Semestral |
 | Datas previstas | Novembro/2026 e Maio/2027 (e subsequentes) |
-| Conteúdo mínimo | Indicadores IND-01 a IND-10; envios mensais; avanço do legado; avanço SIG-RI; irregularidades; pendências; próximas etapas |
+| Conteúdo mínimo | Indicadores de cumprimento do Plano de Ação; envios mensais; avanço do legado; avanço SIG-RI; irregularidades; pendências; próximas etapas |
 
 ---
 
@@ -150,5 +150,7 @@ Comarca de Goianápolis — Estado de Goiás
 
 | Função | Nome | Data | Assinatura |
 |---|---|---|---|
-| Responsável principal | André | ___________ | ___________ |
-| Responsável substituto | [a designar] | ___________ | ___________ |
+| Responsável principal | André | 18/05/2026 | (firmada na via oficial) |
+| Responsável substituto | Monique | 18/05/2026 | (firmada na via oficial) |
+
+> **Nota:** As assinaturas e a ciência foram firmadas na via oficial da Portaria, mantida fora do repositório. Esta reprodução textual não reproduz imagens de assinatura.

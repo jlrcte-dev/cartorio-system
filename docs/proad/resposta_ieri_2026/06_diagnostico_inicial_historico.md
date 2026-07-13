@@ -1,17 +1,19 @@
 # Relatório de Diagnóstico Inicial do Acervo — Documento Histórico
 
-**Status:** MINUTA DIAGNÓSTICA PRELIMINAR — DOCUMENTO BASE  
-**Referência:** Anexo IV da Manifestação — PROAD nº 202509000672377  
+**Status:** HISTÓRICO — DOCUMENTO BASE PRELIMINAR (não é o Anexo IV)  
+**Referência:** Documento histórico interno — PROAD nº 202509000672377. O **Anexo IV** atual da manifestação é o **doc. 11 — Relatório Parcial de Diagnóstico e Atualização do Acervo**.  
 **Versão:** 1.0 — Preliminar  
-**Responsável:** André (Portaria nº 01/2026-RI — Suboficial)  
+**Responsável:** André (Suboficial) — designado pela Portaria nº 01/2026-RI (assinada em 18/05/2026)  
 **Supervisão:** Márcia Maria da Silva Costa Teixeira — Oficial Registradora e Tabeliã
 
 ---
 
 > **AVISO IMPORTANTE:**  
-> Este documento constitui a base estrutural do Anexo IV da manifestação ao PROAD, representando o diagnóstico preliminar da situação do acervo antes do levantamento operacional completo. Os campos marcados com `[a apurar]` devem ser preenchidos pelo responsável designado nos **30 dias seguintes à expedição da Portaria nº 01/2026-RI (prevista para 18/05/2026)**.  
+> Este documento é **histórico** — registra o diagnóstico preliminar inicial da situação do acervo, anterior ao levantamento operacional. **Não é o Anexo IV** da manifestação: o Anexo IV atual é o **doc. 11 — Relatório Parcial de Diagnóstico e Atualização do Acervo**, que consolida os dados confirmados (posição de 06/05/2026) e os números parciais do recorte georref/SIGEF.  
 >
-> **Não protocolar este documento como versão final** sem antes preencher todos os campos `[a apurar]` com dados validados diretamente no sistema Engegraph e nos livros do Registro de Imóveis. Conclusões definitivas sobre totais de matrículas, georreferenciamentos e pendências dependem desse levantamento.
+> Os campos `[a apurar]` aqui presentes são mantidos como **registro do estado preliminar** e **não** devem ser tratados como pendências ativas: a posição atual deve ser consultada no doc. 11 e no Plano de Ação (doc. 03). **Não protocolar este documento como versão final.**
+>
+> **Informação superada:** confirmou-se posteriormente que a Portaria nº 01/2026-RI foi **assinada em 18/05/2026**; a equipe (André — operacional; Monique — substituta) está formalmente designada. As menções a seguir a "minuta pendente de assinatura" / "designação prevista" refletem o estado preliminar deste documento histórico e foram superadas.
 
 ---
 
@@ -78,35 +80,47 @@ e) Registrar limitações atuais e definir próximos passos.
 
 | Livro | Número atual / Situação |
 |---|---|
-| Livro 1 — Protocolo (em uso) | [a apurar] |
-| Livro 2 — Registro Geral / Matrículas | [a apurar] |
+| Livro 1 — Protocolo (em uso) | Último ato nº **4.792** (06/05/2026) |
+| Livro 2 — Registro Geral / Matrículas | Última matrícula aberta **M-3.534** (06/05/2026) |
 | Livro 3 — Registro Auxiliar | [a apurar] |
-| Livro 4 — Indicador Real | [a apurar] |
-| Livro 5 — Indicador Pessoal | [a apurar] |
+| Livro 4 — Indicador Real | Atualizado até **M-3.534** (06/05/2026) |
+| Livro 5 — Indicador Pessoal | Atualizado até **M-3.534** (06/05/2026) |
 | Livros auxiliares / controles correlatos | [a apurar] |
+
+> **Aviso de superação (atualização posterior):** o **Livro 3 — Registro Auxiliar**, indicado acima
+> como "[a apurar]" no diagnóstico inicial, foi posteriormente **identificado e validado em 206
+> registros** no acervo da serventia, conforme o Relatório Parcial de Diagnóstico e Atualização do
+> Acervo (doc. 11 / Anexo IV). Os valores assinalados como "[a apurar]" nesta seção refletem o estado
+> **histórico** do diagnóstico inicial e podem ter sido superados por levantamentos posteriores.
 
 ### 4.2. Matrículas
 
 | Campo | Quantidade |
 |---|---|
-| Total de matrículas abertas no acervo | [a apurar] |
-| Matrículas ativas (não encerradas) | [a apurar] |
-| Matrículas encerradas | [a apurar] |
-| Matrículas com imóvel georreferenciado | [a apurar] |
+| Numeração registral (última matrícula aberta) | **M-3.534** (06/05/2026) |
+| Matrículas ativas (não encerradas) | [a apurar — re-levantamento completo] |
+| Matrículas encerradas | [a apurar]; encerramentos por desmembramento já identificados no levantamento parcial |
+| Matrículas com imóvel georreferenciado | Levantamento **parcial** em curso — matrículas com evidência positiva nos recibos SIGEF/SIG-RI/IERI (ver Relatório Parcial, doc. 11) |
+
+> **Nota:** o levantamento parcial já distingue **matrículas ativas** (universo operacional
+> do SIG-RI) de **encerradas/desmembradas** (histórico, fora do SIG-RI). O relatório de
+> georreferenciamento do sistema de automação é **auxiliar** e ainda demanda saneamento do
+> campo "georreferenciada" em matrículas encerradas — etapa posterior. Números consolidados
+> no Relatório Parcial (doc. 11); detalhamento individual mantido em base interna sem PII.
 
 ### 4.3. Transcrições
 
 | Campo | Quantidade |
 |---|---|
-| Total de transcrições no acervo | [a apurar] |
-| Transcrições com imóvel sem matrícula aberta | [a apurar] |
+| Total de transcrições no acervo | 0 |
+| Transcrições com imóvel sem matrícula aberta | 0 |
 
 ### 4.4. Indicadores
 
 | Campo | Situação |
 |---|---|
-| Indicador Real (atualizado?) | [a apurar] |
-| Indicador Pessoal (atualizado?) | [a apurar] |
+| Indicador Real (atualizado?) | Sim — atualizado até **M-3.534** (06/05/2026) |
+| Indicador Pessoal (atualizado?) | Sim — atualizado até **M-3.534** (06/05/2026) |
 
 ---
 
@@ -129,9 +143,9 @@ e) Registrar limitações atuais e definir próximos passos.
 
 | Tipo de irregularidade | Quantidade |
 |---|---|
-| Sobreposições de área identificadas | [a apurar] |
-| Duplicidades de matrícula identificadas | [a apurar] |
-| Transcrições a encerrar gradualmente | [a apurar] |
+| Sobreposições de área identificadas | 0 |
+| Duplicidades de matrícula identificadas | 0 |
+| Transcrições a encerrar gradualmente | 0 |
 | Matrículas com especialidade objetiva incompleta | [a apurar] |
 | Outras irregularidades identificadas | [a apurar] |
 
@@ -139,41 +153,39 @@ e) Registrar limitações atuais e definir próximos passos.
 
 ## 7. Atos registrais correntes (após 01/09/2025)
 
-| Tipo de ato | Quantidade (set/2025–abr/2026) |
-|---|---|
-| Registros de transmissão | [a apurar] |
-| Averbações diversas | [a apurar] |
-| Registros de ônus e gravames | [a apurar] |
-| Abertura de novas matrículas | [a apurar] |
-| Encerramento de matrículas | [a apurar] |
-| Retificações | [a apurar] |
-| **Total de atos correntes** | **[a apurar]** |
+Seção não consolidada neste documento histórico. A posição corrente dos atos e dos
+indicadores consta do doc. 11 (Anexo IV) e do Plano de Ação (doc. 03).
 
 ---
 
 ## 8. Limitações identificadas
 
 1. O levantamento diagnóstico completo depende do acesso ao Engegraph e dos livros físicos, a ser realizado pelo responsável designado.
-2. Dados parciais de matrículas foram obtidos via extração sanitizada local — não refletem necessariamente o acervo completo.
+2. Dados parciais de matrículas foram obtidos via extração sanitizada local.
 3. A integração automática do Engegraph com o IERI-e ainda não está confirmada.
 4. O credenciamento de profissional técnico habilitado para o SIG-RI ainda está em avaliação.
-5. O envio retroativo dos atos de set/2025 a abr/2026 está condicionado ao procedimento a ser confirmado com o ONR.
+5. O envio retroativo dos atos de set/2025 a abr/2026 será realizado mediante análise do período e envio dos atos eventualmente pendentes pelo IERI-e, sem condicionamento prévio ao ONR (consulta apenas diante de erro/dúvida técnica concreta).
 
 ---
 
 ## 9. Próximas ações
 
+> **Nota:** as ações abaixo refletem o plano preliminar deste documento histórico. O
+> levantamento parcial já foi consolidado no doc. 11 (Anexo IV); o cronograma vigente é o do
+> Plano de Ação (doc. 03). A designação da equipe depende da assinatura da Portaria nº
+> 01/2026-RI (ainda em minuta).
+
 | Ação | Prazo | Responsável |
 |---|---|---|
-| Preencher todos os campos [a apurar] | 30 dias após portaria (18/05/2026) | André (Portaria nº 01/2026-RI) |
-| Validar dados com Engegraph e livros físicos | 30 dias após portaria | André (Portaria nº 01/2026-RI) |
-| Elaborar versão 2.0 do Diagnóstico com dados reais | 30 dias após portaria | André (Portaria nº 01/2026-RI) |
-| Revisar e assinar o diagnóstico final | 30 dias após portaria | Oficial Registradora |
+| Consolidar a contagem integral do acervo (ativas/encerradas) | Após assinatura da Portaria | André (designação prevista na minuta da Portaria nº 01/2026-RI) |
+| Validar dados com Engegraph e livros físicos | Após assinatura da Portaria | André (designação prevista na minuta da Portaria nº 01/2026-RI) |
+| Elaborar versão consolidada do diagnóstico com dados integrais | Após assinatura da Portaria | André (designação prevista na minuta da Portaria nº 01/2026-RI) |
+| Revisar e assinar o diagnóstico final | Após assinatura da Portaria | Oficial Registradora |
 
 ---
 
-*Data de elaboração: [___] de [mês] de 2026*
+*Data de elaboração: [DATA DA ASSINATURA] (documento histórico — não destinado a protocolo)*
 
 _______________________________________________________________  
-André (Portaria nº 01/2026-RI) — Responsável operacional  
+André (Suboficial) — designação prevista na minuta da Portaria nº 01/2026-RI  
 Revisão: Márcia Maria da Silva Costa Teixeira — Oficial Registradora e Tabeliã

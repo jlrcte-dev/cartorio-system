@@ -1,11 +1,12 @@
 # Plano de Ação — IERI-e e SIG-RI
 
-**Status:** MINUTA — Preencher campos `[a apurar]` e assinar antes de protocolar  
+**Status:** MINUTA — Revisar e assinar antes de protocolar  
 **Referência:** Anexo I da Manifestação — PROAD nº 202509000672377  
-**Versão:** 1.0 (sujeita a revisão anual)  
-**Atualizado em:** 2026-05-16
+**Norma de referência:** Provimento CNJ nº 195/2025 (vigente a partir de 01/09/2025)  
+**Versão:** 1.1 (sujeita a revisão anual)  
+**Atualizado em:** 2026-06-08
 
-> **Atenção:** Campos marcados com `[a apurar]` devem ser completados durante o levantamento diagnóstico, nos 30 dias seguintes à expedição da Portaria nº 01/2026-RI (prevista para 18/05/2026).
+> **Atenção:** Este Plano apresenta os dados já confirmados pela serventia (posição de 06/05/2026) e a **linha de base parcial** do levantamento diagnóstico (recorte de georreferenciamento/SIGEF/SIG-RI/IERI). A classificação integral do acervo segue em **levantamento e saneamento progressivo**, detalhada no **Anexo IV — Relatório Parcial (doc. 11)**. A equipe interna foi formalmente designada pela Portaria Interna nº 01/2026-RI, assinada em 18/05/2026 (Anexo II); a via oficial assinada será anexada ao pacote na montagem final.
 
 ---
 
@@ -15,109 +16,67 @@
 |---|---|
 | Serventia | Tabelionato de Notas, de Protesto de Títulos, Tabelionato e Oficialato de Registro de Contratos Marítimos, de Registro de Imóveis, de Registro de Títulos e Documentos, Civil das Pessoas Jurídicas, Civil das Pessoas Naturais e de Interdições e Tutelas de Terezópolis de Goiás |
 | Oficial responsável | Márcia Maria da Silva Costa Teixeira |
-| Comarca / Distrito | Comarca de Goianápolis / Distrito Judiciário de Terezópolis |
+| Comarca / Distrito | Comarca de Goianápolis / Distrito Judiciário de Terezópolis — GO |
 | PROAD | Nº 202509000672377 |
-| Norma de referência | Provimento CNJ nº 195/2025 (vigente a partir de 01/09/2025) |
-| Data de elaboração | [___] de [mês] de 2026 |
-| Versão | 1.0 |
+| Norma de referência | Provimento CNJ nº 195/2025 |
+| Data de elaboração | [DATA DA ASSINATURA] |
 
 ---
 
 ## 2. Objetivo
 
-O presente Plano de Ação tem por objetivos:
+**2.1.** Promover a adequação progressiva da serventia ao Provimento CNJ nº 195/2025, mediante:
 
-**2.1.** Promover a adequação progressiva da serventia às exigências do Provimento CNJ nº 195/2025, mediante:
+a) alimentação mensal ao ONR dos atos registrais praticados, conforme layout e especificações técnicas definidos no manual técnico do ONR (art. 5º, parágrafo único, e art. 320-O, §1º);
 
-a) Alimentação mensal ao ONR dos atos registrais praticados, conforme layout e especificações técnicas definidos pela entidade (art. 5º e parágrafo único);
+b) manutenção e atualização contínua dos dados no SIG-RI, com inserção gradual dos imóveis cuja descrição esteja regularmente georreferenciada;
 
-b) Manutenção e atualização contínua dos dados no SIG-RI, inclusive com inserção gradual dos imóveis cuja descrição esteja regularmente georreferenciada;
+c) levantamento e saneamento progressivo do legado, durante o prazo de 48 meses previsto no modelo de Plano de Ação encaminhado pela Corregedoria-Geral de Justiça do Estado de Goiás (art. 4º, § 1º; art. 343-C);
 
-c) Levantamento e saneamento progressivo do legado (acervo histórico), no prazo de 48 meses contados de 01/09/2025 (até 01/09/2029), nos termos estabelecidos pela Corregedoria-Geral de Justiça do Estado de Goiás;
+d) produção sistemática de evidências auditáveis de cumprimento.
 
-d) Produção sistemática de evidências auditáveis de cumprimento.
-
-**2.2.** Demonstrar à Corregedoria-Geral da Justiça do Estado de Goiás:
-
-- Comprometimento da serventia com o cumprimento das determinações;
-- Existência de governança interna estruturada e responsáveis definidos;
-- Cronograma factível e mecanismos de monitoramento.
+**2.2.** Demonstrar à Corregedoria-Geral da Justiça do Estado de Goiás o comprometimento da serventia, a existência de governança interna estruturada, com responsáveis definidos, e um cronograma factível com mecanismos de monitoramento.
 
 ---
 
 ## 3. Diagnóstico inicial
 
-### 3.1. Acervo de Registro de Imóveis — situação declarada
+O levantamento diagnóstico encontra-se **em andamento**, já com **dados confirmados** pela serventia (posição de 06/05/2026) e com uma **linha de base parcial** de matrículas analisadas. A classificação detalhada das matrículas por situação registral, natureza e modalidade de georreferenciamento encontra-se em **fase de levantamento e saneamento progressivo**.
 
-O levantamento diagnóstico encontra-se **em andamento**. Os campos indicados como `[a apurar]` serão completados no Relatório Diagnóstico Inicial a ser elaborado nos primeiros 30 dias de execução deste Plano de Ação.
+### 3.1. Livros e indicadores (posição de 06/05/2026)
 
-**Livros de registro:**
-
-| Livro | Situação |
+| Item | Posição |
 |---|---|
-| Livro 1 — Protocolo (em uso) | [a apurar — Nº atual] |
-| Livro 2 — Registro Geral / Matrículas | [a apurar — Nº atual] |
-| Livro 3 — Registro Auxiliar | [a apurar — situação] |
-| Livro 4 — Indicador Real | [a apurar — situação] |
-| Livro 5 — Indicador Pessoal | [a apurar — situação] |
-| Livros auxiliares / controles correlatos | [a apurar] |
-
-**Matrículas:**
-
-| Campo | Situação |
-|---|---|
-| Total de matrículas abertas no acervo | [a apurar] |
-| Matrículas ativas (não encerradas) | [a apurar] |
-| Matrículas encerradas | [a apurar] |
-| Matrículas com imóvel georreferenciado | [a apurar] |
-
-**Transcrições:**
-
-| Campo | Situação |
-|---|---|
-| Total de transcrições no acervo | [a apurar] |
-| Transcrições com imóvel sem matrícula aberta | [a apurar] |
-
-### 3.2. Situação dos imóveis georreferenciados
-
-| Categoria | Quantidade |
-|---|---|
-| Rurais com georreferenciamento certificado INCRA/SIGEF | [a apurar] |
-| Rurais com georreferenciamento sem certificação INCRA | [a apurar] |
-| Urbanos georreferenciados via Reurb | [a apurar] |
-| Urbanos georreferenciados fora do Reurb | [a apurar] |
-| Imóveis sem qualquer georreferenciamento | [a apurar] |
-| **Total de imóveis georreferenciados (estimativa)** | **[a apurar]** |
-
-### 3.3. Sistema de automação e integração
-
-| Item | Situação |
-|---|---|
+| Total de matrículas do acervo, informado pela serventia (ativas + encerradas) | **3.534** |
+| Livro 2 — Registro Geral — última matrícula | **M-3.534** (06/05/2026) |
+| Livro 3 — Registro Auxiliar | **206** registros validados no acervo da serventia (06/05/2026) |
+| Livro de Protocolo — último ato | **4.792** (06/05/2026) |
+| Indicador Real | Atualizado até **M-3.534** (06/05/2026) |
+| Indicador Pessoal | Atualizado até **M-3.534** (06/05/2026) |
+| Transcrições no acervo | 0 |
 | Sistema de automação utilizado | Engegraph |
-| Integração automática com IERI-e (ONR) | Pendente de confirmação com o fornecedor |
-| Integração via API com SIG-RI (ONR) | Pendente de confirmação e homologação técnica |
-| Manual Técnico Operacional ONR v1.3 (25/02/2026) | Disponível — adotado como referência operacional |
-| Manuais complementares (Mapa, API, ITN 003/2025) | Disponíveis no Portal RI Digital e em análise |
-| API REST ONR (envio programático de polígonos) | Documentada — adoção condicionada a habilitação técnica |
 
-### 3.4. Pendências de saneamento (estimativa inicial)
+### 3.2. Levantamento diagnóstico — linha de base parcial
 
-| Tipo | Quantidade |
-|---|---|
-| Sobreposições de área identificadas | [a apurar] |
-| Duplicidades de matrícula identificadas | [a apurar] |
-| Transcrições a encerrar gradualmente | [a apurar] |
-| Matrículas com especialidade objetiva incompleta | [a apurar] |
-| Outras irregularidades identificadas | [a apurar] |
-
-### 3.5. Capacidade operacional
+Até a data de corte, foram analisadas individualmente **161 matrículas** no recorte prioritário relacionado ao georreferenciamento, SIGEF, SIG-RI e IERI, sem prejuízo da continuidade do levantamento das demais matrículas do acervo. Esse recorte corresponde a aproximadamente **4,56%** do acervo (161 de 3.534 matrículas) e será ampliado progressivamente.
 
 | Item | Situação |
 |---|---|
+| Matrículas com recibo positivo no SIG-RI | **122** |
+| Demais matrículas do acervo | Levantamento e classificação em andamento |
+| Sanitização de campos do sistema | **2** sanitizações realizadas; trabalho progressivo |
+
+> As 122 matrículas estão comprovadas por **recibos individualizados gerados no SIG-RI**, considerados linha de base parcial na data de corte. O detalhamento individual e a composição dos casos constam do Anexo IV — Relatório Parcial (doc. 11) e de base interna de trabalho, sem dados pessoais.
+
+### 3.3. Equipe e responsáveis
+
+| Função | Responsável |
+|---|---|
+| Supervisão geral | Márcia Maria da Silva Costa Teixeira (Oficial Registradora) |
+| Responsável operacional — IERI-e e SIG-RI | André (Suboficial), designado pela Portaria nº 01/2026-RI (assinada em 18/05/2026) |
+| Substituta | Monique, designada pela Portaria nº 01/2026-RI (assinada em 18/05/2026) |
 | Serventuários do Registro de Imóveis | 1 colaborador |
-| Responsável designado para IERI-e/SIG-RI | André (Suboficial) — designado pela Portaria nº 01/2026-RI de 18/05/2026 |
-| Substituto em caso de ausência | [a designar] — a ser definido pela Oficial Registradora; enquanto não designado, supervisão direta pela Oficial Registradora |
-| Profissional técnico habilitado/credenciado ONR | [a confirmar] |
+| Profissional técnico habilitado/credenciado ONR (art. 343-G) | Em andamento |
 
 ---
 
@@ -125,158 +84,58 @@ O levantamento diagnóstico encontra-se **em andamento**. Os campos indicados co
 
 | Nº | Atividade | Responsável | Prazo | Evidência |
 |---|---|---|---|---|
-| 1 | Constituição de equipe interna para IERI-e e SIG-RI | Oficial Registradora | Imediato (≤5 dias úteis após assinatura) | Portaria Interna nº 01/2026-RI |
-| 2 | Levantamento e diagnóstico inicial do acervo | Equipe designada + Oficial | 0–30 dias após a Portaria | Relatório Diagnóstico Inicial |
-| 3 | Início da alimentação mensal corrente ao IERI-e | Operadores designados | A partir de jun/2026 | Comprovante de envio ao ONR |
-| 4 | Regularização retroativa (set/2025 a abr/2026) | Equipe designada | 31–90 dias após a Portaria (~set/2026) | Comprovantes de envio retroativo |
-| 5 | Levantamento e classificação dos imóveis georreferenciados para SIG-RI | Equipe + profissional técnico | 0–6 meses após a Portaria (~dez/2026) | Listagem classificada (art. 343-C, II) |
-| 6 | Inserção gradual dos imóveis georreferenciados no SIG-RI | Operadores + profissional habilitado | 0–48 meses (até 01/09/2029) | Registros de inserção + relatório semestral |
-| 7 | Identificação e priorização de irregularidades do legado | Oficial + equipe técnica | 6–24 meses | Relatório de irregularidades |
-| 8 | Saneamento progressivo das irregularidades | Oficial Registradora | 6–48 meses (até 01/09/2029) | Autos de procedimento + atos de saneamento |
-| 9 | Elaboração de relatório semestral de cumprimento, com arquivamento no Dossiê IERI-e/SIG-RI e apresentação à Corregedoria quando solicitado ou quando houver determinação específica | Oficial Registradora | A cada 6 meses (1º: nov/2026) | Relatório semestral arquivado no Dossiê IERI-e/SIG-RI |
-| 10 | Revisão e atualização do Plano de Ação | Oficial Registradora | Anual (1ª revisão: mai/2027) | Plano de Ação revisado (versão 2.0) |
+| 1 | Constituição e formalização da equipe interna do IERI-e/SIG-RI | Oficial Registradora | **Concluída** — Portaria nº 01/2026-RI, assinada em 18/05/2026 | Portaria Interna nº 01/2026-RI |
+| 2 | Levantamento e diagnóstico do acervo (livros, matrículas, indicadores) | Equipe designada + Oficial | 0–30 dias após a Portaria; ampliação progressiva | Relatório Diagnóstico (parcial no Anexo IV) |
+| 3 | Rotina mensal de alimentação corrente ao IERI-e | Operadores designados | A partir de jun/2026 | Comprovantes de envio ao ONR |
+| 4 | Análise do período de set/2025 a abr/2026 e realização dos envios retroativos eventualmente identificados | Equipe designada | 31–90 dias após a Portaria | Comprovantes de envio retroativo |
+| 5 | Inserção gradual das informações georreferenciadas no SIG-RI | Operadores designados | Durante os 48 meses | Registros de inserção / recibos do SIG-RI |
+| 6 | Saneamento e formação do mosaico dos imóveis registrados (art. 343-C) | Oficial Registradora + equipe | Durante os 48 meses | Atos de saneamento e regularização |
+| 7 | Monitoramento e emissão de relatórios semestrais | Oficial Registradora | Semestral (1º: nov/2026) | Relatórios arquivados no Dossiê IERI-e/SIG-RI |
+
+> A serventia realizará a análise dos atos e matrículas referentes ao período de **setembro de 2025 a abril de 2026** e, caso sejam identificados atos ainda não informados, efetuará os respectivos envios retroativos pelo IERI-e (etapa 4).
+>
+> O detalhamento operacional das rotinas e as obrigações correlatas (ex.: ITN 003/2025) constam do POP-RI-001 - Anexo III e do Anexo IV. As evidências são arquivadas no Dossiê IERI-e/SIG-RI, com retenção mínima de 5 anos.
 
 ---
 
 ## 5. Cronograma geral
 
-### Fase 1 — Imediato (primeiros 5 dias úteis — mai/jun 2026)
-- [ ] Expedição da Portaria Interna nº 01/2026-RI — **18/05/2026**
-- [ ] Definição do ponto focal para comunicação com o ONR
-- [ ] Validação operacional do acesso e perfis da serventia no Portal RI Digital
-- [ ] Estudo do Manual Técnico Operacional ONR v1.3 (25/02/2026) e manuais complementares
-- [ ] Contato com a Engegraph para verificação da capacidade de exportação compatível com o IERI-e
+**Curto prazo (0–6 meses):** com a equipe interna já formalizada pela Portaria nº 01/2026-RI (18/05/2026), consolidação do diagnóstico do acervo (levantamento parcial já consolidado no Anexo IV), início da alimentação mensal corrente ao IERI-e (a partir de jun/2026) e análise/realização dos envios retroativos de set/2025 a abr/2026 eventualmente identificados.
 
-### Fase 2 — Curto prazo / 0–30 dias (até ~jun/2026)
-- [ ] Levantamento e diagnóstico inicial do acervo
-- [ ] Elaboração do Relatório Diagnóstico Inicial (preenchimento dos campos `[a apurar]`)
-- [ ] Início da alimentação mensal corrente (atos de mai/2026 → envio até último dia útil de jun/2026)
-- [ ] Verificação do status de credenciamento de profissional técnico habilitado junto ao ONR
+**Médio prazo (6–24 meses):** continuidade da inserção das informações georreferenciadas no SIG-RI, saneamento progressivo das irregularidades de menor complexidade e emissão dos relatórios semestrais; revisão anual do Plano (mai/2027 — versão 2.0).
 
-### Fase 3 — Regularização retroativa / 31–90 dias (até ~set/2026)
-- [ ] Alimentação retroativa dos atos de set/2025 a abr/2026 (condicionada ao procedimento ONR)
-- [ ] Levantamento inicial dos imóveis georreferenciados para SIG-RI
-- [ ] 1º relatório mensal interno de cumprimento
-
-### Fase 4 — Estruturação / 0–6 meses (até ~nov/2026)
-- [ ] Rotina mensal IERI-e consolidada e documentada
-- [ ] Levantamento completo dos imóveis georreferenciados
-- [ ] Início das inserções no SIG-RI (prioridade: imóveis rurais certificados INCRA)
-- [ ] 1º Relatório Semestral de cumprimento (novembro/2026)
-
-### Fase 5 — Médio prazo / 6–24 meses (nov/2026 a mai/2028)
-- [ ] Saneamento progressivo de irregularidades de menor complexidade
-- [ ] Continuidade das inserções no SIG-RI
-- [ ] Relatórios semestrais: mai/2027 e nov/2027
-- [ ] Revisão do Plano de Ação: mai/2027 (versão 2.0)
-
-### Fase 6 — Longo prazo / 24–48 meses (mai/2028 a set/2029)
-- [ ] Conclusão da inserção do legado no SIG-RI
-- [ ] Finalização do saneamento das irregularidades do acervo
-- [ ] Entrega do Relatório Consolidado Final (setembro/2029)
+**Longo prazo (24–48 meses):** conclusão da inserção do legado no SIG-RI, finalização do saneamento e formação do mosaico, e entrega do relatório consolidado final.
 
 ---
 
-## 6. Dados alimentados mensalmente no IERI-e
+## 6. Indicadores de cumprimento
 
-### 6.1. Período de abrangência
-
-| Campo | Dado |
+| Indicador | Situação / linha de base |
 |---|---|
-| Alimentação corrente | Atos do mês anterior → envio até último dia útil do mês subsequente |
-| Alimentação retroativa | Set/2025 a abr/2026 → regularização em 31–90 dias após a Portaria |
+| Percentual de atos mensais enviados ao IERI-e no prazo | Meta: 100% |
+| Matrículas analisadas no levantamento | 161 matrículas |
+| Percentual do legado levantado e diagnosticado | 4,56% (161 de 3.534) |
+| Ações de sanitização realizadas | 2 |
+| Matrículas georreferenciadas comprovadas no SIG-RI | 122 |
+| Percentual do recorte comprovado integrado ao SIG-RI | 100% do recorte (122 de 122 recibos) |
+| Percentual global do legado saneado | Em fase de levantamento |
+| Percentual global dos imóveis georreferenciados integrados | Em fase de levantamento integral |
 
-### 6.2. Tipologia dos atos registrais a alimentar
-
-Conforme layout e especificações técnicas definidos pelo ONR (art. 320-O, §1º):
-
-a) Registros de transmissão (compra e venda, doação, permuta, dação em pagamento, herança, partilha etc.);  
-b) Averbações diversas (alterações de dados pessoais, de descrição, de ônus, encerramento de matrículas etc.);  
-c) Registros de ônus e gravames (hipoteca, alienação fiduciária, usufruto, servidão, penhor etc.);  
-d) Abertura de novas matrículas (imóveis rurais e urbanos);  
-e) Encerramento de matrículas;  
-f) Retificações (extrajudiciais e judiciais);  
-g) Averbações de georreferenciamento e certificação INCRA/SIGEF;  
-h) Demais atos registrais conforme especificações do ONR.
-
-### 6.3. Obrigação correlata — ITN 003/2025
-
-A serventia reconhece a existência da Instrução Técnica Normativa ITN 003/2025 (módulo "Incluir Atos e Dados"), que é uma **obrigação correlata e distinta** do IERI-e/SIG-RI:
-
-| Item | Dado |
-|---|---|
-| Escopo | Imóveis rurais e imóveis urbanos da União |
-| Início de obrigatoriedade | 09/03/2026 |
-| Canal | Módulo "Incluir Atos e Dados" no Portal RI Digital |
-
-A serventia incluirá rotina interna específica para a ITN 003/2025, conforme Seção 13 do POP-RI-001 — Rotina correlata — ITN 003/2025 (pendente de validação operacional).
-
-### 6.4. Pendências externas registradas
-
-| Pendência | Situação |
-|---|---|
-| Envio retroativo do IERI-e (set/2025–abr/2026) | Pendente de confirmação com ONR quanto ao procedimento |
-| Periodicidade de atualização do SIGEF no Mapa | Divergência nos manuais (30 x 60 dias) — pendente de confirmação com ONR |
-| Homologação da API REST ONR | Pendente — sem compromisso de uso imediato |
-| Exportação do Engegraph compatível com IERI-e/SIG-RI | Pendente de confirmação com o fornecedor |
+> **Notas:**
+>
+> - Percentual calculado sobre 161 matrículas analisadas em um acervo total de 3.534 matrículas (161 ÷ 3.534 × 100 ≈ 4,56%).
+> - As 122 matrículas estão comprovadas por recibos individualizados gerados no SIG-RI, consideradas linha de base parcial na data de corte. O percentual sobre o universo integral de imóveis georreferenciados será atualizado após a conclusão do levantamento do acervo.
+> - Os três indicadores essenciais informados à Cogex no modelo da Corregedoria — percentual de atos mensais enviados ao IERI-e, percentual do acervo saneado e percentual de imóveis georreferenciados integrados ao SIG-RI — estão refletidos nesta tabela, acompanhados dos dados parciais já confirmados.
 
 ---
 
-## 7. Indicadores de cumprimento
+## 7. Aprovação e compromisso
 
-| Código | Indicador | Meta |
-|---|---|---|
-| IND-01 | % de atos do mês alimentados ao IERI-e no prazo | 100% |
-| IND-02 | Número de matrículas do acervo analisadas no levantamento diagnóstico | [a definir] |
-| IND-03 | % do legado levantado e diagnosticado | [a definir] |
-| IND-04 | % do legado saneado (irregularidades corrigidas / total identificado) | [a definir] |
-| IND-05 | Número de imóveis georreferenciados identificados no acervo | [a apurar] |
-| IND-06 | Número de imóveis georreferenciados inseridos/validados no SIG-RI | [a definir] |
-| IND-07 | % do acervo georreferenciado inserido no SIG-RI | [a definir] |
-| IND-08 | Número de irregularidades (sobreposições, duplicidades etc.) identificadas | [a apurar] |
-| IND-09 | Número de irregularidades saneadas | [a definir] |
-| IND-10 | Relatórios semestrais emitidos e arquivados | Conforme calendário |
+Eu, **MÁRCIA MARIA DA SILVA COSTA TEIXEIRA**, na qualidade de Oficial Registradora e Tabeliã desta serventia, declaro que o presente Plano de Ação reflete as medidas que serão adotadas para promover a adequação progressiva da serventia ao Provimento CNJ nº 195/2025 e às determinações da Corregedoria do Foro Extrajudicial do Tribunal de Justiça do Estado de Goiás, comprometendo-me a adotar as medidas de cumprimento, produzir as evidências e manter a governança interna previstas neste documento, observadas as confirmações técnicas externas e os dados a serem apurados no curso do levantamento progressivo.
 
 ---
 
-## 8. Governança interna
-
-### 8.1. Responsáveis
-
-| Função | Nome |
-|---|---|
-| Responsável geral / Supervisão | Márcia Maria da Silva Costa Teixeira |
-| Responsável operacional — IERI-e | André (Portaria 01/2026-RI, 18/05/2026) |
-| Responsável operacional — SIG-RI | André ou designado específico |
-| Conferência e validação mensal | Oficial Registradora |
-| Substituto em caso de ausência | [a designar] — a ser definido pela Oficial Registradora; enquanto não designado, supervisão direta pela Oficial Registradora |
-| Profissional técnico habilitado (SIG-RI) | [a confirmar] |
-
-### 8.2. Reuniões e monitoramento
-
-| Tipo | Frequência |
-|---|---|
-| Reunião operacional mensal | Todo último dia útil do mês |
-| Reunião de acompanhamento | Semestral (maio e novembro) |
-| Revisão anual do Plano | Maio de cada ano (próxima: mai/2027 → versão 2.0) |
-
-### 8.3. Guarda das evidências
-
-| Item | Definição |
-|---|---|
-| Pasta física | Dossiê IERI-e/SIG-RI — na serventia |
-| Pasta digital | [a definir — servidor local ou nuvem institucional] |
-| Período de retenção mínimo | 5 anos (ou conforme normativo da Corregedoria) |
-
----
-
-## 9. Declaração de compromisso
-
-Eu, **MÁRCIA MARIA DA SILVA COSTA TEIXEIRA**, na qualidade de Oficial Registradora e Tabeliã desta serventia, declaro que o presente Plano de Ação reflete as medidas que serão adotadas para promover a adequação progressiva da serventia ao Provimento CNJ nº 195/2025 e às determinações da Corregedoria do Foro Extrajudicial do Tribunal de Justiça do Estado de Goiás, comprometendo-me a adotar as medidas de cumprimento, produzir as evidências e manter a governança interna previstas neste documento, observadas as confirmações técnicas externas e os dados a serem apurados.
-
----
-
-*[___] de [mês] de 2026*
+*[DATA DA ASSINATURA]*
 
 _______________________________________________________________  
 **MÁRCIA MARIA DA SILVA COSTA TEIXEIRA**  

@@ -5,7 +5,7 @@
 **PROAD:** Nº 202509000672377  
 **Serventia:** Cartório Costa Teixeira — Terezópolis de Goiás / Comarca de Goianápolis — GO  
 **Elaborado em:** Maio de 2026  
-**Atualizado em:** 2026-05-16
+**Atualizado em:** 2026-06-07
 
 > **Atenção:** Este documento é preliminar. Dados de matrículas são parciais e estão em validação. Não afirma conformidade plena. Percentuais e totais precisam ser confirmados diretamente no sistema Engegraph e nos livros do Registro de Imóveis.
 
@@ -31,7 +31,7 @@ Objetivo: subsidiar a resposta ao PROAD nº 202509000672377, orientar a elabora�
 | 29/04/2026 | Despacho/Ofício nº 703/2026 — 4º Juiz Auxiliar da CGJ determina nova notificação |
 | 11/05/2026 | Ofício nº 045/2026/GNP — 2ª notificação (Dr. Leonardo de Camargos Martins) — **prazo 30 dias (~10/06/2026)** |
 
-**Prazo vigente:** ~10/06/2026 (30 dias a contar de 11/05/2026).
+**Prazo:** estimado em 10/06/2026. O Ofício nº 045/2026/GNP (assinado eletronicamente em 11/05/2026) concede 30 dias para a juntada, mas **não fixa data final expressa**; o termo final depende da data de intimação. Prazo sujeito a confirmação no PROAD e no comprovante de intimação.
 
 ---
 
@@ -41,10 +41,10 @@ Objetivo: subsidiar a resposta ao PROAD nº 202509000672377, orientar a elabora�
 |---|---|---|---|
 | Rotina interna de levantamento do acervo | Art. 4º, Prov. 195/2025 | A partir de 01/09/2025 | Em estruturação |
 | Alimentação mensal do IERI-e ao ONR | Art. 5º e §único, Prov. 195/2025 | Até último dia útil do mês subsequente | Envios set/2025–abr/2026 em aberto |
-| Inserção de imóveis georreferenciados no SIG-RI | Art. 4º e 343-F, Prov. 195/2025 | 48 meses (até 01/09/2029, conforme Goiás) | Pendente levantamento |
-| Juntada do Plano de Ação preenchido | Art. 4º e Ofício 045/2026/GNP | **~10/06/2026** | Em elaboração |
+| Inserção de imóveis georreferenciados no SIG-RI | Art. 4º e 343-F, Prov. 195/2025 | 48 meses, atribuídos à Decisão/Ofício Circular nº 103/2025 (CGJ-GO) — cópia primária a confirmar | Levantamento parcial (recorte georref/SIGEF); integral pendente |
+| Juntada do Plano de Ação preenchido | Art. 4º e Ofício 045/2026/GNP (30 dias) | Estimado em 10/06/2026 (a confirmar no PROAD/intimação) | Em elaboração/revisão |
 | Relatórios semestrais de cumprimento | Despacho 4838/2025 | A cada 6 meses | 1º previsto: nov/2026 |
-| Saneamento progressivo do legado | Arts. 343-C e 440-AR a 440-BG | 48 meses (até 01/09/2029) | Pendente diagnóstico |
+| Saneamento progressivo do legado | Arts. 343-C e 440-AR a 440-BG | 48 meses (Decisão/Ofício Circular nº 103/2025 — CGJ-GO; a confirmar) | Pendente diagnóstico integral |
 
 ---
 
@@ -68,11 +68,20 @@ O levantamento diagnóstico encontra-se **em andamento**. Os dados abaixo são *
 
 | Campo | Situação |
 |---|---|
-| Total de matrículas no acervo | A apurar — estimativas disponíveis, não validadas |
-| Matrículas urbanas | Dados parciais disponíveis em `_local_data/` |
-| Matrículas rurais | Dados parciais disponíveis em `_local_data/` |
-| Imóveis georreferenciados (INCRA/SIGEF) | Parcialmente identificados |
-| Pendências de saneamento | A apurar após diagnóstico completo |
+| Numeração registral (última matrícula aberta) | **M-3.534** (06/05/2026) — informado pela serventia |
+| Livro de Protocolo (último ato) | **4.792** (06/05/2026) |
+| Indicador Real / Indicador Pessoal | Atualizados até **M-3.534** (06/05/2026) |
+| Matrículas urbanas / rurais | Dados parciais disponíveis em `_local_data/` (sem PII) |
+| Imóveis georreferenciados (INCRA/SIGEF) | Levantamento **parcial** (recorte georref/SIGEF): 161 imóveis distintos · 135 ativas · 26 históricas · 122 recibos positivos (119 ativos + 3 históricos) · 0 anomalias remanescentes · 80 conferências em saneamento (ver Anexo IV — doc. 11) |
+| Distinção ativas × encerradas | Aplicada — encerradas/desmembradas preservadas como histórico, fora do SIG-RI |
+| Pendências de saneamento | Parcialmente mapeadas; saneamento do campo georref no sistema de automação em etapa posterior |
+
+> **Atualização parcial (06/2026):** a serventia confirmou a posição dos livros e
+> indicadores acima (corte de 06/05/2026). O export analisado anteriormente (15/05/2026)
+> limitava-se à matrícula 3.524 e **não** representa o estado atual do acervo. O
+> levantamento das matrículas georreferenciadas é **parcial**, mas já conta com evidências
+> positivas de certificação (recibos individualizados). Consolidação e números agregados no
+> **Relatório Parcial de Atualização (doc. 11)**.
 
 > **Nota:** Todos os dados brutos e relatórios operacionais de matrículas ficam em `_local_data/ri_inventory/` (não versionados). O repositório contém apenas documentação agregada e scripts sanitizados.
 
@@ -84,7 +93,7 @@ O levantamento diagnóstico encontra-se **em andamento**. Os dados abaixo são *
 
 2. **Dependência do Manual ONR:** Parte das obrigações depende das especificações técnicas do ONR. O Manual Técnico Operacional v1.3 (25/02/2026) está disponível e adotado como referência.
 
-3. **Regularização retroativa condicionada:** O envio retroativo dos atos de set/2025 a abr/2026 está condicionado à confirmação do procedimento aplicável no Portal RI Digital junto ao ONR.
+3. **Regularização retroativa:** A serventia analisará os atos de set/2025 a abr/2026 e efetuará os envios retroativos eventualmente identificados como pendentes pelo IERI-e, sem condicionamento prévio ao ONR (consulta apenas diante de erro/dúvida técnica concreta durante a execução).
 
 4. **Credenciamento de profissional técnico:** A inserção de polígonos no SIG-RI exige profissional habilitado e credenciado junto ao ONR (art. 343-G). Processo em avaliação.
 
@@ -96,10 +105,11 @@ O levantamento diagnóstico encontra-se **em andamento**. Os dados abaixo são *
 
 | Risco | Gravidade | Mitigation |
 |---|---|---|
-| Não resposta dentro do prazo (~10/06/2026) | CRÍTICA | Protocolar pacote antes do prazo; prioridade máxima |
-| Plano de Ação incompleto devolvido pela CGJ | ALTA | Completar campos `[a apurar]` antes de protocolar |
+| Não resposta dentro do prazo (estimado em 10/06/2026 — **iminente**) | CRÍTICA | Protocolar pacote imediatamente; confirmar prazo no PROAD/intimação |
+| Via oficial assinada da Portaria nº 01/2026-RI a anexar (Portaria assinada em 18/05/2026) | MÉDIA | Obter e anexar a via oficial; o doc. 04 é reprodução textual de controle, não a via oficial |
+| Plano de Ação com pendências de diagnóstico integral | ALTA | Completar pendências específicas; manter ressalvas de parcialidade |
 | Promessa de prazos inviáveis | ALTA | Usar linguagem de adequação progressiva; registrar dependências externas |
-| Escalada correicional por nova omissão | ALTA | Juntada do pacote completo com antecedência |
+| Escalada correicional por nova omissão | ALTA | Juntada do pacote completo com a máxima brevidade |
 
 ---
 
@@ -114,10 +124,11 @@ O levantamento diagnóstico encontra-se **em andamento**. Os dados abaixo são *
 
 ## 9. Próximos passos
 
-1. Expedir a Portaria Interna nº 01/2026-RI em **18/05/2026** com nome real do colaborador designado.
-2. Completar o levantamento diagnóstico (campos `[a apurar]`) nos 30 dias seguintes à portaria.
-3. Revisar a minuta de manifestação e o Plano de Ação com os dados apurados.
-4. Finalizar e protocolar o pacote completo até **~10/06/2026**.
+1. Obter e anexar a via oficial assinada da Portaria Interna nº 01/2026-RI (assinada em 18/05/2026; designados André — principal; Monique — substituta).
+2. Consolidar o diagnóstico **integral** do acervo (contagem de ativas/encerradas; classificação dos recibos por origem) — o levantamento parcial já está no Anexo IV (doc. 11).
+3. Revisar a minuta de manifestação e o Plano de Ação com os dados consolidados.
+4. Finalizar e protocolar o pacote completo dentro do prazo (estimado em 10/06/2026, a confirmar no PROAD).
+5. Obter a cópia primária da Decisão/Ofício Circular nº 103/2025 (CGJ-GO) para confirmar o prazo de 48 meses.
 
 ---
 

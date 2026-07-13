@@ -2,8 +2,8 @@
 
 **Status:** EM VALIDAÇÃO  
 **PROAD:** Nº 202509000672377  
-**Referência:** Anexo V da Manifestação  
-**Versão:** 1.0 (2026-05-16)
+**Referência:** Documento interno de apoio ao monitoramento — não integra o pacote de protocolo (Manifestação + Anexos I–IV)  
+**Versão:** 1.0 (2026-05-16) — **Atualizado em:** 2026-06-08
 
 **Legenda de status:**
 - `IMPLANTADO` — em execução regular
@@ -22,7 +22,9 @@
 | Responsável | Oficial Registradora | Oficial Registradora | Oficial Registradora |
 | Periodicidade | Única (revisão anual ou mudança de equipe) | Inicial (revisão anual — mai/2027) | Inicial (revisão anual — mai/2027) |
 | Arquivamento | Dossiê IERI-e/SIG-RI; autos PROAD | Dossiê IERI-e/SIG-RI; autos PROAD | Dossiê IERI-e/SIG-RI |
-| Status | `EM IMPLANTAÇÃO` — Portaria prevista 18/05/2026 | `EM IMPLANTAÇÃO` — sendo elaborado | `EM IMPLANTAÇÃO` — sendo elaborado |
+| Status | `IMPLANTADO` — Portaria nº 01/2026-RI **assinada em 18/05/2026** (via oficial externa ao repositório; doc. 04 é reprodução textual); pendência apenas documental: anexar a via oficial ao pacote | `EM IMPLANTAÇÃO` — Plano simplificado em revisão administrativa | `EM IMPLANTAÇÃO` — minuta operacional em revisão |
+
+> **Designação formal da equipe:** Controle IMPLEMENTADO — evidência: Portaria nº 01/2026-RI, assinada em 18/05/2026; localização da via oficial: externa ao repositório; pendência documental: anexação da via oficial ao pacote final. Distingue-se a **implementação concluída** (designação vigente) da **cópia digital ainda não incorporada ao repositório**.
 
 ---
 
@@ -33,11 +35,11 @@
 | Obrigação | Alimentação mensal ao ONR dos atos registrais praticados no mês anterior |
 | Base normativa | Art. 5º e §único, Provimento CNJ nº 195/2025 |
 | Evidências esperadas | Comprovante/protocolo de envio emitido pelo ONR (mensal); planilha de conferência; relatório mensal interno |
-| Responsável | `[NOME_DO_COLABORADOR_DESIGNADO]` — Revisão: Oficial Registradora |
+| Responsável | André (Suboficial) — Revisão: Oficial Registradora |
 | Periodicidade | Mensal — até o último dia útil do mês subsequente |
 | Arquivamento | Dossiê IERI-e/SIG-RI — pasta física e digital |
-| Status | `PENDENTE` — início previsto jun/2026 (atos de mai/2026) |
-| Observação | Envios de set/2025 a abr/2026 em regularização retroativa |
+| Status | `PENDENTE` — **programado** para jun/2026 (atos de mai/2026, envio até o último dia útil de jun/2026); **sem comprovante de envio ao ONR** até a presente data. Estudo de manual e acesso ao portal **não** constituem comprovante de envio |
+| Observação | Envios de set/2025 a abr/2026: análise do período e envio dos atos eventualmente pendentes pelo IERI-e, sem condicionamento prévio ao ONR |
 
 | Campo | Detalhe |
 |---|---|
@@ -46,7 +48,7 @@
 | Evidências esperadas | Comprovantes de envio retroativo ao ONR; registro interno de conferência |
 | Responsável | Equipe designada |
 | Prazo | 31–90 dias após a Portaria (~set/2026) |
-| Status | `CONDICIONAL` — depende de confirmação do procedimento junto ao ONR |
+| Status | `EM IMPLANTAÇÃO` — análise do período set/2025–abr/2026 e envio dos atos pendentes pelo IERI-e; consulta ao ONR apenas diante de erro/dúvida técnica concreta |
 
 ---
 
@@ -56,11 +58,11 @@
 |---|---|
 | Obrigação | Levantamento diagnóstico inicial do acervo (livros, matrículas, transcrições, georreferenciamentos) |
 | Base normativa | Art. 4º, Prov. 195/2025; Plano de Ação (Etapa 2) |
-| Evidências esperadas | Relatório Diagnóstico Inicial (preenchimento dos campos `[a apurar]` do Plano de Ação) |
-| Responsável | `[NOME_DO_COLABORADOR_DESIGNADO]` + Oficial Registradora |
-| Prazo | 0–30 dias após a Portaria |
+| Evidências esperadas | Relatório Parcial de Diagnóstico e Atualização do Acervo (Anexo IV — doc. 11), já elaborado; diagnóstico **integral** a consolidar |
+| Responsável | André (Suboficial) + Oficial Registradora |
+| Prazo | Levantamento parcial concluído; consolidação integral após a assinatura da Portaria |
 | Arquivamento | Dossiê IERI-e/SIG-RI |
-| Status | `PENDENTE` — inicia após a Portaria (18/05/2026) |
+| Status | `EM IMPLANTAÇÃO` — recorte georref/SIGEF consolidado no Anexo IV; **Livro 3 — Registro Auxiliar: 206 registros identificados e validados no acervo** (Anexo IV — doc. 11); contagem integral de ativas/encerradas pendente |
 
 ---
 
@@ -71,9 +73,9 @@
 | Obrigação | Inserção gradual dos imóveis georreferenciados no SIG-RI (formação do mosaico) |
 | Base normativa | Arts. 343-D a 343-J, Prov. 195/2025; Plano de Ação (Etapas 5 e 6) |
 | Evidências esperadas | Listagem classificada dos imóveis (grupos art. 343-C, II); registros de inserção no SIG-RI; relatórios semestrais de evolução |
-| Responsável | Operadores + profissional técnico habilitado/credenciado ONR |
-| Prazo | Levantamento: 0–6 meses; Inserção: 0–48 meses (até 01/09/2029) |
-| Status | `CONDICIONAL` — depende de credenciamento de profissional técnico habilitado junto ao ONR |
+| Responsável | Operadores + profissional técnico habilitado/credenciado ONR (**ainda não credenciado**) |
+| Prazo | Levantamento: parcial concluído (recorte georref/SIGEF); Inserção: 0–48 meses (Decisão/Ofício Circular nº 103/2025 — a confirmar) |
+| Status | `EM IMPLANTAÇÃO` — 122 matrículas inseridas/validadas no SIG-RI, comprovadas por recibos individualizados (linha de base parcial, 100% do recorte de 122 recibos); a formação do mosaico por polígonos prossegue e depende do credenciamento de profissional técnico habilitado junto ao ONR |
 | Prioridade | Imóveis rurais certificados INCRA/SIGEF (Grupo A) |
 
 ---
@@ -95,7 +97,7 @@
 
 | Relatório | Periodicidade | Prazo | Responsável | Status |
 |---|---|---|---|---|
-| Relatório Mensal Interno de Cumprimento | Mensal | Até 5 dias úteis após envio ao ONR | `[NOME_DO_COLABORADOR_DESIGNADO]` | `PENDENTE` — início jun/2026 |
+| Relatório Mensal Interno de Cumprimento | Mensal | Até 5 dias úteis após envio ao ONR | André (Suboficial) | `PENDENTE` — início jun/2026 |
 | Relatório Semestral de Cumprimento | Semestral | Nov/2026 e mai/2027 | Oficial Registradora | `PENDENTE` — 1º: nov/2026 |
 | Revisão do Plano de Ação | Anual | Mai/2027 (versão 2.0) | Oficial Registradora | `PENDENTE` |
 
@@ -105,11 +107,13 @@
 
 | Dependência | Responsável externo | Status | Observação |
 |---|---|---|---|
-| Layout e procedimento de envio retroativo ao ONR | ONR | `CONDICIONAL` | Pendente de confirmação com ONR |
+| Orientação técnica eventual do ONR sobre envio retroativo | ONR | `INFORMATIVA` | Não condiciona o envio; a análise set/2025–abr/2026 e os envios pendentes seguem independentemente; consulta apenas diante de erro/dúvida técnica concreta |
 | Exportação automática do Engegraph compatível com IERI-e | Engegraph | `CONDICIONAL` | Pendente de verificação com fornecedor |
 | Habilitação técnica da API REST do ONR | ONR | `CONDICIONAL` | Sem compromisso de uso imediato |
 | Credenciamento de profissional técnico habilitado (SIG-RI) | ONR | `CONDICIONAL` | Em processo de identificação |
 | Periodicidade de atualização do SIGEF no Mapa | ONR | `CONDICIONAL` | Divergência nos manuais — pendente de confirmação |
+| Prazo de 48 meses para o legado / SIG-RI (termo final) | CGJ-GO | `CONDICIONAL` | Atribuído à Decisão/Ofício Circular nº 103/2025; cópia primária a obter para confirmar prazo e termo final |
+| Data final do prazo do PROAD | TJGO / PROAD | `CONDICIONAL` | Ofício nº 045/2026/GNP concede 30 dias sem data expressa; confirmar no PROAD e no comprovante de intimação |
 
 ---
 
@@ -117,10 +121,10 @@
 
 | Bloco | Status geral |
 |---|---|
-| 1 — Governança interna | `EM IMPLANTAÇÃO` |
-| 2 — Alimentação mensal IERI-e | `PENDENTE` (corrente) / `CONDICIONAL` (retroativo) |
-| 3 — Diagnóstico e levantamento | `PENDENTE` |
-| 4 — SIG-RI | `CONDICIONAL` |
+| 1 — Governança interna | `IMPLANTADO` (Portaria nº 01/2026-RI assinada em 18/05/2026; via oficial a anexar) |
+| 2 — Alimentação mensal IERI-e | `PENDENTE` (corrente — programado jun/2026, sem comprovante) / `EM IMPLANTAÇÃO` (retroativo — análise e envio sem condicionamento ao ONR) |
+| 3 — Diagnóstico e levantamento | `EM IMPLANTAÇÃO` (parcial no Anexo IV; integral em andamento) |
+| 4 — SIG-RI | `EM IMPLANTAÇÃO` (122 inseridas/validadas comprovadas por recibos; mosaico por polígonos depende de profissional técnico) |
 | 5 — Saneamento do legado | `PENDENTE` |
 | 6 — Relatórios e monitoramento | `PENDENTE` |
 
