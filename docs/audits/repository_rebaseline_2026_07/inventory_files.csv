@@ -1,0 +1,256 @@
+﻿path,top_level_directory,extension,size_bytes,tracked,ignored,category,probable_owner_module,probable_status,sensitive_risk,duplicate_candidate,notes
+.env.example,.env.example,.example,239,yes,no,configuração,raiz,ativo,baixo,,
+.gitattributes,.gitattributes,(none),321,yes,no,configuração,raiz,ativo,baixo,,
+.gitignore,.gitignore,(none),3041,yes,no,configuração,raiz,ativo,baixo,,
+.python-version,.python-version,(none),5,yes,no,configuração,raiz,ativo,baixo,,
+CARTORIO_SYSTEM_PROJECT_CONFIGURATION.md,CARTORIO_SYSTEM_PROJECT_CONFIGURATION.md,.md,21254,yes,no,documentação técnica,raiz,ativo,baixo,,
+CLAUDE.md,CLAUDE.md,.md,6150,yes,no,documentação técnica,raiz,ativo,baixo,,
+README.md,README.md,.md,5379,yes,no,documentação técnica,raiz,ativo,baixo,,
+alembic.ini,alembic.ini,.ini,659,yes,no,configuração,db,ativo,baixo,,
+alembic/README,alembic,(none),221,yes,no,finalidade indefinida,db,revisar,baixo,,
+alembic/env.py,alembic,.py,1427,yes,no,configuração,db,ativo,baixo,,
+alembic/script.py.mako,alembic,.mako,616,yes,no,configuração,db,ativo,baixo,,
+alembic/versions/20260501_1045_initial_finance_core.py,alembic,.py,5383,yes,no,migration,db,ativo,baixo,,
+alembic/versions/20260501_1336_finance_core_hardening_direction_source_.py,alembic,.py,3815,yes,no,migration,db,ativo,baixo,,
+alembic/versions/20260501_1413_drop_competence_month_glob_check.py,alembic,.py,1120,yes,no,migration,db,ativo,baixo,,
+alembic/versions/20260504_0900_add_audit_findings.py,alembic,.py,7416,yes,no,migration,db,ativo,baixo,,
+alembic/versions/20260505_1000_add_lgpd_actions.py,alembic,.py,6439,yes,no,migration,db,ativo,baixo,,
+alembic/versions/20260505_1100_add_retention_rules.py,alembic,.py,3713,yes,no,migration,db,ativo,baixo,,
+alembic/versions/20260506_1000_add_compliance_tables.py,alembic,.py,12423,yes,no,migration,db,ativo,baixo,,
+alembic/versions/20260506_1500_add_compliance_evidences.py,alembic,.py,4235,yes,no,migration,db,ativo,baixo,,
+alembic/versions/20260506_1600_add_compliance_requirement_finding_links.py,alembic,.py,3366,yes,no,migration,db,ativo,baixo,,
+alembic/versions/20260507_1000_add_compliance_requirement_status.py,alembic,.py,6066,yes,no,migration,db,ativo,baixo,,
+app/__init__.py,app,.py,0,yes,no,finalidade indefinida,core/__init__.py,revisar,baixo,,
+app/core/__init__.py,app,.py,0,yes,no,infraestrutura,core/core,ativo,baixo,,
+app/core/config.py,app,.py,541,yes,no,infraestrutura,core/core,ativo,baixo,,
+app/core/errors.py,app,.py,884,yes,no,infraestrutura,core/core,ativo,baixo,,
+app/core/logging.py,app,.py,907,yes,no,infraestrutura,core/core,ativo,baixo,,
+app/db/__init__.py,app,.py,0,yes,no,infraestrutura,core/db,ativo,baixo,,
+app/db/base.py,app,.py,679,yes,no,infraestrutura,core/db,ativo,baixo,,
+app/db/session.py,app,.py,544,yes,no,infraestrutura,core/db,ativo,baixo,,
+app/interfaces/__init__.py,app,.py,0,yes,no,interface/API,interfaces,ativo,baixo,,
+app/interfaces/api/__init__.py,app,.py,0,yes,no,interface/API,interfaces,ativo,baixo,,
+app/interfaces/api/v1/__init__.py,app,.py,0,yes,no,interface/API,interfaces,ativo,baixo,,
+app/interfaces/api/v1/router.py,app,.py,756,yes,no,interface/API,interfaces,ativo,baixo,,
+app/main.py,app,.py,1186,yes,no,infraestrutura,core/main.py,ativo,baixo,,
+app/modules/__init__.py,app,.py,0,yes,no,código de produção,__init__.py,ativo,baixo,,
+app/modules/audit/__init__.py,app,.py,0,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/diagnosis/__init__.py,app,.py,0,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/diagnosis/analyzer.py,app,.py,7125,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/diagnosis/cli.py,app,.py,6285,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/diagnosis/models.py,app,.py,1697,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/diagnosis/report.py,app,.py,10322,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/diagnosis/rules.py,app,.py,37306,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/diagnosis/temp_rules.py,app,.py,13038,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/findings/__init__.py,app,.py,0,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/findings/enums.py,app,.py,2193,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/findings/models.py,app,.py,5332,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/findings/router.py,app,.py,3881,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/findings/rules.py,app,.py,2714,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/findings/schemas.py,app,.py,7586,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/findings/service.py,app,.py,5924,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/scanner/__init__.py,app,.py,0,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/scanner/cli.py,app,.py,5201,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/scanner/file_scanner.py,app,.py,9887,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/scanner/models.py,app,.py,2562,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/audit/scanner/report.py,app,.py,14424,yes,no,código de produção,audit,ativo,baixo,,
+app/modules/clients/__init__.py,app,.py,0,yes,no,código de produção,clients,placeholder,baixo,,pacote vazio (__init__.py)
+app/modules/compliance/__init__.py,app,.py,350,yes,no,código de produção,compliance,ativo,baixo,,
+app/modules/compliance/enums.py,app,.py,3509,yes,no,código de produção,compliance,ativo,baixo,,
+app/modules/compliance/models.py,app,.py,23810,yes,no,código de produção,compliance,ativo,baixo,,
+app/modules/compliance/router.py,app,.py,15856,yes,no,código de produção,compliance,ativo,baixo,,
+app/modules/compliance/schemas.py,app,.py,12815,yes,no,código de produção,compliance,ativo,baixo,,
+app/modules/compliance/seed.py,app,.py,12031,yes,no,código de produção,compliance,ativo,baixo,,
+app/modules/compliance/seed_data/__init__.py,app,.py,613,yes,no,código de produção,compliance,ativo,baixo,,
+app/modules/compliance/seed_data/matriz_v1.py,app,.py,50130,yes,no,código de produção,compliance,ativo,baixo,,
+app/modules/compliance/service.py,app,.py,30158,yes,no,código de produção,compliance,ativo,baixo,,
+app/modules/documents/__init__.py,app,.py,0,yes,no,código de produção,documents,placeholder,baixo,,pacote vazio (__init__.py)
+app/modules/exports/__init__.py,app,.py,0,yes,no,código de produção,exports,placeholder,baixo,,pacote vazio (__init__.py)
+app/modules/finance/__init__.py,app,.py,0,yes,no,código de produção,finance,ativo,baixo,,
+app/modules/finance/enums.py,app,.py,2215,yes,no,código de produção,finance,ativo,baixo,,
+app/modules/finance/models.py,app,.py,3473,yes,no,código de produção,finance,ativo,baixo,,
+app/modules/finance/router.py,app,.py,2660,yes,no,código de produção,finance,ativo,baixo,,
+app/modules/finance/rules.py,app,.py,2487,yes,no,código de produção,finance,ativo,baixo,,
+app/modules/finance/schemas.py,app,.py,4850,yes,no,código de produção,finance,ativo,baixo,,
+app/modules/finance/service.py,app,.py,6379,yes,no,código de produção,finance,ativo,baixo,,
+app/modules/lgpd/__init__.py,app,.py,0,yes,no,código de produção,lgpd,ativo,baixo,,
+app/modules/lgpd/enums.py,app,.py,1296,yes,no,código de produção,lgpd,ativo,baixo,,
+app/modules/lgpd/models.py,app,.py,4813,yes,no,código de produção,lgpd,ativo,baixo,,
+app/modules/lgpd/router.py,app,.py,3413,yes,no,código de produção,lgpd,ativo,baixo,,
+app/modules/lgpd/rules.py,app,.py,5404,yes,no,código de produção,lgpd,ativo,baixo,,
+app/modules/lgpd/schemas.py,app,.py,3397,yes,no,código de produção,lgpd,ativo,baixo,,
+app/modules/lgpd/service.py,app,.py,14816,yes,no,código de produção,lgpd,ativo,baixo,,
+app/modules/notas/__init__.py,app,.py,39,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/__init__.py,app,.py,270,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/application/__init__.py,app,.py,512,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/application/calculator.py,app,.py,3578,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/application/renderer.py,app,.py,34896,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/application/validator.py,app,.py,5968,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/domain/__init__.py,app,.py,611,yes,no,domínio,notas,ativo,baixo,,
+app/modules/notas/inventarios/domain/errors.py,app,.py,764,yes,no,domínio,notas,ativo,baixo,,
+app/modules/notas/inventarios/domain/models.py,app,.py,2255,yes,no,domínio,notas,ativo,baixo,,
+app/modules/notas/inventarios/examples/inventario_sem_meeiro.yaml,app,.yaml,1189,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/examples/inventario_simples.yaml,app,.yaml,1146,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/infrastructure/__init__.py,app,.py,358,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/infrastructure/exporters/__init__.py,app,.py,204,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/infrastructure/exporters/odt_exporter.py,app,.py,10906,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/infrastructure/loaders.py,app,.py,1918,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/infrastructure/output_dir.py,app,.py,2452,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/infrastructure/templates/inventario_extrajudicial_padrao.md.j2,app,.j2,13351,yes,no,código de produção,notas,ativo,baixo,,template Jinja2 espelho
+app/modules/notas/inventarios/interfaces/__init__.py,app,.py,0,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/interfaces/cli.py,app,.py,8214,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/notas/inventarios/interfaces/schemas.py,app,.py,6071,yes,no,código de produção,notas,ativo,baixo,,
+app/modules/protocols/__init__.py,app,.py,0,yes,no,código de produção,protocols,placeholder,baixo,,pacote vazio (__init__.py)
+app/modules/reports/__init__.py,app,.py,0,yes,no,código de produção,reports,placeholder,baixo,,pacote vazio (__init__.py)
+app/modules/retention/__init__.py,app,.py,341,yes,no,código de produção,retention,ativo,baixo,,
+app/modules/retention/enums.py,app,.py,1398,yes,no,código de produção,retention,ativo,baixo,,
+app/modules/retention/models.py,app,.py,3056,yes,no,código de produção,retention,ativo,baixo,,
+app/modules/retention/repository.py,app,.py,1480,yes,no,código de produção,retention,ativo,baixo,,
+app/modules/retention/rules.py,app,.py,3104,yes,no,código de produção,retention,ativo,baixo,,
+app/modules/retention/schemas.py,app,.py,3009,yes,no,código de produção,retention,ativo,baixo,,
+app/modules/retention/seed.py,app,.py,11461,yes,no,código de produção,retention,ativo,baixo,,
+app/modules/retention/service.py,app,.py,6345,yes,no,código de produção,retention,ativo,baixo,,
+app/modules/tasks/__init__.py,app,.py,0,yes,no,código de produção,tasks,placeholder,baixo,,pacote vazio (__init__.py)
+docs/README.md,docs,.md,7072,yes,no,documentação técnica,docs,ativo,baixo,,
+docs/ai/AI_LEGAL_TOOLS_INVESTIGATION.md,docs,.md,63777,yes,no,relatório histórico,docs/ai,histórico,baixo,,investigação AI-LEGAL-0
+docs/analysis/lgpd_domain_model.md,docs,.md,20261,yes,no,relatório histórico,docs/analysis,histórico,baixo,,análises da sprint LGPD; caráter de registro
+docs/analysis/lgpd_inova_questions.md,docs,.md,22835,yes,no,relatório histórico,docs/analysis,histórico,baixo,,análises da sprint LGPD; caráter de registro
+docs/analysis/lgpd_module_backlog.md,docs,.md,22306,yes,no,relatório histórico,docs/analysis,histórico,baixo,,análises da sprint LGPD; caráter de registro
+docs/analysis/lgpd_module_context_report.md,docs,.md,65596,yes,no,relatório histórico,docs/analysis,histórico,baixo,,análises da sprint LGPD; caráter de registro
+docs/analysis/lgpd_module_executive_brief.md,docs,.md,9854,yes,no,relatório histórico,docs/analysis,histórico,baixo,,análises da sprint LGPD; caráter de registro
+docs/analysis/lgpd_mvp_decision_matrix.md,docs,.md,19336,yes,no,relatório histórico,docs/analysis,histórico,baixo,,análises da sprint LGPD; caráter de registro
+docs/architecture.md,docs,.md,7168,yes,no,documentação técnica,docs,ativo,baixo,,
+docs/audit/deployment_and_operation.md,docs,.md,24170,yes,no,documentação operacional,audit,ativo,baixo,,
+docs/audit/module_roadmap.md,docs,.md,37724,yes,no,documentação operacional,audit,ativo,baixo,,
+docs/audit/operational_procedure.md,docs,.md,34182,yes,no,documentação operacional,audit,ativo,baixo,,
+docs/audit/read_only_policy.md,docs,.md,9573,yes,no,documentação operacional,audit,ativo,baixo,,
+docs/decisions/ADR-001-compliance-evidence-ownership.md,docs,.md,7082,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/ADR-002-weak-references-between-regulatory-modules.md,docs,.md,9393,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/ADR-003-document-registry-ownership.md,docs,.md,19347,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/ADR-004-separacao-knowledge-base-ai-gateway.md,docs,.md,4128,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/ADR-005-knowledge-base-antes-de-ia-externa.md,docs,.md,4142,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/ADR-006-dados-permitidos-e-proibidos-para-ia.md,docs,.md,5345,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/ADR-007-mcp-e-agentes-fora-das-fases-iniciais.md,docs,.md,5291,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/ADR-008-saida-de-ia-e-rascunho-sujeito-a-revisao.md,docs,.md,6013,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/ADR-009-inventory-cent-rounding-policy.md,docs,.md,11856,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/index.md,docs,.md,3686,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/decisions/technical_decisions.md,docs,.md,14092,yes,no,ADR/decisão arquitetural,docs/decisions,ativo,baixo,,
+docs/document_registry/CNPFE_GO_NORMATIVE_MATRIX_BLUEPRINT.md,docs,.md,26339,yes,no,documentação funcional,document_registry,planejado,baixo,,blueprint sem código
+docs/document_registry/DOCUMENT_REGISTRY_MODULE_CONCEPT.md,docs,.md,25806,yes,no,documentação funcional,document_registry,planejado,baixo,,blueprint sem código
+docs/document_registry/EXPECTED_DOCUMENTS_CNPFE_GO_INITIAL_MATRIX.md,docs,.md,70691,yes,no,documentação funcional,document_registry,planejado,baixo,,blueprint sem código
+docs/infrastructure/infrastructure_roadmap.md,docs,.md,11481,yes,no,documentação operacional,docs/infrastructure,ativo,baixo,,
+docs/infrastructure/target_infrastructure.md,docs,.md,10605,yes,no,documentação operacional,docs/infrastructure,ativo,baixo,,
+docs/knowledge_base/GOVERNANCE_DECISIONS.md,docs,.md,8984,yes,no,documentação funcional,knowledge_base,planejado,baixo,,blueprint sem código
+docs/knowledge_base/IMPLEMENTATION_ROADMAP.md,docs,.md,8460,yes,no,documentação funcional,knowledge_base,planejado,baixo,,blueprint sem código
+docs/knowledge_base/KNOWLEDGE_BASE_BLUEPRINT.md,docs,.md,32402,yes,no,documentação funcional,knowledge_base,planejado,baixo,,blueprint sem código
+docs/knowledge_base/PHASE_1_SOURCE_ALLOWLIST.md,docs,.md,12795,yes,no,documentação funcional,knowledge_base,planejado,baixo,,blueprint sem código
+docs/knowledge_base/README.md,docs,.md,2884,yes,no,documentação funcional,knowledge_base,planejado,baixo,,blueprint sem código
+docs/modules/audit.md,docs,.md,13888,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/audit_document_diagnosis.md,docs,.md,11273,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/audit_document_diagnosis_execution.md,docs,.md,15274,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/audit_file_scanner.md,docs,.md,21408,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/audit_findings.md,docs,.md,12967,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/compliance.md,docs,.md,26743,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/finance.md,docs,.md,8194,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/lgpd.md,docs,.md,21578,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/notas_inventarios.md,docs,.md,34127,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/notas_inventarios_checklist.md,docs,.md,9439,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/registro_imoveis.md,docs,.md,6896,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/modules/retention.md,docs,.md,9150,yes,no,documentação técnica,docs/modules,ativo,baixo,,
+docs/operations/how_to_run.md,docs,.md,4441,yes,no,documentação operacional,operations,ativo,baixo,,
+docs/operations/local_data_policy.md,docs,.md,2882,yes,no,documentação operacional,operations,ativo,baixo,,
+docs/proad/RESPOSTA_PROAD_ADEQUACAO_PROVIMENTO_213.md,docs,.md,11061,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/00_README_CONTROLE_DOCUMENTAL.md,docs,.md,8397,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/01_relatorio_analitico_preliminar.md,docs,.md,9153,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/02_minuta_manifestacao_proad.md,docs,.md,9301,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/03_plano_acao_ieri_sig_ri.md,docs,.md,10105,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/04_minuta_portaria_designacao_ri.md,docs,.md,8959,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/05_pop_ri_001_alimentacao_ieri_sig_ri.md,docs,.md,10012,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/06_diagnostico_inicial_historico.md,docs,.md,9675,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/07_matriz_evidencias_controles.md,docs,.md,8774,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/08_checklist_juntada.md,docs,.md,5369,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/09_pendencias_alertas.md,docs,.md,8216,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/proad/resposta_ieri_2026/10_analise_manuais_ri_digital.md,docs,.md,6902,yes,no,documentação normativa/compliance,docs/proad,ativo,médio,,minutas/manifestação PROAD; working tree com alterações não commitadas
+docs/quality/risk_register_model.md,docs,.md,7930,yes,no,documentação normativa/compliance,docs/regulatory,ativo,baixo,,
+docs/quality/testing.md,docs,.md,6461,yes,no,finalidade indefinida,quality,revisar,baixo,,
+docs/readiness/operating_flows_audit_plan.md,docs,.md,7569,yes,no,documentação operacional,docs/readiness,ativo,baixo,,
+docs/readiness/technical_dossier_structure.md,docs,.md,9605,yes,no,documentação operacional,docs/readiness,ativo,baixo,,
+docs/readiness/visitation_readiness_checklist.md,docs,.md,9777,yes,no,documentação operacional,docs/readiness,ativo,baixo,,
+docs/readiness/visitation_readiness_plan.md,docs,.md,8537,yes,no,documentação operacional,docs/readiness,ativo,baixo,,
+docs/regulatory/cnj_213/alignment.md,docs,.md,6902,yes,no,documentação normativa/compliance,docs/regulatory,ativo,baixo,,
+docs/regulatory/cnj_213/compliance_plan.md,docs,.md,12492,yes,no,documentação normativa/compliance,docs/regulatory,ativo,baixo,,
+docs/regulatory/cnj_213/regulatory_integration_blueprint.md,docs,.md,51077,yes,no,documentação normativa/compliance,docs/regulatory,ativo,baixo,,
+docs/regulatory/cnj_213/roadmap.md,docs,.md,24145,yes,no,documentação normativa/compliance,docs/regulatory,ativo,baixo,,
+docs/reports/RELATORIO_EXECUTIVO_CARTORIO_SYSTEM_DIRETORIA.md,docs,.md,44354,yes,no,relatório histórico,docs/reports,histórico,baixo,,
+docs/reports/generated/relatorio_pdf.css,docs,.css,9583,yes,no,artefato gerado,docs/reports,revisar,baixo,,CSS de geração de PDF versionado
+docs/ri_inventory/SANITIZED_DATA_DICTIONARY.md,docs,.md,15547,yes,no,documentação técnica,docs/ri_inventory,ativo,baixo,,dicionário de dados sanitizado
+docs/roadmap.md,docs,.md,7535,yes,no,documentação técnica,docs,ativo,baixo,,
+exports/atlas/.gitkeep,exports,(none),0,yes,no,configuração,exports,ativo,baixo,,mantém pasta exports/atlas
+pyproject.toml,pyproject.toml,.toml,1389,yes,no,configuração,raiz,ativo,baixo,,
+scripts/gerar_relatorio_pdf.py,scripts,.py,34347,yes,no,artefato gerado,scripts,revisar,baixo,,gerador de PDF do relatório executivo
+scripts/local_tools/analyze_ri_real_json.py,scripts,.py,48672,yes,no,código de produção,scripts/local_tools,ativo,médio,,ferramenta local RI; opera sobre dados reais fora do repo
+scripts/local_tools/audit_ri_inventory_reconciliation.py,scripts,.py,30348,yes,no,código de produção,scripts/local_tools,ativo,médio,,ferramenta local RI; opera sobre dados reais fora do repo
+scripts/local_tools/classify_ri_property_nature.py,scripts,.py,37730,yes,no,código de produção,scripts/local_tools,ativo,médio,,ferramenta local RI; opera sobre dados reais fora do repo
+scripts/local_tools/consolidate_ri_real_json_reports.py,scripts,.py,31721,yes,no,código de produção,scripts/local_tools,ativo,médio,,ferramenta local RI; opera sobre dados reais fora do repo
+scripts/local_tools/export_ri_inventory_review_report.py,scripts,.py,31261,yes,no,código de produção,scripts/local_tools,ativo,médio,,ferramenta local RI; opera sobre dados reais fora do repo
+scripts/local_tools/extract_ri_rural_inventory.py,scripts,.py,61697,yes,no,código de produção,scripts/local_tools,ativo,médio,,ferramenta local RI; opera sobre dados reais fora do repo
+scripts/local_tools/query_ri_real_json_inventory.py,scripts,.py,7667,yes,no,código de produção,scripts/local_tools,ativo,médio,,ferramenta local RI; opera sobre dados reais fora do repo
+tests/__init__.py,tests,.py,0,yes,no,testes,tests,ativo,baixo,,
+tests/conftest.py,tests,.py,1623,yes,no,testes,tests,ativo,baixo,,
+tests/golden/notas_inventarios/inventario_sem_meeiro_minuta.md,tests,.md,17092,yes,no,golden file,tests,ativo,baixo,,
+tests/golden/notas_inventarios/inventario_sem_meeiro_resumo.md,tests,.md,1945,yes,no,golden file,tests,ativo,baixo,,
+tests/golden/notas_inventarios/inventario_sem_meeiro_validacao.json,tests,.json,1636,yes,no,golden file,tests,ativo,baixo,,
+tests/golden/notas_inventarios/inventario_simples_minuta.md,tests,.md,16861,yes,no,golden file,tests,ativo,baixo,,
+tests/golden/notas_inventarios/inventario_simples_resumo.md,tests,.md,1941,yes,no,golden file,tests,ativo,baixo,,
+tests/golden/notas_inventarios/inventario_simples_validacao.json,tests,.json,1606,yes,no,golden file,tests,ativo,baixo,,
+tests/test_audit_findings.py,tests,.py,17821,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_evidence_models.py,tests,.py,5460,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_evidence_routes.py,tests,.py,9599,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_evidence_service.py,tests,.py,8727,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_finding_link_models.py,tests,.py,8860,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_finding_link_routes.py,tests,.py,12595,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_finding_link_service.py,tests,.py,13749,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_isolation.py,tests,.py,6615,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_models.py,tests,.py,6112,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_requirement_status_history.py,tests,.py,3723,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_requirement_status_models.py,tests,.py,4266,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_requirement_status_routes.py,tests,.py,6917,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_requirement_status_service.py,tests,.py,19021,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_routes.py,tests,.py,5640,yes,no,testes,tests,ativo,baixo,,
+tests/test_compliance_seed.py,tests,.py,6006,yes,no,testes,tests,ativo,baixo,,
+tests/test_diagnosis_retention_integration.py,tests,.py,15661,yes,no,testes,tests,ativo,baixo,,
+tests/test_document_diagnosis.py,tests,.py,27569,yes,no,testes,tests,ativo,baixo,,
+tests/test_file_scanner.py,tests,.py,14044,yes,no,testes,tests,ativo,baixo,,
+tests/test_finance_entries.py,tests,.py,21956,yes,no,testes,tests,ativo,baixo,,
+tests/test_health.py,tests,.py,395,yes,no,testes,tests,ativo,baixo,,
+tests/test_isolation.py,tests,.py,2473,yes,no,testes,tests,ativo,baixo,,
+tests/test_lgpd_actions.py,tests,.py,18655,yes,no,testes,tests,ativo,baixo,,
+tests/test_notas_inventarios_calculator.py,tests,.py,7303,yes,no,testes,tests,ativo,baixo,,
+tests/test_notas_inventarios_golden.py,tests,.py,4883,yes,no,testes,tests,ativo,baixo,,
+tests/test_notas_inventarios_odt_exporter.py,tests,.py,15002,yes,no,testes,tests,ativo,baixo,,
+tests/test_notas_inventarios_output_dir.py,tests,.py,4565,yes,no,testes,tests,ativo,baixo,,
+tests/test_notas_inventarios_renderer.py,tests,.py,25674,yes,no,testes,tests,ativo,baixo,,
+tests/test_notas_inventarios_schemas.py,tests,.py,8168,yes,no,testes,tests,ativo,baixo,,
+tests/test_notas_inventarios_validator.py,tests,.py,11099,yes,no,testes,tests,ativo,baixo,,
+tests/test_retention_rules.py,tests,.py,8085,yes,no,testes,tests,ativo,baixo,,
+tests/test_retention_seed.py,tests,.py,3285,yes,no,testes,tests,ativo,baixo,,
+tests/test_ri_inventory_extractor.py,tests,.py,33690,yes,no,testes,tests,ativo,baixo,,
+tests/test_ri_inventory_reconciliation.py,tests,.py,21542,yes,no,testes,tests,ativo,baixo,,
+tests/test_ri_inventory_review_report.py,tests,.py,19592,yes,no,testes,tests,ativo,baixo,,
+tests/test_ri_property_nature_classifier.py,tests,.py,20894,yes,no,testes,tests,ativo,baixo,,
+tests/test_ri_real_json_analyzer.py,tests,.py,17545,yes,no,testes,tests,ativo,baixo,,
+tests/test_ri_real_json_consolidated_report.py,tests,.py,12892,yes,no,testes,tests,ativo,baixo,,
+tests/test_temp_diagnosis_rules.py,tests,.py,9666,yes,no,testes,tests,ativo,baixo,,
+docs/modules/notas_inventarios/POP_USO_GERADOR_MINUTA_INVENTARIO.md,docs,.md,28168,no,no,documentação técnica,docs/modules,não versionado (novo),baixo,,untracked no baseline
+docs/proad/resposta_ieri_2026/11_relatorio_parcial_atualizacao_ieri_sig_ri.md,docs,.md,10046,no,no,documentação normativa/compliance,docs/proad,não versionado (novo),médio,,minutas/manifestação PROAD; working tree com alterações não commitadas; untracked no baseline
+cartorio.db,cartorio.db,.db,,no,yes,banco local,,local,alto,,banco SQLite de desenvolvimento; 385 KB; ignorado
+_local_data/,_local_data,(dir),,no,yes,dado local,,local,alto,,582 MB / ~1944 arquivos; documentos reais da serventia; ignorado
+outputs/,outputs,(dir),,no,yes,output manual,,local,médio,,saídas manuais notas_inventarios; ignorado
+.ai_tmp/,.ai_tmp,(dir),,no,yes,arquivo temporário,,local,médio,,artefatos de sessões de IA; ignorado
+exports/atlas/ (conteúdo),exports,(dir),,no,yes,artefato gerado,,local,baixo,,vazio exceto .gitkeep; ignorado
+apresentacao_executiva_cartorio_system_mvp.html,apresentacao_executiva_cartorio_system_mvp.html,.html,,no,yes,artefato gerado,,local,baixo,,apresentação HTML 79 KB na raiz; ignorado
+docs/reports/RELATORIO_EXECUTIVO_CARTORIO_SYSTEM_DIRETORIA.pdf,docs,.pdf,,no,yes,artefato gerado,,local,baixo,,PDF gerado; ignorado
+cartorio_system.egg-info/,cartorio_system.egg-info,(dir),,no,yes,artefato gerado,,local,baixo,,metadados de build; ignorado
+.venv/,.venv,(dir),,no,yes,arquivo temporário,,local,baixo,,ambiente virtual local
+".pytest_cache/, .ruff_cache/, __pycache__/",.pytest_cache,(dir),,no,yes,arquivo temporário,,local,baixo,,caches de ferramentas
+".claude/, .vscode/",.claude,(dir),,no,yes,configuração,,local,baixo,,estado local de ferramentas; ignorado
