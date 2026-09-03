@@ -21,7 +21,8 @@ nova** e apenas por alinhamento das declarações ORM.
 **Ressalva única, e é de política, não de execução:** os commits permanecem
 **locais**. Não houve autorização explícita do gestor para push nesta execução,
 e a política permanente do projeto (CLAUDE.md § 6) proíbe push automático.
-`origin/main` continua em `6ed62cb`, agora **6 commits atrás** do HEAD local. O
+`origin/main` continua em `6ed62cb`, agora **9 commits atrás** do HEAD local — os
+2 anteriores mais os 7 desta sprint. O
 CI criado nesta sprint **ainda não executou** — ele só dispara após a publicação.
 
 Por isso o veredito não é `..._STABILIZED_WITH_ALEMBIC_EXCEPTION` (não há exceção
@@ -140,7 +141,9 @@ projeto (CLAUDE.md § 6) e a instrução de fallback do próprio escopo, o bloqu
    risco de perda física permanece.
 2. O CI criado nesta sprint **nunca executou** — GitHub Actions só dispara com o
    workflow publicado. A validação apresentada neste relatório é local.
-3. Somam-se agora **6 commits** não publicados.
+3. Somam-se **9 commits** não publicados: os 2 anteriores mais os 7 desta sprint
+   (5 de execução e 2 de correção do próprio relatório). A contagem sempre
+   verificável por `git rev-list --count origin/main..HEAD`.
 
 **Para publicar, basta autorização explícita:**
 
@@ -613,7 +616,7 @@ git status --short
 |---|---|---|
 | HEAD | `dd5b3be` | `cf99cef` — commit documental, 5 à frente do início |
 | `origin/main` | `6ed62cb` | `6ed62cb` — **inalterado** |
-| Ahead / behind | 2 / 0 | **7 / 0** |
+| Ahead / behind | 2 / 0 | **9 / 0** |
 | Arquivos modificados não commitados | 0 | **0** |
 | Arquivos untracked | 2 | **0** |
 
