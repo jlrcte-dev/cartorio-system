@@ -18,22 +18,23 @@ Todos os objetivos da sprint foram atingidos, incluindo o único que o escopo
 admitia como possivelmente inalcançável (`alembic check`), obtido **sem migration
 nova** e apenas por alinhamento das declarações ORM.
 
-**Ressalva única, e é de política, não de execução:** os commits permanecem
-**locais**. Não houve autorização explícita do gestor para push nesta execução,
-e a política permanente do projeto (CLAUDE.md § 6) proíbe push automático.
-`origin/main` continua em `6ed62cb`, agora **9 commits atrás** do HEAD local — os
-2 anteriores mais os 7 desta sprint. O
-CI criado nesta sprint **ainda não executou** — ele só dispara após a publicação.
+O gestor autorizou explicitamente a publicação ao final da sprint. Os **10
+commits** foram publicados e `origin/main` convergiu com o HEAD local. O CI
+**executou pela primeira vez na história do repositório** — falhou na primeira
+tentativa, teve a causa-raiz identificada e corrigida, e ficou **verde em todos
+os quatro gates** na segunda.
 
 Por isso o veredito não é `..._STABILIZED_WITH_ALEMBIC_EXCEPTION` (não há exceção
-de Alembic: o gate ficou verde) nem `..._STABILIZATION_BLOCKED` (nada foi
-bloqueado tecnicamente). O repositório está estabilizado; falta publicá-lo.
+de Alembic: o gate ficou verde) nem `..._STABILIZATION_BLOCKED` (nada permaneceu
+bloqueado). O repositório está estabilizado **e publicado, com gate automático
+comprovadamente funcional** — não apenas escrito.
 
 ### Placar da sprint
 
 | Objetivo | Resultado |
 |---|---|
-| Salvaguarda dos commits locais | 🟡 Delta auditado e limpo; **push não autorizado** |
+| Salvaguarda dos commits locais | 🟢 Delta auditado, push **autorizado e executado**; `origin/main` convergido |
+| Primeira execução do CI | 🟢 Verde na 2ª tentativa; falha da 1ª diagnosticada e corrigida |
 | Correção do relatório de rebaseline | 🟢 4 inconsistências factuais corrigidas |
 | Declaração do PyYAML | 🟢 TD-23 encerrada |
 | `ruff format` como gate | 🟢 TD-25 encerrada — 25 arquivos, AST idêntica |
@@ -126,30 +127,31 @@ A  docs/proad/resposta_ieri_2026/11_relatorio_parcial_atualizacao_ieri_sig_ri.md
 
 **Conclusão da auditoria: o delta é seguro para publicação.**
 
-### 3.2. Push — BLOQUEADO por ausência de autorização
+### 3.2. Push — AUTORIZADO e EXECUTADO
 
-O escopo da sprint condicionou o push a autorização explícita do gestor ("*Se a
-autorização para esta execução tiver sido fornecida*"). **Nenhuma autorização
-explícita foi fornecida nesta execução.** Conforme a política permanente do
-projeto (CLAUDE.md § 6) e a instrução de fallback do próprio escopo, o bloqueio
-é registrado e a sprint prossegue sem push.
+O escopo condicionou o push a autorização explícita do gestor. A sprint foi
+conduzida até o fim **sem push**, conforme a política permanente (CLAUDE.md § 6),
+e a autorização foi solicitada ao término, com o delta já auditado. **O gestor
+autorizou a publicação.**
 
-**Consequências ativas enquanto o push não ocorrer:**
-
-1. O dossiê PROAD consolidado e a auditoria de julho continuam existindo em
-   **uma única máquina**. A dívida TD-05 foi encerrada quanto ao *commit*, mas o
-   risco de perda física permanece.
-2. O CI criado nesta sprint **nunca executou** — GitHub Actions só dispara com o
-   workflow publicado. A validação apresentada neste relatório é local.
-3. Somam-se **9 commits** não publicados: os 2 anteriores mais os 7 desta sprint
-   (5 de execução e 2 de correção do próprio relatório). A contagem sempre
-   verificável por `git rev-list --count origin/main..HEAD`.
-
-**Para publicar, basta autorização explícita:**
-
-```bash
-git push origin main
 ```
+git push origin main
+To https://github.com/jlrcte-dev/cartorio-system.git
+   6ed62cb..a3a28ea  main -> main
+```
+
+**Convergência comprovada nas três fontes:**
+
+| Fonte | Valor |
+|---|---|
+| `git rev-parse HEAD` | `a3a28ea…` |
+| `git rev-parse origin/main` | `a3a28ea…` |
+| `git ls-remote origin refs/heads/main` | `a3a28ea…` |
+| `git rev-list --left-right --count origin/main...HEAD` | `0  0` |
+
+Um segundo push publicou a correção do CI descrita no § 8.2
+(`a3a28ea..3200980`). **Risco RS-1 eliminado:** o dossiê PROAD, a auditoria de
+julho e toda a estabilização deixaram de existir em uma única máquina.
 
 ---
 
@@ -353,10 +355,83 @@ transforma isso de premissa em garantia.
 `mypy`. Continuam exigidos pelo CLAUDE.md § 5 para mudanças sensíveis e
 permanecem como **TD-10**, para sprint própria.
 
-**Validação possível localmente:** YAML parseado e estrutura conferida; a
-sequência completa de gates executada na máquina de desenvolvimento com
-resultado verde. **A execução real no GitHub Actions depende do push** e ainda
-não ocorreu.
+### 8.1. Primeira execução — falhou
+
+Publicado o workflow, o CI disparou pela primeira vez na história do repositório
+(run `33711644836`) e **falhou no passo de formatação**:
+
+```
+✓ Set up job
+✓ Checkout
+✓ Configurar Python 3.12
+✓ Instalar o projeto (runtime + dev)
+X Formatação (ruff format)          <- falha
+- Lint · Testes · Migrations         (não executados)
+```
+
+O CI reprovou `docs/analysis/lgpd_domain_model.md` e outros documentos —
+arquivos que **nunca fizeram parte** do baseline de formatação desta sprint.
+
+### 8.2. Causa-raiz — e não era a que eu previa
+
+O relatório registrava como risco RS-2 uma provável divergência de EOL entre
+Linux e Windows. **Não era isso.** A causa foi o piso aberto do contrato de
+dependências:
+
+| Ambiente | ruff instalado |
+|---|---|
+| Máquina de desenvolvimento | **0.15.12** |
+| Runner do CI (`ruff>=0.5.0` resolvido para o mais recente) | **0.16.5** |
+
+A partir da 0.16, o formatador do ruff passou a processar **blocos de código
+Python dentro de arquivos Markdown**. O gate local, com 0.15, jamais tocava
+documentação; o gate do CI, com 0.16, passou a exigir formatação de trechos
+ilustrativos dentro dos documentos.
+
+O problema de fundo é mais sério que os arquivos em si: **o ruff é o gate de
+formatação**, então um piso aberto permite que "verde na máquina" e "verde no
+CI" divirjam sem nenhuma mudança de código — exatamente o que o CI deveria
+impedir.
+
+### 8.3. Correção
+
+Commit `3200980` — a faixa passou de `ruff>=0.5.0` para **`ruff>=0.15.0,<0.16`**,
+a versão contra a qual o baseline de formatação foi efetivamente validado.
+
+Optou-se por **fixar a faixa** em vez de reformatar a documentação porque:
+(a) formatar código ilustrativo dentro de docs altera conteúdo documental, fora
+do escopo desta sprint; (b) subir de faixa deve ser decisão deliberada,
+acompanhada da reformatação correspondente; (c) a mudança mínima eficaz aqui é
+tornar o gate determinístico, não expandir seu alcance.
+
+### 8.4. Segunda execução — verde
+
+Run `33711774766`, todos os passos aprovados em 39 s:
+
+```
+✓ Formatação (ruff format)        -> 147 files already formatted
+✓ Lint (ruff check)               -> All checks passed!
+✓ Testes (pytest)                 -> 904 passed, 2 warnings in 14.45s
+✓ Migrations (banco temporário)   -> No new upgrade operations detected.
+```
+
+**Duas observações factuais dessa execução:**
+
+1. **O CI roda 904 testes passando, contra 903 + 1 skip na máquina local.** Não
+   é divergência: o único skip é o `chmod` do `test_file_scanner.py`, condicional
+   ao Windows sem privilégios de administrador. **No Linux ele executa** — ou
+   seja, a partir de agora esse teste tem cobertura real, que localmente nunca
+   teve.
+2. **Dois warnings aparecem só no CI**, vindos de versões mais novas resolvidas
+   no runner (starlette 1.6.0 contra 1.0.0 local): `StarletteDeprecationWarning`
+   sobre `httpx` no `testclient` e `DeprecationWarning` do alias
+   `anyio.abc.BlockingPortal`. **Nenhum vem de código do projeto** — são sinais
+   antecipados de deriva de dependências, a acompanhar, não defeitos a corrigir
+   agora.
+
+Anotação recorrente do runner: `actions/checkout@v4` e `actions/setup-python@v5`
+apontam para Node.js 20, já depreciado, e são forçados a rodar em Node.js 24.
+Não afeta o resultado; atualizar as actions fica como manutenção futura.
 
 ---
 
@@ -501,8 +576,12 @@ Encerra **TD-27**. O documento passa a ser versionado.
 | Estado do banco | `alembic current` | 🟢 **f4a5b6c7d8e9 (head)** |
 | Drift | `alembic check` | 🟢 **No new upgrade operations detected.** |
 
-**A quantidade de testes não mudou: 904 coletados, 903 passando, 1 skip
-condicional de plataforma — idêntico ao baseline de entrada.** Nenhum teste foi
+**No CI (Linux), os mesmos gates rodam com resultado equivalente**, com uma
+diferença esperada e favorável: **904 passed**, porque o skip de `chmod` é
+condicional ao Windows e no runner o teste executa de fato.
+
+**A quantidade de testes não mudou: 904 coletados, 903 passando localmente +
+1 skip condicional de plataforma — idêntico ao baseline de entrada.** Nenhum teste foi
 adicionado, removido, renomeado ou desativado; esta sprint não alterou regra de
 negócio nem comportamento. O gate foi executado após cada etapa (formatação,
 PyYAML, alinhamento ORM, CI, documentação), sempre com o mesmo resultado.
@@ -523,6 +602,14 @@ revisados antes de cada um.
 | 4 | `d47a640` | `ci: add repository quality gate` | 1 (+73, novo) | TD-09 (P1) |
 | 5 | `cf99cef` | `docs: reconcile cartorio system current state` | 12 (+3.159 / −282) | TD-01, TD-02, TD-03, TD-04, TD-11, TD-16, TD-27 |
 
+| 6 | `f4f572f` | `docs: correct commit hash in stabilization report` | 1 | — |
+| 7 | `a3a28ea` | `docs: correct unpublished commit count in report` | 1 | — |
+| 8 | `3200980` | `fix: pin ruff to the version range the gate was validated against` | 1 (+7 / −1) | corrige o CI |
+
+Os commits 6 e 7 corrigem dados que só podiam ser conhecidos depois de escritos
+(hash e contagem do próprio relatório). O commit 8 corrige a falha da primeira
+execução do CI, descrita no § 8.2.
+
 Nenhum arquivo sensível foi versionado em qualquer um deles.
 
 ---
@@ -532,11 +619,12 @@ Nenhum arquivo sensível foi versionado em qualquer um deles.
 | Item | Valor |
 |---|---|
 | `origin/main` no início | `6ed62cb2c9f62d3eb69331007e4a3894094fda0e` |
-| `origin/main` ao final | `6ed62cb2c9f62d3eb69331007e4a3894094fda0e` — **inalterado** |
-| Commits locais à frente | **7** (2 anteriores + 5 desta sprint) |
-| Commits atrás | 0 |
-| Push executado | ❌ **Não** — sem autorização explícita |
-| CI executado | ❌ **Não** — depende da publicação do workflow |
+| `origin/main` ao final | `3200980…` (mais o commit deste relatório) |
+| Commits publicados nesta sprint | **10** — 2 anteriores + 8 desta sprint |
+| Ahead / behind ao final | **0 / 0** — convergido |
+| Push executado | ✅ **Sim**, com autorização explícita do gestor |
+| CI executado | ✅ **Sim** — 1ª execução falhou, 2ª **verde** nos 4 gates |
+| Runs | `33711644836` (failure) · `33711774766` (**success**, 39 s) |
 
 ---
 
@@ -562,8 +650,8 @@ Nenhum arquivo sensível foi versionado em qualquer um deles.
 
 ## 15. Dívidas remanescentes
 
-Das 26 dívidas abertas registradas no rebaseline, **15 permanecem**. Nenhuma é P0
-ou P1.
+Das 26 dívidas abertas registradas no rebaseline, **15 permanecem**, e esta
+sprint descobriu **1 nova** (TD-28). Nenhuma é P0 ou P1.
 
 | ID | Dívida | Prio. | Por que não foi tratada aqui |
 |---|---|:--:|---|
@@ -582,6 +670,7 @@ ou P1.
 | **TD-07** | Seis placeholders vazios | P4 | Decisão consciente |
 | **TD-20** | Sem task runner unificado | P4 | Melhoria futura |
 | **TD-21** | Observabilidade limitada a stdout | P4 | Adequada ao estágio |
+| **TD-28** 🆕 | Dependências sem lockfile — CI e máquina local resolvem versões diferentes | P2 | Descoberta pela falha da 1ª execução do CI. Mitigada para `ruff` (fixado); as demais seguem com piso aberto. Adotar lockfile exige decisão explícita, vedada nesta sprint |
 
 **Gaps funcionais de `notas/inventarios`** (precisão percentual, fração ideal,
 saída fragmentada, texto limpo para Engegraph) não são dívida técnica e
@@ -594,14 +683,15 @@ sprint.
 
 | # | Risco | Prob. | Impacto | Situação após a sprint |
 |---|---|:--:|:--:|---|
-| **RS-1** | **7 commits em máquina única** — dossiê PROAD, auditoria de julho e toda a estabilização | média | **muito alto** | 🔴 **Agravado** — eram 2 commits, agora são 7. Mitigação disponível e barata: um `git push` autorizado |
-| **RS-2** | CI publicado pode falhar na primeira execução por diferença de ambiente (Linux × Windows, versões resolvidas na hora) | média | baixo | 🟡 Mitigado localmente, **não comprovado em runner**. O ponto mais sensível é `ruff format --check` sob EOL diferente |
-| **RS-3** | Regressão silenciosa em `main` | alta → baixa | alto | 🟢 **Mitigado** — assim que o workflow for publicado |
+| **RS-1** | Commits em máquina única — dossiê PROAD, auditoria de julho e estabilização | média → **nula** | muito alto | 🟢 **ELIMINADO** — 10 commits publicados; `origin/main` convergido |
+| **RS-2** | CI falhar na primeira execução por diferença de ambiente | média | baixo | 🟢 **MATERIALIZOU E FOI RESOLVIDO** — mas pela causa errada: não foi EOL, foi o piso aberto `ruff>=0.5.0` deixando o runner instalar 0.16.5 contra 0.15.12 local (§ 8.2). Corrigido no commit `3200980`; 2ª execução verde |
+| **RS-3** | Regressão silenciosa em `main` | alta → baixa | alto | 🟢 **Mitigado e comprovado** — gate verde executando de fato no runner |
 | **RS-4** | Instalação limpa quebrar em runtime | média → nula | alto | 🟢 **Eliminado** — TD-23 encerrada |
 | **RS-5** | Decisão errada por documentação defasada | alta → baixa | médio | 🟢 **Mitigado** — 6 documentos reconciliados, 122 links verificados |
 | **RS-6** | Backup de `_local_data` (582 MB) não confirmado | média | alto | 🔴 **Inalterado** — externo ao repositório (TD-22) |
 | **RS-7** | Evidência regulatória envelhecendo (artefatos de maio/2026) | média | médio | 🔴 **Inalterado** — depende de TD-26, Horizonte B |
 | **RS-8** | Capacidade construída e nunca validada em uso | média | médio | 🔴 **Inalterado** — depende de TD-26 |
+| **RS-9** | 🆕 Deriva de dependências com pisos abertos | média | médio | 🟡 **Parcialmente mitigado** — `ruff` fixado por ser o gate; `pytest`, `fastapi`, `starlette` e outros seguem com piso aberto, e o runner já resolve versões bem mais novas que as locais (starlette 1.6.0 × 1.0.0), produzindo 2 warnings que não aparecem localmente. Um lockfile é a solução estrutural — exige decisão explícita |
 
 ---
 
@@ -614,17 +704,19 @@ git status --short
 
 | Item | Início | Fim |
 |---|---|---|
-| HEAD | `dd5b3be` | `cf99cef` — commit documental, 5 à frente do início |
-| `origin/main` | `6ed62cb` | `6ed62cb` — **inalterado** |
-| Ahead / behind | 2 / 0 | **9 / 0** |
+| HEAD | `dd5b3be` | commit deste relatório, sobre `3200980` |
+| `origin/main` | `6ed62cb` | **convergido com o HEAD local** |
+| Ahead / behind | 2 / 0 | **0 / 0** |
 | Arquivos modificados não commitados | 0 | **0** |
 | Arquivos untracked | 2 | **0** |
+| Commits publicados | — | **10** |
 
-> Nota de autorreferência: `cf99cef` é o commit que **introduz este relatório**,
-> e por isso o arquivo não podia conter o próprio hash quando foi escrito. Uma
-> correção subsequente registrou o hash correto — antes dela, esta seção trazia
-> um identificador antecipado que não correspondia ao commit real. Se houver
-> commits acima de `cf99cef`, o `git log` é a fonte da verdade.
+> Nota de autorreferência: um relatório não pode conter o hash do commit que o
+> introduz. Os identificadores citados aqui são os dos commits **anteriores** ao
+> desta atualização; o `git log` é sempre a fonte da verdade. Esta seção já
+> passou por duas correções (`f4f572f`, `a3a28ea`) justamente por conter dados
+> antecipados que não corresponderam à realidade — registro mantido por
+> transparência.
 
 **Conformidade com o escopo:**
 
@@ -641,7 +733,7 @@ git status --short
 | Staging explícito, sem `git add .` | ✅ |
 | Sem `--no-verify`, sem `--force` | ✅ |
 | Commits pequenos e temáticos | ✅ 5 commits |
-| Push somente com autorização | ✅ **não executado** |
+| Push somente com autorização | ✅ **executado após autorização explícita** |
 
 ---
 
