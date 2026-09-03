@@ -450,6 +450,97 @@ em [ADR-009 § Critérios para revisão futura](../decisions/ADR-009-inventory-c
 
 ---
 
+## 6.1. Representação de percentual e fração ideal
+
+> **Decisão vigente:** [ADR-010 — Representação de percentual e fração ideal em
+> inventários](../decisions/ADR-010-inventory-fraction-percentage-rendering.md).
+> Sprint `NOTAS-INVENTARIO-FRACOES-1`. A ADR-009 (§ 6 acima) permanece intacta:
+> aquela trata de **resíduo de centavos**; esta trata de **representação**.
+
+### 6.1.1. O problema
+
+Até esta sprint, percentual e dinheiro compartilhavam o mesmo formatador de duas
+casas. Percentuais que exigem mais precisão eram silenciosamente truncados:
+
+| Valor no domínio | Antes | Agora |
+|---|---|---|
+| `3.125` | `3,12%` | **`3,125%`** |
+| `0.005` | `0,00%` | **`0,005%`** |
+| `50` | `50,00%` | `50,00%` (inalterado) |
+| `12.5` | `12,50%` | `12,50%` (inalterado) |
+| `33.33` | `33,33%` | `33,33%` (inalterado) |
+
+O sintoma era verificável: num cenário de meeira mais nove herdeiros, os
+percentuais **exibidos** somavam `100,04%` enquanto a aritmética interna
+permanecia exata. Um caso real de 2026-07-09, com quinhões de 1/16 e 1/32,
+precisou sair do fluxo automatizado por causa disso.
+
+### 6.1.2. Regra de precisão
+
+A precisão do percentual é **derivada da entrada**, com piso de 2 casas: parte-se
+do expoente do próprio `Decimal`, descartam-se zeros à direita, e nunca se desce
+abaixo do piso. Não há teto arbitrário porque nenhum percentual do módulo é
+calculado — todos vêm da entrada estruturada, de modo que não existe dízima a
+truncar.
+
+Dinheiro **não** herda essa regra: continua sempre em 2 casas. Os quatro
+contratos vivem em
+[`application/formatting.py`](../../app/modules/notas/inventarios/application/formatting.py):
+`formatar_monetario`, `serializar_monetario`, `formatar_percentual` e
+`serializar_percentual`.
+
+### 6.1.3. Fração ideal — opcional e nunca inferida
+
+Cada item de `distribuicao` aceita um campo opcional `fracao_ideal`:
+
+```yaml
+distribuicao:
+  - beneficiario: HERDEIRO_8
+    percentual: "3.125"
+    fracao_ideal: "1/32"      # opcional
+```
+
+Regras:
+
+- **O sistema nunca infere a fração.** `3,125%` não vira `1/32` sozinho, e
+  nenhuma hipótese sucessória (representação, estirpe, pré-morte, meio quinhão)
+  é deduzida. A fração só existe quando explicitamente informada.
+- Formato estrito `numerador/denominador`, com inteiros positivos. São recusados
+  denominador zero, numerador zero, negativos, decimais (`0.5`), notação
+  científica e texto arbitrário.
+- **Forma canônica:** `2/64` é normalizado para `1/32`.
+- A fração é **conferida contra o percentual** informado. A tolerância é meia
+  unidade da última casa decimal do percentual — `33.33` com `1/3` é aceito
+  (erro 0,00333), `33.34` com `1/3` é recusado, `40` com `1/2` é recusado.
+- A fração é **metadado de representação**: não entra em nenhum cálculo. Meação,
+  monte, quinhões e resíduo de centavos são idênticos com e sem ela.
+
+### 6.1.4. Onde a fração aparece
+
+| Artefato | Fração |
+|---|---|
+| `inventario_validacao.json` | exibida (omitida quando ausente) |
+| `inventario_resumo.md` | coluna "Fração ideal", só quando há alguma |
+| `inventario_minuta.md` | 🔴 **não exibida** — ver abaixo |
+| `inventario_minuta.odt` | herda a minuta |
+
+> 🔴 **Decisão humana pendente.** A minuta **não** grafa a fração. Os artefatos
+> sanitizados do caso de 2026-07-09 mostram que a serventia redigiu a escritura
+> **por percentual** — não há uma única ocorrência de notação fracionária no
+> texto aprovado; as frações aparecem apenas nos documentos técnicos internos.
+> Como não há redação aprovada a seguir, o gerador não inventa uma. Para exibir
+> a fração na minuta é preciso: (1) o tabelião definir a redação exata; (2) nova
+> ADR ou aditamento à ADR-010; (3) regenerar o golden do caso fracionário.
+
+### 6.1.5. Compatibilidade
+
+Os seis golden files anteriores permanecem **byte a byte idênticos** — o piso de
+2 casas garante que nenhum caso comum mude de redação. Um sétimo conjunto
+(`inventario_fracoes_*`) cobre o cenário fracionário, a partir do exemplo
+`examples/inventario_fracoes.yaml`.
+
+---
+
 ## 7. Contrato de entrada — schema Pydantic v2
 
 > **Sprint NOTAS-INVENTARIO-4.** O contrato YAML/JSON é validado por um

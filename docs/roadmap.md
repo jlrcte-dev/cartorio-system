@@ -60,17 +60,21 @@ Sprint `CARTORIO-SYSTEM-ENGINEERING-STABILIZATION-1` (2026-09-03):
   em banco temporário.
 - Documentos guarda-chuva reconciliados com o código.
 
-### HORIZONTE B — Evolução de valor em `notas/inventarios` ◻ próximo
+### HORIZONTE B — Evolução de valor em `notas/inventarios` ◧ em andamento
 
 Frente escolhida por ser a única com evidência de uso real repetido. Substitui
 trabalho manual **observado**, não hipotético:
 
-- **Saída fragmentada de cláusulas** (§§ 10 e 11) — hoje recortadas à mão em
+- ✅ **Precisão de percentual e fração ideal** — concluído em 2026-09-03 pela
+  sprint `NOTAS-INVENTARIO-FRACOES-1` ([ADR-010](decisions/ADR-010-inventory-fraction-percentage-rendering.md)).
+  `3,125%` deixou de ser truncado para `3,12%`; a fração ideal passou a ser
+  aceita, validada e exibida nos artefatos técnicos. Um ponto segue aberto: a
+  **redação da fração no texto da escritura** depende de definição do tabelião —
+  os artefatos do caso real mostram que a serventia redigiu por percentual, e o
+  gerador não inventa redação.
+- ◻ **Saída fragmentada de cláusulas** (§§ 10 e 11) — hoje recortadas à mão em
   todos os casos recentes.
-- **Saída em texto limpo para o Engegraph** — hoje produzida manualmente.
-- **Precisão de percentual e fração ideal** — a formatação atual trunca
-  `3,125%` para `3,12%` e não grafa frações, o que já forçou uma minuta
-  inteiramente manual em 2026-07-09. Exige ADR própria.
+- ◻ **Saída em texto limpo para o Engegraph** — hoje produzida manualmente.
 
 Frente operacional paralela (não compete por código com a acima):
 **ativação do eixo regulatório** — aplicar os seeds de `compliance` e

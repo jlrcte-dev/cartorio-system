@@ -179,6 +179,7 @@ Campos obrigatórios na raiz:
 | `patrimonio_total` | string decimal | Maior que zero. Deve bater com a soma dos `bens.valor` (tolerância ±0,01). |
 | `herdeiros` | lista (≥1) | Cada item tem `id` (string única) e `percentual_heranca` (string decimal). |
 | `bens` | lista (≥1) | Cada item tem `id`, `tipo`, `valor`, `distribuicao` e, opcionalmente, `descricao_generica`. |
+| `distribuicao[*].fracao_ideal` | string, **opcional** | Fração ideal do quinhão, no formato `"numerador/denominador"` com inteiros positivos (ex.: `"1/32"`). Ver § 6.3.1. |
 
 Regras estruturais importantes:
 
@@ -192,6 +193,42 @@ Regras estruturais importantes:
 - **Cada `beneficiario`** na distribuição ∈ `{"MEEIRO"} ∪ {ids dos herdeiros}`.
 - Se `possui_meeiro=false`, **nenhum bem** pode ter `MEEIRO` como
   beneficiário.
+
+#### 6.3.1. Fração ideal (opcional) — ADR-010
+
+Cada item de `distribuicao` aceita, além de `percentual`, um campo opcional
+`fracao_ideal`:
+
+```yaml
+distribuicao:
+  - beneficiario: HERDEIRO_8
+    percentual: "3.125"
+    fracao_ideal: "1/32"
+```
+
+O que você precisa saber para operar:
+
+- **É opcional.** Omitir é o caso comum e não muda nada no documento gerado.
+- **O sistema nunca deduz a fração.** Escrever apenas `percentual: "3.125"` não
+  faz o gerador concluir `1/32`. Se a fração precisa constar, ela tem de ser
+  informada — e a responsabilidade pelo valor é de quem preenche.
+- **Formato estrito:** `inteiro/inteiro`, ambos positivos. São recusados `1/0`,
+  `0/5`, `-1/2`, `0.5`, `1e-2` e texto livre.
+- **É simplificada automaticamente:** escrever `"2/64"` produz `1/32`.
+- **É conferida contra o percentual.** Se a fração não corresponder ao
+  percentual informado, a validação falha com mensagem explícita. A margem
+  aceita é meia unidade da última casa do percentual — por isso `1/3` com
+  `"33.33"` passa, e `1/3` com `"33.34"` não.
+- **Não altera nenhum valor.** Meação, monte, quinhões e o alerta de centavos
+  são idênticos com e sem fração.
+
+**Onde ela aparece:** no `inventario_validacao.json` e como coluna do
+`inventario_resumo.md`. **Não aparece na minuta** — a redação da fração no texto
+da escritura ainda depende de definição do tabelião (ver ADR-010).
+
+**Precisão do percentual.** Desde a ADR-010, percentuais com mais de duas casas
+são preservados: `"3.125"` aparece como `3,125%`, e não mais como `3,12%`. Nada
+muda para percentuais comuns como `"50"` ou `"12.5"`.
 
 ### 6.4. Cuidados com tipos, datas, CPF, nomes
 
