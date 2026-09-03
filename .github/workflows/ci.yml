@@ -1,0 +1,73 @@
+name: CI
+
+# Quality gate do Cartório System.
+#
+# Executa exatamente os mesmos comandos documentados em CLAUDE.md § 5 e em
+# docs/operations/how_to_run.md, para que "verde no CI" e "verde na máquina"
+# signifiquem a mesma coisa.
+#
+# Escopo deliberadamente mínimo (sprint CARTORIO-SYSTEM-ENGINEERING-STABILIZATION-1):
+# formatação, lint, testes e migrations. Ferramentas de segurança
+# (bandit, pip-audit, gitleaks) e tipagem (mypy) NÃO entram aqui — elas exigem
+# decisão e sprint próprias, conforme TD-10.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    name: Formatação, lint, testes e migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          # O projeto não tem requirements.txt; sem esta linha o cache do
+          # setup-python procuraria por um e falharia.
+          cache-dependency-path: pyproject.toml
+
+      # Instala a partir do contrato declarado no pyproject.toml — nada de
+      # requirements paralelos. Se uma dependência de runtime não estiver
+      # declarada (como PyYAML não estava até a TD-23), o gate quebra aqui.
+      - name: Instalar o projeto (runtime + dev)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Formatação (ruff format)
+        run: python -m ruff format --check .
+
+      - name: Lint (ruff check)
+        run: python -m ruff check .
+
+      - name: Testes (pytest)
+        run: python -m pytest -q
+
+      # Gate hermético de migrations: banco SQLite temporário criado do zero
+      # nesta execução. O banco de desenvolvimento `cartorio.db` é gitignorado
+      # e portanto nunca chega ao runner — a verificação abaixo torna isso
+      # explícito em vez de presumido.
+      - name: Migrations (banco temporário, nunca cartorio.db)
+        env:
+          DATABASE_URL: sqlite:///./ci_alembic_check.db
+        run: |
+          test ! -f cartorio.db || { echo "cartorio.db presente no runner — abortando"; exit 1; }
+          python -m alembic upgrade head
+          python -m alembic current
+          python -m alembic heads
+          python -m alembic check
+          rm -f ci_alembic_check.db
