@@ -518,7 +518,7 @@ revisados antes de cada um.
 | 2 | `90a6578` | `fix: declare notas yaml runtime dependency` | 1 (+2) | TD-23 (P1) |
 | 3 | `987627f` | `fix: align orm metadata with migrated uniqueness` | 2 (+21 / −2) | TD-24 |
 | 4 | `d47a640` | `ci: add repository quality gate` | 1 (+73, novo) | TD-09 (P1) |
-| 5 | *(este commit)* | `docs: reconcile cartorio system current state` | 11 | TD-01, TD-02, TD-03, TD-04, TD-11, TD-16, TD-27 |
+| 5 | `cf99cef` | `docs: reconcile cartorio system current state` | 12 (+3.159 / −282) | TD-01, TD-02, TD-03, TD-04, TD-11, TD-16, TD-27 |
 
 Nenhum arquivo sensível foi versionado em qualquer um deles.
 
@@ -606,19 +606,22 @@ sprint.
 
 ```
 git status --short
-?? docs/reports/RELATORIO_CARTORIO_SYSTEM_ENGINEERING_STABILIZATION_1.md
+(vazio — working tree limpo)
 ```
-
-*(o estado exato ao término consta da resposta final da sprint; este relatório é
-o último arquivo a ser versionado)*
 
 | Item | Início | Fim |
 |---|---|---|
-| HEAD | `dd5b3be` | `f6cba3e` (5 commits à frente) |
-| `origin/main` | `6ed62cb` | `6ed62cb` — inalterado |
+| HEAD | `dd5b3be` | `cf99cef` — commit documental, 5 à frente do início |
+| `origin/main` | `6ed62cb` | `6ed62cb` — **inalterado** |
 | Ahead / behind | 2 / 0 | **7 / 0** |
-| Arquivos modificados não commitados | 0 | 0 |
-| Arquivos untracked | 2 | 0 |
+| Arquivos modificados não commitados | 0 | **0** |
+| Arquivos untracked | 2 | **0** |
+
+> Nota de autorreferência: `cf99cef` é o commit que **introduz este relatório**,
+> e por isso o arquivo não podia conter o próprio hash quando foi escrito. Uma
+> correção subsequente registrou o hash correto — antes dela, esta seção trazia
+> um identificador antecipado que não correspondia ao commit real. Se houver
+> commits acima de `cf99cef`, o `git log` é a fonte da verdade.
 
 **Conformidade com o escopo:**
 
