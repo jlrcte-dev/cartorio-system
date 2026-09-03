@@ -207,35 +207,43 @@ def test_duplicate_link_raises_integrity_error(db_session: Session) -> None:
 def test_same_source_ref_different_requirement_is_allowed(db_session: Session) -> None:
     req_a = _make_requirement(db_session, "UQ_REQ_A")
     req_b = _make_requirement(db_session, "UQ_REQ_B")
-    db_session.add(RequirementFindingLink(
-        requirement_id=req_a.id,
-        source_module=ComplianceLinkSourceModule.AUDIT,
-        source_type=ComplianceLinkSourceType.FINDING,
-        source_ref="SHARED-REF",
-    ))
-    db_session.add(RequirementFindingLink(
-        requirement_id=req_b.id,
-        source_module=ComplianceLinkSourceModule.AUDIT,
-        source_type=ComplianceLinkSourceType.FINDING,
-        source_ref="SHARED-REF",
-    ))
+    db_session.add(
+        RequirementFindingLink(
+            requirement_id=req_a.id,
+            source_module=ComplianceLinkSourceModule.AUDIT,
+            source_type=ComplianceLinkSourceType.FINDING,
+            source_ref="SHARED-REF",
+        )
+    )
+    db_session.add(
+        RequirementFindingLink(
+            requirement_id=req_b.id,
+            source_module=ComplianceLinkSourceModule.AUDIT,
+            source_type=ComplianceLinkSourceType.FINDING,
+            source_ref="SHARED-REF",
+        )
+    )
     db_session.flush()  # deve passar sem IntegrityError
 
 
 def test_same_requirement_source_ref_different_source_type_is_allowed(db_session: Session) -> None:
     req = _make_requirement(db_session)
-    db_session.add(RequirementFindingLink(
-        requirement_id=req.id,
-        source_module=ComplianceLinkSourceModule.AUDIT,
-        source_type=ComplianceLinkSourceType.FINDING,
-        source_ref="SAME-REF",
-    ))
-    db_session.add(RequirementFindingLink(
-        requirement_id=req.id,
-        source_module=ComplianceLinkSourceModule.AUDIT,
-        source_type=ComplianceLinkSourceType.DIAGNOSIS,
-        source_ref="SAME-REF",
-    ))
+    db_session.add(
+        RequirementFindingLink(
+            requirement_id=req.id,
+            source_module=ComplianceLinkSourceModule.AUDIT,
+            source_type=ComplianceLinkSourceType.FINDING,
+            source_ref="SAME-REF",
+        )
+    )
+    db_session.add(
+        RequirementFindingLink(
+            requirement_id=req.id,
+            source_module=ComplianceLinkSourceModule.AUDIT,
+            source_type=ComplianceLinkSourceType.DIAGNOSIS,
+            source_ref="SAME-REF",
+        )
+    )
     db_session.flush()  # source_type diferente → não é duplicata
 
 
@@ -243,16 +251,20 @@ def test_same_requirement_source_ref_different_source_module_is_allowed(
     db_session: Session,
 ) -> None:
     req = _make_requirement(db_session)
-    db_session.add(RequirementFindingLink(
-        requirement_id=req.id,
-        source_module=ComplianceLinkSourceModule.AUDIT,
-        source_type=ComplianceLinkSourceType.FINDING,
-        source_ref="SAME-REF",
-    ))
-    db_session.add(RequirementFindingLink(
-        requirement_id=req.id,
-        source_module=ComplianceLinkSourceModule.RETENTION,
-        source_type=ComplianceLinkSourceType.FINDING,
-        source_ref="SAME-REF",
-    ))
+    db_session.add(
+        RequirementFindingLink(
+            requirement_id=req.id,
+            source_module=ComplianceLinkSourceModule.AUDIT,
+            source_type=ComplianceLinkSourceType.FINDING,
+            source_ref="SAME-REF",
+        )
+    )
+    db_session.add(
+        RequirementFindingLink(
+            requirement_id=req.id,
+            source_module=ComplianceLinkSourceModule.RETENTION,
+            source_type=ComplianceLinkSourceType.FINDING,
+            source_ref="SAME-REF",
+        )
+    )
     db_session.flush()  # source_module diferente → não é duplicata

@@ -28,6 +28,7 @@ from classify_ri_property_nature import (  # noqa: I001
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _rec(
     nome: str | None = None,
     area_unidade: str | None = None,
@@ -54,6 +55,7 @@ def _cls(rec: dict[str, Any]) -> NatureClassification:
 # ---------------------------------------------------------------------------
 # 1. Urban signals — strong and moderate combinations
 # ---------------------------------------------------------------------------
+
 
 class TestUrbanCases:
     # Case 1: Lote + Quadra → urbano provável
@@ -110,6 +112,7 @@ class TestUrbanCases:
 # 2. Rural confirmed
 # ---------------------------------------------------------------------------
 
+
 class TestRuralConfirmed:
     # Case 6: Fazenda + ha → rural confirmado
     def test_fazenda_com_ha_confirmado(self) -> None:
@@ -152,6 +155,7 @@ class TestRuralConfirmed:
 # ---------------------------------------------------------------------------
 # 3. Rural probable
 # ---------------------------------------------------------------------------
+
 
 class TestRuralProbable:
     # Case 8: Sítio Boa Vista (no area) → rural provável
@@ -204,6 +208,7 @@ class TestRuralProbable:
 # 4. Conflict cases
 # ---------------------------------------------------------------------------
 
+
 class TestConflictCases:
     # Case 11: Lote rural na Fazenda X → conflito
     def test_lote_rural_na_fazenda_conflito(self) -> None:
@@ -219,8 +224,14 @@ class TestConflictCases:
 
     # Case 13: INCRA + urban description → conflito
     def test_incra_com_descricao_urbana_conflito(self) -> None:
-        c = _cls(_rec("Lote 07, situado no Sítio Novo Horizonte", tem_incra=1,
-                       area_unidade="ha", area_valor=2.0))
+        c = _cls(
+            _rec(
+                "Lote 07, situado no Sítio Novo Horizonte",
+                tem_incra=1,
+                area_unidade="ha",
+                area_valor=2.0,
+            )
+        )
         assert c.natureza_imovel == "misto"
         assert c.status_revisao_ri == "needs_manual_review"
 
@@ -249,6 +260,7 @@ class TestConflictCases:
 # ---------------------------------------------------------------------------
 # 5. Indeterminate
 # ---------------------------------------------------------------------------
+
 
 class TestIndeterminate:
     # Case 15: No name, no area, no characteristic → indeterminado
@@ -279,6 +291,7 @@ class TestIndeterminate:
 # ---------------------------------------------------------------------------
 # 6. Signal detection functions
 # ---------------------------------------------------------------------------
+
 
 class TestDetectRuralSignals:
     def test_fazenda_in_nome(self) -> None:
@@ -386,6 +399,7 @@ class TestDetectUrbanSignals:
 # 7. Normalization
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizaNome:
     def test_lowercase(self) -> None:
         assert _normalize_nome("FAZENDA") == "fazenda"
@@ -405,6 +419,7 @@ class TestNormalizaNome:
 # ---------------------------------------------------------------------------
 # 8. Output safety — no PII in classification results
 # ---------------------------------------------------------------------------
+
 
 class TestNoPiiInOutput:
     # Case 20: No CPF/CNPJ/RG/CI in any classification output
@@ -442,6 +457,7 @@ class TestNoPiiInOutput:
 # 9. Classification invariants
 # ---------------------------------------------------------------------------
 
+
 class TestClassificationInvariants:
     # Case 18: Report ordered by matricula (tested via integration, not unit test)
     # but we can verify the dataclass fields are always present
@@ -457,11 +473,17 @@ class TestClassificationInvariants:
             assert isinstance(c, NatureClassification)
             assert c.natureza_imovel in ("rural", "urbano", "misto", "indeterminado")
             assert c.natureza_imovel_confidence in (
-                "confirmado", "provavel", "baixa_confianca", "manual"
+                "confirmado",
+                "provavel",
+                "baixa_confianca",
+                "manual",
             )
             assert isinstance(c.excluir_metricas_rurais, bool)
             assert c.status_revisao_ri in (
-                "ok", "needs_manual_review", "excluir_metricas_rurais", "validado_manual"
+                "ok",
+                "needs_manual_review",
+                "excluir_metricas_rurais",
+                "validado_manual",
             )
 
     def test_confirmed_rural_always_ok(self) -> None:

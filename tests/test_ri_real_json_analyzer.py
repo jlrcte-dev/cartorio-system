@@ -10,9 +10,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "scripts" / "local_tools")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "local_tools"))
 
 from analyze_ri_real_json import (  # noqa: I001
     RuralFlags,
@@ -57,9 +55,13 @@ def raw_urbano(matricula: int = 1, **kwargs) -> dict:
         "CONTRIBUINTE": "CONTRIBUINTE FICTICIO SA",  # nunca deve aparecer na saída
         "CONDOMINIO": "",
         "RURAL": {
-            "CAR": "", "NIRF": "", "CCIR": "",
-            "NUMERO_INCRA": "", "SIGEF": "",
-            "DENOMINACAORURAL": "", "ACIDENTEGEOGRAFICO": "",
+            "CAR": "",
+            "NIRF": "",
+            "CCIR": "",
+            "NUMERO_INCRA": "",
+            "SIGEF": "",
+            "DENOMINACAORURAL": "",
+            "ACIDENTEGEOGRAFICO": "",
         },
     }
     base.update(kwargs)
@@ -98,6 +100,7 @@ def raw_rural(matricula: int = 1000, **kwargs) -> dict:
 # ---------------------------------------------------------------------------
 # 1. Parse de NUMERO_REGISTRO válido
 # ---------------------------------------------------------------------------
+
 
 class TestParseNumeroRegistro:
     def test_parse_valido(self):
@@ -142,6 +145,7 @@ class TestParseNumeroRegistro:
 # 4. CNS divergente gera alerta
 # ---------------------------------------------------------------------------
 
+
 class TestCNSDivergente:
     def test_cns_divergente(self):
         raw = raw_urbano(matricula=1)
@@ -158,6 +162,7 @@ class TestCNSDivergente:
 # ---------------------------------------------------------------------------
 # 5–7. LOCALIZACAO
 # ---------------------------------------------------------------------------
+
 
 class TestLocalizacao:
     def test_localizacao_0_urbano(self):
@@ -199,32 +204,66 @@ class TestLocalizacao:
 # 8–10. NIRF
 # ---------------------------------------------------------------------------
 
+
 class TestNIRF:
     def test_nirf_vazio_ausente(self):
-        r = _normalize_rural({"CAR": "", "NIRF": "", "CCIR": "", "NUMERO_INCRA": "",
-                               "SIGEF": "", "DENOMINACAORURAL": "", "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "CAR": "",
+                "NIRF": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_nirf is False
         assert r.nirf_status == "ausente"
 
     def test_nirf_so_zeros_placeholder(self):
-        r = _normalize_rural({"NIRF": "00000000", "CAR": "", "CCIR": "",
-                               "NUMERO_INCRA": "", "SIGEF": "", "DENOMINACAORURAL": "",
-                               "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "NIRF": "00000000",
+                "CAR": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_nirf is False
         assert r.nirf_status == "placeholder_zeros"
 
     def test_nirf_valido(self):
-        r = _normalize_rural({"NIRF": "12345678", "CAR": "", "CCIR": "",
-                               "NUMERO_INCRA": "", "SIGEF": "", "DENOMINACAORURAL": "",
-                               "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "NIRF": "12345678",
+                "CAR": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_nirf is True
         assert r.nirf_status == "valido"
         assert r.nirf_codigo == "12345678"
 
     def test_nirf_none_ausente(self):
-        r = _normalize_rural({"NIRF": None, "CAR": "", "CCIR": "",
-                               "NUMERO_INCRA": "", "SIGEF": "", "DENOMINACAORURAL": "",
-                               "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "NIRF": None,
+                "CAR": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_nirf is False
         assert r.nirf_status == "ausente"
 
@@ -233,18 +272,35 @@ class TestNIRF:
 # 11. CAR preenchido
 # ---------------------------------------------------------------------------
 
+
 class TestCAR:
     def test_car_preenchido(self):
-        r = _normalize_rural({"CAR": "GO-1234567-ABC", "NIRF": "", "CCIR": "",
-                               "NUMERO_INCRA": "", "SIGEF": "", "DENOMINACAORURAL": "",
-                               "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "CAR": "GO-1234567-ABC",
+                "NIRF": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_car is True
         assert r.car_codigo == "GO-1234567-ABC"
 
     def test_car_vazio(self):
-        r = _normalize_rural({"CAR": "", "NIRF": "", "CCIR": "",
-                               "NUMERO_INCRA": "", "SIGEF": "", "DENOMINACAORURAL": "",
-                               "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "CAR": "",
+                "NIRF": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_car is False
 
 
@@ -252,17 +308,34 @@ class TestCAR:
 # 12. CCIR preenchido
 # ---------------------------------------------------------------------------
 
+
 class TestCCIR:
     def test_ccir_preenchido(self):
-        r = _normalize_rural({"CAR": "", "NIRF": "", "CCIR": "987654321",
-                               "NUMERO_INCRA": "", "SIGEF": "", "DENOMINACAORURAL": "",
-                               "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "CAR": "",
+                "NIRF": "",
+                "CCIR": "987654321",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_ccir is True
 
     def test_ccir_vazio(self):
-        r = _normalize_rural({"CAR": "", "NIRF": "", "CCIR": "",
-                               "NUMERO_INCRA": "", "SIGEF": "", "DENOMINACAORURAL": "",
-                               "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "CAR": "",
+                "NIRF": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_ccir is False
 
 
@@ -270,23 +343,41 @@ class TestCCIR:
 # 13–14. NUMERO_INCRA e SIGEF
 # ---------------------------------------------------------------------------
 
+
 class TestIncraESigef:
     def test_numero_incra_preenchido(self):
-        r = _normalize_rural({"CAR": "", "NIRF": "", "CCIR": "",
-                               "NUMERO_INCRA": "93018000018482", "SIGEF": "",
-                               "DENOMINACAORURAL": "", "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "CAR": "",
+                "NIRF": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "93018000018482",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_numero_incra is True
 
     def test_sigef_preenchido(self):
-        r = _normalize_rural({"CAR": "", "NIRF": "", "CCIR": "",
-                               "NUMERO_INCRA": "", "SIGEF": "SIGEF-GO-99999",
-                               "DENOMINACAORURAL": "", "ACIDENTEGEOGRAFICO": ""})
+        r = _normalize_rural(
+            {
+                "CAR": "",
+                "NIRF": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "SIGEF-GO-99999",
+                "DENOMINACAORURAL": "",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_sigef is True
 
 
 # ---------------------------------------------------------------------------
 # 15–17. Georreferenciamento
 # ---------------------------------------------------------------------------
+
 
 class TestGeorreferenciamento:
     def test_incra_gera_georef(self):
@@ -303,8 +394,10 @@ class TestGeorreferenciamento:
 
     def test_ambos_gera_georef(self):
         r = RuralFlags(
-            tem_numero_incra=True, numero_incra_codigo="93018000018482",
-            tem_sigef=True, sigef_codigo="SIGEF-GO-99999",
+            tem_numero_incra=True,
+            numero_incra_codigo="93018000018482",
+            tem_sigef=True,
+            sigef_codigo="SIGEF-GO-99999",
         )
         possui, criterio = calc_georreferenciamento(r)
         assert possui is True
@@ -321,6 +414,7 @@ class TestGeorreferenciamento:
 # ---------------------------------------------------------------------------
 # 18. CONTRIBUINTE não aparece na saída sanitizada
 # ---------------------------------------------------------------------------
+
 
 class TestContribuinteAusente:
     def test_contribuinte_nao_no_dict(self):
@@ -345,38 +439,58 @@ class TestContribuinteAusente:
 # 19. Denominação rural suspeita é removida
 # ---------------------------------------------------------------------------
 
+
 class TestDenominacaoRuralSuspeita:
     def test_denominacao_imovel_valida(self):
-        r = _normalize_rural({
-            "CAR": "", "NIRF": "", "CCIR": "", "NUMERO_INCRA": "", "SIGEF": "",
-            "DENOMINACAORURAL": "Fazenda Bela Vista",
-            "ACIDENTEGEOGRAFICO": "",
-        })
+        r = _normalize_rural(
+            {
+                "CAR": "",
+                "NIRF": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "Fazenda Bela Vista",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_denominacao_rural is True
         assert r.denominacao_rural_sanitizada == "Fazenda Bela Vista"
 
     def test_denominacao_suspeita_nome_pessoa_removida(self):
         # Padrão de múltiplas palavras em caixa alta sem palavra-chave de imóvel
-        r = _normalize_rural({
-            "CAR": "", "NIRF": "", "CCIR": "", "NUMERO_INCRA": "", "SIGEF": "",
-            "DENOMINACAORURAL": "JOAO FICTICIO DA SILVA",
-            "ACIDENTEGEOGRAFICO": "",
-        })
+        r = _normalize_rural(
+            {
+                "CAR": "",
+                "NIRF": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "JOAO FICTICIO DA SILVA",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.tem_denominacao_rural is True
         assert r.denominacao_rural_sanitizada == ""
 
     def test_denominacao_com_cpf_removida(self):
-        r = _normalize_rural({
-            "CAR": "", "NIRF": "", "CCIR": "", "NUMERO_INCRA": "", "SIGEF": "",
-            "DENOMINACAORURAL": "Proprietario CPF 000.000.000-00",
-            "ACIDENTEGEOGRAFICO": "",
-        })
+        r = _normalize_rural(
+            {
+                "CAR": "",
+                "NIRF": "",
+                "CCIR": "",
+                "NUMERO_INCRA": "",
+                "SIGEF": "",
+                "DENOMINACAORURAL": "Proprietario CPF 000.000.000-00",
+                "ACIDENTEGEOGRAFICO": "",
+            }
+        )
         assert r.denominacao_rural_sanitizada == ""
 
 
 # ---------------------------------------------------------------------------
 # 20. Relatórios não contêm PII (varredura anti-PII básica)
 # ---------------------------------------------------------------------------
+
 
 class TestAntiPII:
     def test_is_pii_string_cpf(self):
@@ -405,11 +519,12 @@ class TestAntiPII:
 # 21. Duplicidades são detectadas
 # ---------------------------------------------------------------------------
 
+
 class TestDuplicidades:
     def _make_records(self) -> list:
         raws = [
             raw_urbano(matricula=1),
-            raw_urbano(matricula=1),   # duplicata
+            raw_urbano(matricula=1),  # duplicata
             raw_urbano(matricula=2),
             raw_rural(matricula=1000),
         ]
@@ -431,6 +546,7 @@ class TestDuplicidades:
 # ---------------------------------------------------------------------------
 # 22. Matrículas faltantes são calculadas
 # ---------------------------------------------------------------------------
+
 
 class TestMatriculasFaltantes:
     def test_faltantes_detectadas(self):
@@ -455,6 +571,7 @@ class TestMatriculasFaltantes:
 # ---------------------------------------------------------------------------
 # Extras: sanitize helpers
 # ---------------------------------------------------------------------------
+
 
 class TestSanitizeHelpers:
     def test_sanitize_cep_formatado(self):

@@ -86,9 +86,7 @@ def test_router_requirement_links_endpoints_exist() -> None:
     assert "POST" in paths_methods["/compliance/requirement-links"], (
         "POST /requirement-links ausente"
     )
-    assert "GET" in paths_methods["/compliance/requirement-links"], (
-        "GET /requirement-links ausente"
-    )
+    assert "GET" in paths_methods["/compliance/requirement-links"], "GET /requirement-links ausente"
     assert "/compliance/requirement-links/{link_id}" in paths_methods, (
         "Endpoint /requirement-links/{id} não registrado"
     )
@@ -112,9 +110,7 @@ def test_router_requirement_status_endpoints_exist() -> None:
         methods = getattr(route, "methods", None) or set()
         paths_methods.setdefault(path, set()).update(methods)
 
-    assert "/compliance/requirement-statuses" in paths_methods, (
-        "GET /requirement-statuses ausente"
-    )
+    assert "/compliance/requirement-statuses" in paths_methods, "GET /requirement-statuses ausente"
     assert "GET" in paths_methods["/compliance/requirement-statuses"]
 
     assert "/compliance/requirements/{code}/status" in paths_methods, (

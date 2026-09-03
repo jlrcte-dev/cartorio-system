@@ -409,9 +409,7 @@ def list_requirement_statuses(
     return [_status_to_read(s) for s in statuses]
 
 
-@router.get(
-    "/requirements/{code}/status", response_model=RequirementStatusDetail
-)
+@router.get("/requirements/{code}/status", response_model=RequirementStatusDetail)
 def get_requirement_status(code: str, db: DbSession) -> RequirementStatusDetail:
     status = service.get_requirement_status(db, code)
     if status is None:

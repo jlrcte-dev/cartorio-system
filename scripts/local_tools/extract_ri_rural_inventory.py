@@ -93,13 +93,9 @@ _TOTAL_GERAL_SERVENTIA = 3523
 # ---------------------------------------------------------------------------
 _CPF_RE = re.compile(r"\d{3}[\.\s]?\d{3}[\.\s]?\d{3}[\-\.\s]?\d{2}")
 _CNPJ_RE = re.compile(r"\d{2}[\.\s]?\d{3}[\.\s]?\d{3}[\.\s\/]?\d{4}[\-\.\s]?\d{2}")
-_DOC_LABEL = re.compile(
-    r"\bCPF\b|\bCNPJ\b|\bCI\b|\bSSP\b|\bRG\b|\bCIC\b|\bCED\b", re.I
-)
+_DOC_LABEL = re.compile(r"\bCPF\b|\bCNPJ\b|\bCI\b|\bSSP\b|\bRG\b|\bCIC\b|\bCED\b", re.I)
 # Detecta 2+ palavras em caixa alta consecutivas (suspeito de nome de pessoa)
-_NOME_CAPS = re.compile(
-    r"([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{3,}\s+){1,}[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{3,}"
-)
+_NOME_CAPS = re.compile(r"([A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{3,}\s+){1,}[A-ZÁÉÍÓÚÂÊÎÔÛÃÕÇ]{3,}")
 
 # ---------------------------------------------------------------------------
 # Padrões estruturais do PDF
@@ -119,11 +115,17 @@ _AREA_RE = re.compile(
     re.IGNORECASE,
 )
 _UNIDADE_MAP = {
-    "ha": "ha", "hectare": "ha", "hectares": "ha",
-    "m²": "m2", "m2": "m2",
-    "alqueire": "alqueire", "alqueires": "alqueire",
-    "ac": "ac", "ac.": "ac",
-    "are": "are", "ares": "are",
+    "ha": "ha",
+    "hectare": "ha",
+    "hectares": "ha",
+    "m²": "m2",
+    "m2": "m2",
+    "alqueire": "alqueire",
+    "alqueires": "alqueire",
+    "ac": "ac",
+    "ac.": "ac",
+    "are": "are",
+    "ares": "are",
 }
 
 _GEOREF_SIM_RE = re.compile(r"\bSim\b", re.I)
@@ -142,9 +144,7 @@ _MUNICIPIO_RE = re.compile(
     r"(?:\s*,|\s*GO\b|\s*Reserv|\s*Geo\b|$)",
     re.I,
 )
-_MUNICIPIO_INVALIDO = re.compile(
-    r"Reserv|Incra|Georef|NIRF|\bSim\b|\bNão\b", re.I
-)
+_MUNICIPIO_INVALIDO = re.compile(r"Reserv|Incra|Georef|NIRF|\bSim\b|\bNão\b", re.I)
 # Municípios conhecidos da circunscrição
 _MUNICIPIO_KNOWN = re.compile(
     r"Terez[oó]polis\s+de\s+Goi[aá]s|Goian[aá]polis",
@@ -159,12 +159,14 @@ _IMOVEL_KEYWORDS = re.compile(
 )
 
 # Campos técnicos cujos valores podem ter dígitos longos — excluídos da varredura de PII
-_CAMPOS_CODIGOS_TECNICOS = frozenset({
-    "hash_bloco_origem",
-    "incra_codigo",
-    "nirf_codigo",
-    "georreferenciamento_valor",
-})
+_CAMPOS_CODIGOS_TECNICOS = frozenset(
+    {
+        "hash_bloco_origem",
+        "incra_codigo",
+        "nirf_codigo",
+        "georreferenciamento_valor",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -607,9 +609,7 @@ def _normalize_municipio(municipio: str) -> str:
 # ---------------------------------------------------------------------------
 # Detecção de duplicidades
 # ---------------------------------------------------------------------------
-def _detect_duplicates(
-    records: list[dict[str, Any]], run_id: str
-) -> list[dict[str, Any]]:
+def _detect_duplicates(records: list[dict[str, Any]], run_id: str) -> list[dict[str, Any]]:
     count: dict[int, int] = {}
     fontes_map: dict[int, set[str]] = {}
     for r in records:
@@ -678,9 +678,7 @@ def _extract_from_pdf(
                 ordem += 1
                 record_id += 1
 
-                rec = _parse_block(
-                    block, record_id, ordem, i + 1, pdf_path.name, tipo_relatorio
-                )
+                rec = _parse_block(block, record_id, ordem, i + 1, pdf_path.name, tipo_relatorio)
                 if rec:
                     records.append(rec)
                 else:
@@ -782,9 +780,7 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
 
     for col, defn in new_cols.items():
         if col not in existing_cols:
-            conn.execute(
-                f"ALTER TABLE ri_matriculas_inventory ADD COLUMN {col} {defn}"
-            )
+            conn.execute(f"ALTER TABLE ri_matriculas_inventory ADD COLUMN {col} {defn}")
             print(f"[MIGRAÇÃO] Coluna adicionada: {col}")
     conn.commit()
 
@@ -849,11 +845,7 @@ def _write_db(
                         r.get("incra_codigo"),
                         1 if r.get("tem_nirf") else 0,
                         r.get("nirf_codigo"),
-                        (
-                            None
-                            if r.get("tem_reserva") is None
-                            else (1 if r["tem_reserva"] else 0)
-                        ),
+                        (None if r.get("tem_reserva") is None else (1 if r["tem_reserva"] else 0)),
                         r.get("reserva_valor"),
                         r["fonte_relatorio"],
                         r.get("pagina_origem"),
@@ -896,9 +888,17 @@ def _write_db(
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
-                run_id, filename, filename,
-                total_reportado, total_blocos, len(records),
-                len(duplicates), 0, "completed", started_at, finished_at,
+                run_id,
+                filename,
+                filename,
+                total_reportado,
+                total_blocos,
+                len(records),
+                len(duplicates),
+                0,
+                "completed",
+                started_at,
+                finished_at,
             ),
         )
         conn.commit()
@@ -923,12 +923,23 @@ def _validate_sanitized(records: list[dict[str, Any]]) -> None:
     Nunca imprime o conteúdo sensível.
     """
     proibidos = {
-        "nome", "cpf", "cnpj", "rg", "nome_proprietario", "nome_conjuge",
-        "nome_transmitente", "nome_adquirente", "documento_identidade", "endereco_pessoal",
+        "nome",
+        "cpf",
+        "cnpj",
+        "rg",
+        "nome_proprietario",
+        "nome_conjuge",
+        "nome_transmitente",
+        "nome_adquirente",
+        "documento_identidade",
+        "endereco_pessoal",
     }
     campos_texto = [
-        "municipio", "nome_imovel_sanitizado", "area_texto_original",
-        "reserva_valor", "observacoes_tecnicas_sem_pii",
+        "municipio",
+        "nome_imovel_sanitizado",
+        "area_texto_original",
+        "reserva_valor",
+        "observacoes_tecnicas_sem_pii",
     ]
 
     for rec in records:
@@ -963,9 +974,7 @@ def _validate_sanitized(records: list[dict[str, Any]]) -> None:
             )
             sys.exit(1)
 
-    print(
-        f"[OK] Validação anti-PII: {len(records)} registros verificados — sem PII detectada."
-    )
+    print(f"[OK] Validação anti-PII: {len(records)} registros verificados — sem PII detectada.")
 
 
 # ---------------------------------------------------------------------------
@@ -1065,9 +1074,7 @@ def _scan_output_files() -> bool:
 # ---------------------------------------------------------------------------
 # Salvamento CSV/JSON
 # ---------------------------------------------------------------------------
-def _save_sanitized(
-    records: list[dict[str, Any]], suffix: str = ""
-) -> tuple[Path, Path]:
+def _save_sanitized(records: list[dict[str, Any]], suffix: str = "") -> tuple[Path, Path]:
     SANITIZED_DIR.mkdir(parents=True, exist_ok=True)
     stem = f"ri_rural_inventory{suffix}"
     csv_path = SANITIZED_DIR / f"{stem}_sanitized.csv"
@@ -1112,41 +1119,37 @@ def _generate_report(
     total_T = sum(1 for r in records if r["tipo_registro"] == "T")
 
     # Georreferenciamento: separa direto / inferido / total
-    total_georref_direto = sum(
-        1 for r in records if r.get("georreferenciamento_detectado_direto")
-    )
+    total_georref_direto = sum(1 for r in records if r.get("georreferenciamento_detectado_direto"))
     total_georref_inferido = sum(
         1 for r in records if r.get("georreferenciamento_inferido_por_fonte")
     )
     total_georref = sum(1 for r in records if r.get("tem_georreferenciamento"))
     total_incra = sum(1 for r in records if r.get("tem_incra"))
     total_incra_sem_georref = sum(
-        1 for r in records
-        if r.get("tem_incra") and not r.get("georreferenciamento_detectado_direto")
+        1
+        for r in records
+        if r.get("tem_incra")
+        and not r.get("georreferenciamento_detectado_direto")
         and not r.get("georreferenciamento_inferido_por_fonte")
     )
 
     # NIRF: válido vs zerado vs ausente
     total_nirf_valido = sum(1 for r in records if r.get("tem_nirf"))
     total_nirf_zerado = sum(
-        1 for r in records
+        1
+        for r in records
         if "nirf_zerado_ignorado" in (r.get("observacoes_tecnicas_sem_pii") or "")
     )
     total_nirf_ambiguo = sum(
-        1 for r in records
-        if "nirf_ambiguo" in (r.get("observacoes_tecnicas_sem_pii") or "")
+        1 for r in records if "nirf_ambiguo" in (r.get("observacoes_tecnicas_sem_pii") or "")
     )
 
     total_reserva_sim = sum(1 for r in records if r.get("reserva_valor") == "Sim")
     total_reserva_nao = sum(1 for r in records if r.get("reserva_valor") == "Não")
     total_com_area = sum(1 for r in records if r.get("area_valor_normalizado") is not None)
     total_sem_area = total - total_com_area
-    total_needs_review = sum(
-        1 for r in records if r.get("status_extracao") == "needs_review"
-    )
-    total_area_ambigua = sum(
-        1 for r in records if r.get("status_extracao") == "area_ambigua"
-    )
+    total_needs_review = sum(1 for r in records if r.get("status_extracao") == "needs_review")
+    total_area_ambigua = sum(1 for r in records if r.get("status_extracao") == "area_ambigua")
 
     # Distribuição por município
     municipios: dict[str, int] = {}
@@ -1154,24 +1157,18 @@ def _generate_report(
         mun = r.get("municipio") or "Não identificado"
         municipios[mun] = municipios.get(mun, 0) + 1
     mun_table = "\n".join(
-        f"| {mun} | {qtd} |"
-        for mun, qtd in sorted(municipios.items(), key=lambda x: -x[1])
+        f"| {mun} | {qtd} |" for mun, qtd in sorted(municipios.items(), key=lambda x: -x[1])
     )
 
     # Análise de totais detectados no PDF
     totais_str = "Não analisado."
     if total_analysis:
         linhas = []
-        for val_str, info in sorted(
-            total_analysis.items(), key=lambda x: -x[1]["ocorrencias"]
-        ):
-            linhas.append(
-                f"| {info['valor']} | {info['ocorrencias']} | {info['classificacao']} |"
-            )
+        for val_str, info in sorted(total_analysis.items(), key=lambda x: -x[1]["ocorrencias"]):
+            linhas.append(f"| {info['valor']} | {info['ocorrencias']} | {info['classificacao']} |")
         if linhas:
-            totais_str = (
-                "| Valor | Ocorrências | Classificação |\n|---|---|---|\n"
-                + "\n".join(linhas)
+            totais_str = "| Valor | Ocorrências | Classificação |\n|---|---|---|\n" + "\n".join(
+                linhas
             )
 
     # Alertas de qualidade
@@ -1189,15 +1186,16 @@ def _generate_report(
         # Verificar se o total reportado parece ser subtotal
         if total_analysis:
             for val_str, info in total_analysis.items():
-                if info["valor"] == total_reportado and info["classificacao"] == "subtotal_repetido":
+                if (
+                    info["valor"] == total_reportado
+                    and info["classificacao"] == "subtotal_repetido"
+                ):
                     alertas.append(
                         f"AVISO: 'Total: {total_reportado}' aparece {info['ocorrencias']} vezes "
                         f"— classificado como subtotal repetido, não total global"
                     )
     else:
-        alertas.append(
-            "AVISO: padrão 'Total: N' não encontrado — controle de qualidade parcial"
-        )
+        alertas.append("AVISO: padrão 'Total: N' não encontrado — controle de qualidade parcial")
 
     if total_unicos > _TOTAL_GERAL_SERVENTIA:
         alertas.append(
@@ -1236,9 +1234,7 @@ def _generate_report(
             f"{r.get('observacoes_tecnicas_sem_pii', '')} |"
             for r in needs_review_rows[:50]
         )
-        needs_review_table = (
-            "\n| Matrícula | Status | Motivo técnico |\n|---|---|---|\n" + rows_md
-        )
+        needs_review_table = "\n| Matrícula | Status | Motivo técnico |\n|---|---|---|\n" + rows_md
         if len(needs_review_rows) > 50:
             needs_review_table += f"\n... e mais {len(needs_review_rows) - 50} registros."
 
@@ -1294,13 +1290,13 @@ def _generate_report(
 
 | Indicador | Quantidade | % |
 |---|---|---|
-| Georref. detectado direto (Sim explícito) | {total_georref_direto} | {total_georref_direto/total*100:.1f}% |
-| Georref. inferido por fonte (relatório georref) | {total_georref_inferido} | {total_georref_inferido/total*100:.1f}% |
+| Georref. detectado direto (Sim explícito) | {total_georref_direto} | {total_georref_direto / total * 100:.1f}% |
+| Georref. inferido por fonte (relatório georref) | {total_georref_inferido} | {total_georref_inferido / total * 100:.1f}% |
 | Total com georreferenciamento (direto+inferido) | {total_georref} | {pct_georref:.1f}% |
-| Sem georreferenciamento | {total - total_georref} | {100-pct_georref:.1f}% |
+| Sem georreferenciamento | {total - total_georref} | {100 - pct_georref:.1f}% |
 | Com certificação INCRA/SIGEF | {total_incra} | {pct_incra:.1f}% |
 | INCRA sem Georef. explícito | {total_incra_sem_georref} | |
-| Sem certificação INCRA | {total - total_incra} | {100-pct_incra:.1f}% |
+| Sem certificação INCRA | {total - total_incra} | {100 - pct_incra:.1f}% |
 
 ---
 
@@ -1389,7 +1385,7 @@ def _generate_report(
 > Recomendação: cruzar com consulta direta no SIGEF para confirmar.
 
 ### Seção 12 — Diagnóstico do legado
-> Imóveis sem georreferenciamento: **{total - total_georref}** ({100-pct_georref:.1f}%)
+> Imóveis sem georreferenciamento: **{total - total_georref}** ({100 - pct_georref:.1f}%)
 > Base para o plano de saneamento progressivo (48 meses até 01/09/2029).
 
 ---
@@ -1404,7 +1400,8 @@ def _generate_report(
 def _consolidate() -> None:
     """Lê todos os CSVs parciais de sanitized/ e gera base consolidada."""
     csvs = sorted(
-        f for f in SANITIZED_DIR.glob("ri_rural_inventory_*_sanitized.csv")
+        f
+        for f in SANITIZED_DIR.glob("ri_rural_inventory_*_sanitized.csv")
         if "consolidado" not in f.name
     )
     if not csvs:
@@ -1427,9 +1424,7 @@ def _consolidate() -> None:
     csv_path, json_path = _save_sanitized(all_records, suffix="_consolidado")
     run_id = str(uuid.uuid4())[:8]
     dups = _detect_duplicates(all_records, run_id)
-    report = _generate_report(
-        all_records, ", ".join(fontes), None, len(all_records), dups, run_id
-    )
+    report = _generate_report(all_records, ", ".join(fontes), None, len(all_records), dups, run_id)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     report_path = REPORTS_DIR / "ri_rural_inventory_summary.md"
     report_path.write_text(report, encoding="utf-8")
@@ -1453,23 +1448,23 @@ def _print_dry_run(
     total_analysis = meta.get("total_analysis", {})
 
     com_area = sum(1 for r in records if r.get("area_valor_normalizado") is not None)
-    com_georref_direto = sum(
-        1 for r in records if r.get("georreferenciamento_detectado_direto")
-    )
+    com_georref_direto = sum(1 for r in records if r.get("georreferenciamento_detectado_direto"))
     com_georref_inferido = sum(
         1 for r in records if r.get("georreferenciamento_inferido_por_fonte")
     )
     com_georref_total = sum(1 for r in records if r.get("tem_georreferenciamento"))
     com_incra = sum(1 for r in records if r.get("tem_incra"))
     incra_sem_georref = sum(
-        1 for r in records
+        1
+        for r in records
         if r.get("tem_incra")
         and not r.get("georreferenciamento_detectado_direto")
         and not r.get("georreferenciamento_inferido_por_fonte")
     )
     com_nirf_valido = sum(1 for r in records if r.get("tem_nirf"))
     nirf_zerado = sum(
-        1 for r in records
+        1
+        for r in records
         if "nirf_zerado_ignorado" in (r.get("observacoes_tecnicas_sem_pii") or "")
     )
     com_reserva_sim = sum(1 for r in records if r.get("reserva_valor") == "Sim")
@@ -1487,13 +1482,14 @@ def _print_dry_run(
     print(f"  Registros sanitizados:              {len(records)}")
     print(f"  Matrículas únicas:                  {numeros_unicos}")
     print(f"  Duplicidades detectadas:            {len(duplicates)}")
-    print(f"  Total reportado (1ª ocorrência):   "
-          f"{total_reportado if total_reportado is not None else 'não detectado'}")
+    print(
+        f"  Total reportado (1ª ocorrência):   "
+        f"{total_reportado if total_reportado is not None else 'não detectado'}"
+    )
 
     if total_analysis:
         subtotais = [
-            v for v in total_analysis.values()
-            if v["classificacao"] == "subtotal_repetido"
+            v for v in total_analysis.values() if v["classificacao"] == "subtotal_repetido"
         ]
         if subtotais:
             for s in subtotais:
@@ -1517,11 +1513,7 @@ def _print_dry_run(
     print(f"    needs_review:                     {needs_review}")
     print("\n  PII descartada silenciosamente em todas as linhas processadas.")
     if sample_pages:
-        projecao = (
-            int(len(records) / pages_analisadas * n_pages)
-            if pages_analisadas
-            else "—"
-        )
+        projecao = int(len(records) / pages_analisadas * n_pages) if pages_analisadas else "—"
         print(f"  Nota: dry-run parcial ({sample_pages} páginas de {n_pages}).")
         print(f"  Projeção total estimada:            ~{projecao} registros")
     print()
@@ -1533,8 +1525,7 @@ def _print_dry_run(
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
-            "Extrator sanitizado de matrículas rurais — Engegraph PDF → "
-            "CSV/JSON/SQLite limpos (v3)"
+            "Extrator sanitizado de matrículas rurais — Engegraph PDF → CSV/JSON/SQLite limpos (v3)"
         )
     )
     parser.add_argument("--input", help="Caminho para o PDF bruto")

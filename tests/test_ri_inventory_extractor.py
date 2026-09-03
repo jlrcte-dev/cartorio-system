@@ -13,9 +13,7 @@ from pathlib import Path
 import pytest
 
 # Caminho para o módulo local (não instalado no projeto principal)
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "scripts" / "local_tools")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "local_tools"))
 
 from extract_ri_rural_inventory import (  # noqa: I001
     _detect_duplicates,
@@ -35,6 +33,7 @@ from extract_ri_rural_inventory import (  # noqa: I001
 # ---------------------------------------------------------------------------
 # Helpers de blocos sintéticos (sem dados reais)
 # ---------------------------------------------------------------------------
+
 
 def bloco_minimo() -> list[str]:
     """Matrícula M 1 sem nome do imóvel, sem área, sem campos técnicos."""
@@ -155,6 +154,7 @@ def bloco_nirf_zerado_6dig() -> list[str]:
 # Testes: _is_pii_line
 # ---------------------------------------------------------------------------
 
+
 class TestIsPiiLine:
     def test_cpf_formatado(self):
         assert _is_pii_line("NOME FICTICIO CPF: 123.456.789-00")
@@ -191,6 +191,7 @@ class TestIsPiiLine:
 # ---------------------------------------------------------------------------
 # Testes: _normalize_area
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeArea:
     def test_ha_simples(self):
@@ -240,6 +241,7 @@ class TestNormalizeArea:
 # ---------------------------------------------------------------------------
 # Testes: _normalize_nirf
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeNirf:
     def test_none_retorna_false(self):
@@ -303,6 +305,7 @@ class TestNormalizeNirf:
 # Testes: _extract_nome_imovel
 # ---------------------------------------------------------------------------
 
+
 class TestExtractNomeImovel:
     def test_fazenda_alvorada(self):
         # Residual após remover área e município deve ser o nome da fazenda
@@ -348,9 +351,11 @@ class TestExtractNomeImovel:
 # Testes: _parse_block
 # ---------------------------------------------------------------------------
 
+
 class TestParseBlock:
-    def _parse(self, block, record_id=1, ordem=1, pagina=1,
-                fonte="teste_ficticio.pdf", tipo="rural"):
+    def _parse(
+        self, block, record_id=1, ordem=1, pagina=1, fonte="teste_ficticio.pdf", tipo="rural"
+    ):
         return _parse_block(block, record_id, ordem, pagina, fonte, tipo)
 
     def test_bloco_invalido_sem_tipo_numero(self):
@@ -592,6 +597,7 @@ class TestParseBlock:
         assert h.startswith("H-")
         assert len(h) == 8  # "H-" + 6 chars hex
         import re
+
         digits_run = re.findall(r"\d+", h)
         assert all(len(d) <= 6 for d in digits_run), "hash tem sequência de dígitos longa"
 
@@ -605,6 +611,7 @@ class TestParseBlock:
 # ---------------------------------------------------------------------------
 # Testes: _detect_duplicates
 # ---------------------------------------------------------------------------
+
 
 class TestDetectDuplicates:
     def test_sem_duplicidades(self):
@@ -653,6 +660,7 @@ class TestDetectDuplicates:
 # ---------------------------------------------------------------------------
 # Testes: _validate_sanitized
 # ---------------------------------------------------------------------------
+
 
 class TestValidateSanitized:
     def _make_record(self, **kwargs) -> dict:
@@ -714,23 +722,28 @@ class TestValidateSanitized:
 
     def test_incra_codigo_longo_nao_bloqueia(self):
         # Código INCRA com 14 dígitos NÃO deve bloquear (é whitelisted)
-        records = [self._make_record(
-            incra_codigo="93018000018482",
-            tem_incra=True,
-        )]
+        records = [
+            self._make_record(
+                incra_codigo="93018000018482",
+                tem_incra=True,
+            )
+        ]
         _validate_sanitized(records)  # Não deve lançar SystemExit
 
     def test_nirf_zerado_em_obs_nao_expoe_pii(self):
         """Observação 'nirf_zerado_ignorado' é técnica e não contém PII."""
-        records = [self._make_record(
-            observacoes_tecnicas_sem_pii="nirf_zerado_ignorado; area_ausente",
-        )]
+        records = [
+            self._make_record(
+                observacoes_tecnicas_sem_pii="nirf_zerado_ignorado; area_ausente",
+            )
+        ]
         _validate_sanitized(records)  # Deve passar sem bloquear
 
 
 # ---------------------------------------------------------------------------
 # Testes: _extract_total_reportado
 # ---------------------------------------------------------------------------
+
 
 class TestExtractTotalReportado:
     def test_total_detectado(self):
@@ -758,6 +771,7 @@ class TestExtractTotalReportado:
 # ---------------------------------------------------------------------------
 # Testes: _extract_all_totals
 # ---------------------------------------------------------------------------
+
 
 class TestExtractAllTotals:
     def test_total_unico_candidato(self):
@@ -823,6 +837,7 @@ class TestExtractAllTotals:
 # Testes: _normalize_municipio
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeMunicipio:
     def test_terezopolis_aceito(self):
         assert _normalize_municipio("Terezópolis de Goiás") == "Terezópolis de Goiás"
@@ -848,6 +863,7 @@ class TestNormalizeMunicipio:
 # Testes: _hash_bloco
 # ---------------------------------------------------------------------------
 
+
 class TestHashBloco:
     def test_formato_prefixo(self):
         h = _hash_bloco(["M 1 Terezópolis de Goiás"])
@@ -868,6 +884,7 @@ class TestHashBloco:
 
     def test_sem_sequencia_longa_de_digitos(self):
         import re
+
         for block in [bloco_minimo(), bloco_fazenda_alvorada(), bloco_nirf_presente()]:
             h = _hash_bloco(block)
             digits = re.findall(r"\d+", h)

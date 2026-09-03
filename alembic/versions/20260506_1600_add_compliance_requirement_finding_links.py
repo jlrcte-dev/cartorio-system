@@ -95,15 +95,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     with op.batch_alter_table("compliance_requirement_finding_links", schema=None) as batch_op:
-        batch_op.create_index(
-            "ix_compliance_finding_links_requirement_id", ["requirement_id"]
-        )
-        batch_op.create_index(
-            "ix_compliance_finding_links_source_module", ["source_module"]
-        )
-        batch_op.create_index(
-            "ix_compliance_finding_links_risk_level", ["risk_level"]
-        )
+        batch_op.create_index("ix_compliance_finding_links_requirement_id", ["requirement_id"])
+        batch_op.create_index("ix_compliance_finding_links_source_module", ["source_module"])
+        batch_op.create_index("ix_compliance_finding_links_risk_level", ["risk_level"])
 
 
 def downgrade() -> None:

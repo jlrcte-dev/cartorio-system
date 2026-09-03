@@ -441,9 +441,7 @@ class _RequirementSourceCounts:
     last_link_at: datetime | None
 
 
-def _count_requirement_status_sources(
-    db: Session, requirement_id: int
-) -> _RequirementSourceCounts:
+def _count_requirement_status_sources(db: Session, requirement_id: int) -> _RequirementSourceCounts:
     """Lê fontes primárias da verdade (compliance_evidences e finding_links).
 
     Não consulta tabelas fora do módulo compliance.
@@ -452,9 +450,7 @@ def _count_requirement_status_sources(
     ev_row = db.execute(
         select(
             func.count(ComplianceEvidence.id),
-            func.max(
-                func.coalesce(ComplianceEvidence.collected_at, ComplianceEvidence.created_at)
-            ),
+            func.max(func.coalesce(ComplianceEvidence.collected_at, ComplianceEvidence.created_at)),
         ).where(ComplianceEvidence.requirement_id == requirement_id)
     ).one()
     evidence_count = int(ev_row[0] or 0)

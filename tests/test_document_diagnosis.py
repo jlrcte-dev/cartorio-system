@@ -543,8 +543,7 @@ def test_rule_credential_does_not_flag_engegraph_in_financial_context(tmp_path):
         _file_entry(
             "Engegraph dez 2023 Terezopolis.pdf",
             path_relative=(
-                "Gerenciamento_financeiro/Comprovantes/"
-                "Engegraph dez 2023 Terezopolis.pdf"
+                "Gerenciamento_financeiro/Comprovantes/Engegraph dez 2023 Terezopolis.pdf"
             ),
             parent_path="Gerenciamento_financeiro/Comprovantes",
         ),
@@ -656,8 +655,7 @@ def test_rule_out_of_context_document_detects_territorio_nacional(tmp_path):
         _file_entry(
             "VALIDA EM TODO O TERRITORIO NACIONAL.pdf",
             path_relative=(
-                "Gerenciamento_financeiro/2025/Outubro/"
-                "VALIDA EM TODO O TERRITORIO NACIONAL.pdf"
+                "Gerenciamento_financeiro/2025/Outubro/VALIDA EM TODO O TERRITORIO NACIONAL.pdf"
             ),
             parent_path="Gerenciamento_financeiro/2025/Outubro",
         ),
@@ -676,8 +674,7 @@ def test_rule_out_of_context_document_detects_autorização_in_financial(tmp_pat
         _file_entry(
             "AUTORIZAÇÃO DE ESCRITURA - ALAIDE.pdf",
             path_relative=(
-                "Gerenciamento_financeiro/Fundos e taxas/"
-                "AUTORIZAÇÃO DE ESCRITURA - ALAIDE.pdf"
+                "Gerenciamento_financeiro/Fundos e taxas/AUTORIZAÇÃO DE ESCRITURA - ALAIDE.pdf"
             ),
             parent_path="Gerenciamento_financeiro/Fundos e taxas",
         ),

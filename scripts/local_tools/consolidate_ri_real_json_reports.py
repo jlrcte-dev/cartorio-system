@@ -64,7 +64,10 @@ _PII_PATTERNS_DATA = [
 _PII_PATTERNS_DOC = [
     (re.compile(r"\b\d{3}[\.\-]?\d{3}[\.\-]?\d{3}[\.\-]?\d{2}\b"), "CPF"),
     (re.compile(r"\b\d{2}[\.\-]?\d{3}[\.\-]?\d{3}[\/]?\d{4}[\-]?\d{2}\b"), "CNPJ"),
-    (re.compile(r"\b[Cc][Oo][Nn][Tt][Rr][Ii][Bb][Uu][Ii][Nn][Tt][Ee]\s*[:=]\s*\S"), "CONTRIBUINTE_VALOR"),
+    (
+        re.compile(r"\b[Cc][Oo][Nn][Tt][Rr][Ii][Bb][Uu][Ii][Nn][Tt][Ee]\s*[:=]\s*\S"),
+        "CONTRIBUINTE_VALOR",
+    ),
 ]
 
 
@@ -87,8 +90,7 @@ def assert_no_pii(content: str, filename: str, doc_mode: bool = False) -> None:
     if hits:
         summary = "; ".join(f"{label}={count}" for label, count in hits)
         raise ValueError(
-            f"[BLOQUEADO] PII detectada em '{filename}': {summary}. "
-            "Arquivo não será gravado."
+            f"[BLOQUEADO] PII detectada em '{filename}': {summary}. Arquivo não será gravado."
         )
 
 
@@ -125,7 +127,12 @@ ACOES = {
 
 def prioridade(tipos: list[str]) -> str:
     alta = {"NEEDS_REVIEW", "URBANO_COM_CAMPOS_RURAIS", "RURAL_SEM_CCIR", "DADO_INCONSISTENTE"}
-    media = {"RURAL_SEM_CAR", "RURAL_SEM_NIRF", "RURAL_SEM_GEOREFERENCIAMENTO", "RURAL_GEOREFERENCIADO"}
+    media = {
+        "RURAL_SEM_CAR",
+        "RURAL_SEM_NIRF",
+        "RURAL_SEM_GEOREFERENCIAMENTO",
+        "RURAL_GEOREFERENCIADO",
+    }
     baixa = {"RURAL_COMPLETO", "URBANO_SEM_PENDENCIA"}
     for t in tipos:
         if t in alta:
@@ -139,6 +146,7 @@ def prioridade(tipos: list[str]) -> str:
 # ---------------------------------------------------------------------------
 # Leitura dos CSVs
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Registro:
@@ -196,7 +204,10 @@ class Registro:
                 or self.is_true("tem_ccir")
                 or self.is_true("tem_numero_incra")
                 or self.is_true("tem_sigef")
-                or (self.is_true("tem_nirf") and self.nirf_status.strip().lower() not in ("ausente", ""))
+                or (
+                    self.is_true("tem_nirf")
+                    and self.nirf_status.strip().lower() not in ("ausente", "")
+                )
             )
             obs = self.observacoes_tecnicas_sem_pii.strip().lower()
             if campos_rurais or "rural" in obs:
@@ -262,9 +273,13 @@ def load_all_records() -> dict[str, Registro]:
                     tem_numero_incra=row.get("tem_numero_incra", "").strip(),
                     tem_sigef=row.get("tem_sigef", "").strip(),
                     possui_georreferenciamento=row.get("possui_georreferenciamento", "").strip(),
-                    georreferenciamento_criterio=row.get("georreferenciamento_criterio", "").strip(),
+                    georreferenciamento_criterio=row.get(
+                        "georreferenciamento_criterio", ""
+                    ).strip(),
                     status_revisao_ri=row.get("status_revisao_ri", "").strip(),
-                    observacoes_tecnicas_sem_pii=row.get("observacoes_tecnicas_sem_pii", "").strip(),
+                    observacoes_tecnicas_sem_pii=row.get(
+                        "observacoes_tecnicas_sem_pii", ""
+                    ).strip(),
                     fontes=[fname],
                 )
             else:
@@ -314,37 +329,42 @@ CSV_COLUMNS = [
 
 def build_csv_rows(records: dict[str, Registro]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
-    for rec in sorted(records.values(), key=lambda r: int(r.matricula_numero) if r.matricula_numero.isdigit() else 0):
+    for rec in sorted(
+        records.values(),
+        key=lambda r: int(r.matricula_numero) if r.matricula_numero.isdigit() else 0,
+    ):
         tipos = rec.classificar()
         pri = prioridade(tipos)
         tipo_str = "; ".join(tipos)
         acoes_str = " | ".join(dict.fromkeys(ACOES.get(t, "") for t in tipos if ACOES.get(t)))
         obs_col = rec.observacoes_tecnicas_sem_pii or ""
 
-        rows.append({
-            "matricula_numero": rec.matricula_numero,
-            "numero_registro": rec.numero_registro,
-            "natureza_imovel": rec.natureza_imovel,
-            "tipo_pendencia": tipo_str,
-            "prioridade_conferencia": pri,
-            "responsavel_conferencia": "",
-            "acao_recomendada": acoes_str,
-            "motivo_tecnico": obs_col,
-            "tem_car": _bool_val(rec.tem_car),
-            "tem_nirf": _bool_val(rec.tem_nirf),
-            "nirf_status": rec.nirf_status or "—",
-            "tem_ccir": _bool_val(rec.tem_ccir),
-            "tem_numero_incra": _bool_val(rec.tem_numero_incra),
-            "tem_sigef": _bool_val(rec.tem_sigef),
-            "possui_georreferenciamento": _bool_val(rec.possui_georreferenciamento),
-            "georreferenciamento_criterio": rec.georreferenciamento_criterio or "—",
-            "status_revisao_ri": rec.status_revisao_ri or "—",
-            "fonte_relatorio": "; ".join(rec.fontes),
-            "observacoes_para_colaborador": obs_col,
-            "resultado_conferencia": "",
-            "observacao_conferencia": "",
-            "data_conferencia": "",
-        })
+        rows.append(
+            {
+                "matricula_numero": rec.matricula_numero,
+                "numero_registro": rec.numero_registro,
+                "natureza_imovel": rec.natureza_imovel,
+                "tipo_pendencia": tipo_str,
+                "prioridade_conferencia": pri,
+                "responsavel_conferencia": "",
+                "acao_recomendada": acoes_str,
+                "motivo_tecnico": obs_col,
+                "tem_car": _bool_val(rec.tem_car),
+                "tem_nirf": _bool_val(rec.tem_nirf),
+                "nirf_status": rec.nirf_status or "—",
+                "tem_ccir": _bool_val(rec.tem_ccir),
+                "tem_numero_incra": _bool_val(rec.tem_numero_incra),
+                "tem_sigef": _bool_val(rec.tem_sigef),
+                "possui_georreferenciamento": _bool_val(rec.possui_georreferenciamento),
+                "georreferenciamento_criterio": rec.georreferenciamento_criterio or "—",
+                "status_revisao_ri": rec.status_revisao_ri or "—",
+                "fonte_relatorio": "; ".join(rec.fontes),
+                "observacoes_para_colaborador": obs_col,
+                "resultado_conferencia": "",
+                "observacao_conferencia": "",
+                "data_conferencia": "",
+            }
+        )
     return rows
 
 
@@ -361,6 +381,7 @@ def write_csv(rows: list[dict[str, str]], out_path: Path) -> None:
 # ---------------------------------------------------------------------------
 # Estatísticas
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class Stats:
@@ -419,14 +440,24 @@ def calcular_stats(records: dict[str, Registro], rows: list[dict[str, str]]) -> 
         for t in tipos:
             s.por_tipo[t] = s.por_tipo.get(t, 0) + 1
 
-    pendencias = {"RURAL_SEM_CAR", "RURAL_SEM_NIRF", "RURAL_SEM_CCIR", "NEEDS_REVIEW", "URBANO_COM_CAMPOS_RURAIS", "DADO_INCONSISTENTE"}
-    s.total_pendencias = sum(1 for rec in records.values() if any(t in pendencias for t in rec.classificar()))
+    pendencias = {
+        "RURAL_SEM_CAR",
+        "RURAL_SEM_NIRF",
+        "RURAL_SEM_CCIR",
+        "NEEDS_REVIEW",
+        "URBANO_COM_CAMPOS_RURAIS",
+        "DADO_INCONSISTENTE",
+    }
+    s.total_pendencias = sum(
+        1 for rec in records.values() if any(t in pendencias for t in rec.classificar())
+    )
     return s
 
 
 # ---------------------------------------------------------------------------
 # Relatório executivo
 # ---------------------------------------------------------------------------
+
 
 def write_relatorio_executivo(stats: Stats, out_path: Path) -> None:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -635,6 +666,7 @@ A planilha CSV gerada (`ri_real_json_plano_conferencia_colaboradores.csv`) deve 
 # Checklist operacional
 # ---------------------------------------------------------------------------
 
+
 def write_checklist(stats: Stats, out_path: Path) -> None:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
@@ -717,6 +749,7 @@ Preencher as colunas da planilha:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     print("=" * 60)

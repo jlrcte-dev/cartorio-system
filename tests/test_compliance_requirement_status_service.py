@@ -263,9 +263,7 @@ def test_first_recompute_creates_history(db_session: Session) -> None:
     req = _seed_requirement(db_session)
     service.recompute_requirement_status(db_session, req.code)
     history = (
-        db_session.query(ComplianceRequirementStatusHistory)
-        .filter_by(requirement_id=req.id)
-        .all()
+        db_session.query(ComplianceRequirementStatusHistory).filter_by(requirement_id=req.id).all()
     )
     assert len(history) == 1
     assert history[0].previous_status is None
@@ -316,9 +314,7 @@ def test_status_change_creates_history(db_session: Session) -> None:
     assert mutated is True
     assert reason in ("status_changed", "status_and_counters_changed")
     history = (
-        db_session.query(ComplianceRequirementStatusHistory)
-        .filter_by(requirement_id=req.id)
-        .all()
+        db_session.query(ComplianceRequirementStatusHistory).filter_by(requirement_id=req.id).all()
     )
     assert len(history) == 2
     assert history[1].previous_status == ComplianceRequirementStatusValue.EVIDENCE_PENDING
@@ -334,9 +330,7 @@ def test_counter_only_change_creates_history(db_session: Session) -> None:
     assert mutated is True
     assert reason == "counters_changed"
     history = (
-        db_session.query(ComplianceRequirementStatusHistory)
-        .filter_by(requirement_id=req.id)
-        .all()
+        db_session.query(ComplianceRequirementStatusHistory).filter_by(requirement_id=req.id).all()
     )
     assert len(history) == 2
 

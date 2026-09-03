@@ -13,9 +13,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-sys.path.insert(
-    0, str(Path(__file__).resolve().parents[1] / "scripts" / "local_tools")
-)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts" / "local_tools"))
 
 from audit_ri_inventory_reconciliation import (
     _classify_duplicates,
@@ -114,15 +112,29 @@ def _insert_rec(
             created_at
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
-            "M", matricula, nome_imovel, municipio,
-            area_texto, area_valor,
-            1, tem_georref,
-            georref_direto, georref_fonte,
+            "M",
+            matricula,
+            nome_imovel,
+            municipio,
+            area_texto,
+            area_valor,
+            1,
+            tem_georref,
+            georref_direto,
+            georref_fonte,
             None,
-            tem_incra, incra_codigo, tem_nirf, nirf_codigo,
-            tem_reserva, reserva_valor,
-            fonte, 1, matricula,
-            hash_bloco, status, obs or None,
+            tem_incra,
+            incra_codigo,
+            tem_nirf,
+            nirf_codigo,
+            tem_reserva,
+            reserva_valor,
+            fonte,
+            1,
+            matricula,
+            hash_bloco,
+            status,
+            obs or None,
             "2026-01-01T00:00:00+00:00",
         ),
     )
@@ -132,6 +144,7 @@ def _insert_rec(
 # ---------------------------------------------------------------------------
 # Testes: _count_csv e _count_json
 # ---------------------------------------------------------------------------
+
 
 class TestCountSources:
     def test_count_csv_file_nao_existe(self, tmp_path):
@@ -166,6 +179,7 @@ class TestCountSources:
 # ---------------------------------------------------------------------------
 # Testes: _find_missing_matriculas
 # ---------------------------------------------------------------------------
+
 
 class TestFindMissingMatriculas:
     def test_sem_faltantes(self):
@@ -205,6 +219,7 @@ class TestFindMissingMatriculas:
 # Testes: _classify_duplicates
 # ---------------------------------------------------------------------------
 
+
 class TestClassifyDuplicates:
     def test_sem_duplicatas(self):
         conn = _make_conn()
@@ -233,12 +248,26 @@ class TestClassifyDuplicates:
         """Mesmo matrícula, mesmos dados técnicos, hash diferente → TECHNICAL_DUPLICATE."""
         conn = _make_conn()
         _insert_rec(
-            conn, 200, hash_bloco="H-aaaaaa", fonte="rural.pdf",
-            tem_georref=0, tem_incra=0, tem_nirf=0, area_texto="50 ha", area_valor=50.0
+            conn,
+            200,
+            hash_bloco="H-aaaaaa",
+            fonte="rural.pdf",
+            tem_georref=0,
+            tem_incra=0,
+            tem_nirf=0,
+            area_texto="50 ha",
+            area_valor=50.0,
         )
         _insert_rec(
-            conn, 200, hash_bloco="H-bbbbbb", fonte="rural.pdf",
-            tem_georref=0, tem_incra=0, tem_nirf=0, area_texto="50 ha", area_valor=50.0
+            conn,
+            200,
+            hash_bloco="H-bbbbbb",
+            fonte="rural.pdf",
+            tem_georref=0,
+            tem_incra=0,
+            tem_nirf=0,
+            area_texto="50 ha",
+            area_valor=50.0,
         )
         result = _classify_duplicates(conn)
         assert len(result) == 1
@@ -251,12 +280,24 @@ class TestClassifyDuplicates:
         """Mesmo matrícula, dados técnicos diferentes → CONFLICT_DUPLICATE."""
         conn = _make_conn()
         _insert_rec(
-            conn, 300, hash_bloco="H-aaaaaa", fonte="rural.pdf",
-            tem_georref=1, georref_direto=1, area_texto="100 ha", area_valor=100.0
+            conn,
+            300,
+            hash_bloco="H-aaaaaa",
+            fonte="rural.pdf",
+            tem_georref=1,
+            georref_direto=1,
+            area_texto="100 ha",
+            area_valor=100.0,
         )
         _insert_rec(
-            conn, 300, hash_bloco="H-bbbbbb", fonte="rural.pdf",
-            tem_georref=0, georref_direto=0, area_texto="200 ha", area_valor=200.0
+            conn,
+            300,
+            hash_bloco="H-bbbbbb",
+            fonte="rural.pdf",
+            tem_georref=0,
+            georref_direto=0,
+            area_texto="200 ha",
+            area_valor=200.0,
         )
         result = _classify_duplicates(conn)
         assert len(result) == 1
@@ -272,10 +313,12 @@ class TestClassifyDuplicates:
         _insert_rec(conn, 10, hash_bloco="H-aaaaaa", fonte="rural.pdf")
         _insert_rec(conn, 10, hash_bloco="H-aaaaaa", fonte="georref.pdf")
         # Technical
-        _insert_rec(conn, 20, hash_bloco="H-cccccc", fonte="rural.pdf",
-                    area_texto="50 ha", area_valor=50.0)
-        _insert_rec(conn, 20, hash_bloco="H-dddddd", fonte="rural.pdf",
-                    area_texto="50 ha", area_valor=50.0)
+        _insert_rec(
+            conn, 20, hash_bloco="H-cccccc", fonte="rural.pdf", area_texto="50 ha", area_valor=50.0
+        )
+        _insert_rec(
+            conn, 20, hash_bloco="H-dddddd", fonte="rural.pdf", area_texto="50 ha", area_valor=50.0
+        )
         result = _classify_duplicates(conn)
         classificacoes = {d["matricula_numero"]: d["classificacao"] for d in result}
         assert classificacoes[10] == "EXACT_DUPLICATE"
@@ -286,6 +329,7 @@ class TestClassifyDuplicates:
 # ---------------------------------------------------------------------------
 # Testes: _db_stats
 # ---------------------------------------------------------------------------
+
 
 class TestDbStats:
     def test_stats_basicos(self):
@@ -319,10 +363,7 @@ class TestDbStats:
     def test_nirf_zerado_contado_por_obs(self):
         """NIRF zerado deve ser detectado pela observação técnica."""
         conn = _make_conn()
-        _insert_rec(
-            conn, 1, hash_bloco="H-aaaaaa",
-            obs="nirf_zerado_ignorado; area_ausente"
-        )
+        _insert_rec(conn, 1, hash_bloco="H-aaaaaa", obs="nirf_zerado_ignorado; area_ausente")
         _insert_rec(conn, 2, hash_bloco="H-bbbbbb", obs="area_ausente")
         stats = _db_stats(conn)
         assert stats["nirf_zerado"] == 1
@@ -331,11 +372,25 @@ class TestDbStats:
     def test_incra_sem_georref_contado(self):
         conn = _make_conn()
         # INCRA sem georref
-        _insert_rec(conn, 1, hash_bloco="H-aaaaaa",
-                    tem_incra=1, tem_georref=0, georref_direto=0, georref_fonte=0)
+        _insert_rec(
+            conn,
+            1,
+            hash_bloco="H-aaaaaa",
+            tem_incra=1,
+            tem_georref=0,
+            georref_direto=0,
+            georref_fonte=0,
+        )
         # INCRA com georref direto
-        _insert_rec(conn, 2, hash_bloco="H-bbbbbb",
-                    tem_incra=1, tem_georref=1, georref_direto=1, georref_fonte=0)
+        _insert_rec(
+            conn,
+            2,
+            hash_bloco="H-bbbbbb",
+            tem_incra=1,
+            tem_georref=1,
+            georref_direto=1,
+            georref_fonte=0,
+        )
         stats = _db_stats(conn)
         assert stats["incra_sem_georref_explicito"] == 1
         conn.close()
@@ -354,6 +409,7 @@ class TestDbStats:
 # ---------------------------------------------------------------------------
 # Testes: _scan_report_for_pii
 # ---------------------------------------------------------------------------
+
 
 class TestScanReportForPii:
     def test_relatorio_limpo(self):
@@ -406,6 +462,7 @@ class TestScanReportForPii:
 # Testes: reconciliação CSV vs SQLite (divergência por UNIQUE)
 # ---------------------------------------------------------------------------
 
+
 class TestDivergenciaUniqueConstraint:
     def test_exact_match_rejeitado_por_unique(self):
         """
@@ -431,11 +488,32 @@ class TestDivergenciaUniqueConstraint:
                 hash_bloco_origem, status_extracao, observacoes_tecnicas_sem_pii,
                 created_at
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            ("M", 1, None, "Terezópolis de Goiás", None, None,
-             1, 0, 0, 0, None, 0, None, 0, None, 0, "Não",
-             "test_rural.pdf", 1, 1,
-             "H-000001", "ok", None,
-             "2026-01-01T00:00:00+00:00"),
+            (
+                "M",
+                1,
+                None,
+                "Terezópolis de Goiás",
+                None,
+                None,
+                1,
+                0,
+                0,
+                0,
+                None,
+                0,
+                None,
+                0,
+                None,
+                0,
+                "Não",
+                "test_rural.pdf",
+                1,
+                1,
+                "H-000001",
+                "ok",
+                None,
+                "2026-01-01T00:00:00+00:00",
+            ),
         )
         conn.commit()
 
@@ -468,6 +546,7 @@ class TestDivergenciaUniqueConstraint:
 # Testes: lista de matrículas faltantes
 # ---------------------------------------------------------------------------
 
+
 class TestListaMatriculasFaltantes:
     def test_lista_calculada_corretamente(self):
         """Com matrículas 1-10 presentes, faltam 11-3523."""
@@ -491,8 +570,20 @@ class TestListaMatriculasFaltantes:
                 "georreferenciamento_detectado_direto, georreferenciamento_inferido_por_fonte, "
                 "tem_incra, tem_nirf, fonte_relatorio, hash_bloco_origem, status_extracao, "
                 "created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                ("M", i, 1, 0, 0, 0, 0, 0, "test.pdf", f"H-{i:06x}", "ok",
-                 "2026-01-01T00:00:00+00:00"),
+                (
+                    "M",
+                    i,
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    "test.pdf",
+                    f"H-{i:06x}",
+                    "ok",
+                    "2026-01-01T00:00:00+00:00",
+                ),
             )
         conn.commit()
         missing = _find_missing_matriculas(conn)
@@ -514,6 +605,7 @@ class TestListaMatriculasFaltantes:
 # ---------------------------------------------------------------------------
 # Testes: anti-PII — relatórios não devem conter dados pessoais
 # ---------------------------------------------------------------------------
+
 
 class TestRelatorioPiiLivre:
     def test_relatorio_com_numeros_matricula_ok(self):

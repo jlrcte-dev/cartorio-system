@@ -71,7 +71,10 @@ FROM ri_real_json_inventory
 def _connect(db_path: Path) -> sqlite3.Connection:
     if not db_path.exists():
         print(f"[ERRO] Banco não encontrado: {db_path}", file=sys.stderr)
-        print("[DICA] Execute primeiro: python scripts/local_tools/analyze_ri_real_json.py --write-db", file=sys.stderr)
+        print(
+            "[DICA] Execute primeiro: python scripts/local_tools/analyze_ri_real_json.py --write-db",
+            file=sys.stderr,
+        )
         sys.exit(1)
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -149,9 +152,14 @@ def cmd_filter(conn: sqlite3.Connection, filters: list[str]) -> None:
         col = col.strip().lower()
         val = val.strip().lower()
         # Validar que coluna é segura
-        if col not in _SAFE_DISPLAY_FIELDS + ["cns", "livro", "natureza_imovel",
-                                               "natureza_imovel_confidence", "nirf_status",
-                                               "localizacao_codigo"]:
+        if col not in _SAFE_DISPLAY_FIELDS + [
+            "cns",
+            "livro",
+            "natureza_imovel",
+            "natureza_imovel_confidence",
+            "nirf_status",
+            "localizacao_codigo",
+        ]:
             print(f"[AVISO] Coluna não permitida para filtro: {col}")
             continue
         # Converter bool
@@ -180,7 +188,12 @@ def _build_parser() -> argparse.ArgumentParser:
     g.add_argument("--georef", action="store_true", help="Listar georreferenciados")
     g.add_argument("--needs-review", action="store_true", help="Listar needs_manual_review")
     g.add_argument("--matricula", type=int, help="Buscar matrícula específica")
-    g.add_argument("--filter", nargs="+", metavar="campo=valor", help="Filtros (ex: natureza=rural tem_car=true)")
+    g.add_argument(
+        "--filter",
+        nargs="+",
+        metavar="campo=valor",
+        help="Filtros (ex: natureza=rural tem_car=true)",
+    )
     return p
 
 

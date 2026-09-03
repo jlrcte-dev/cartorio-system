@@ -106,16 +106,18 @@ _DOC_LABEL_RE = re.compile(
 )
 
 # Campos técnicos com números longos — excluídos da varredura CPF/CNPJ
-_CAMPOS_CODIGOS_TECNICOS = frozenset({
-    "hash_registro_sanitizado",
-    "record_id",
-    "car_codigo",
-    "ccir_codigo",
-    "numero_incra_codigo",
-    "sigef_codigo",
-    "nirf_codigo",
-    "cep_sanitizado",
-})
+_CAMPOS_CODIGOS_TECNICOS = frozenset(
+    {
+        "hash_registro_sanitizado",
+        "record_id",
+        "car_codigo",
+        "ccir_codigo",
+        "numero_incra_codigo",
+        "sigef_codigo",
+        "nirf_codigo",
+        "cep_sanitizado",
+    }
+)
 
 # Denominação rural: padrões suspeitos de nome de pessoa
 # Aceita preposições curtas (DA, DE, DO, etc.) como separadores com {2,}
@@ -368,8 +370,11 @@ def _detect_inconsistency(rec: InventoryRecord, raw: dict) -> list[str]:
         if _RURAL_KW_RE.search(texto):
             alertas.append("urbano_com_sinais_rurais")
         rural_fields = [
-            rec.rural.tem_car, rec.rural.tem_nirf, rec.rural.tem_ccir,
-            rec.rural.tem_numero_incra, rec.rural.tem_sigef,
+            rec.rural.tem_car,
+            rec.rural.tem_nirf,
+            rec.rural.tem_ccir,
+            rec.rural.tem_numero_incra,
+            rec.rural.tem_sigef,
         ]
         if any(rural_fields):
             alertas.append("urbano_com_campos_rurais_preenchidos")
@@ -481,8 +486,8 @@ def process_record(raw: dict, cns_esperado: str, fonte: str) -> InventoryRecord:
     rec.rural = _normalize_rural(rural_raw)
 
     # Georreferenciamento
-    rec.possui_georreferenciamento, rec.georreferenciamento_criterio = (
-        calc_georreferenciamento(rec.rural)
+    rec.possui_georreferenciamento, rec.georreferenciamento_criterio = calc_georreferenciamento(
+        rec.rural
     )
 
     # Inconsistências heurísticas
@@ -494,9 +499,7 @@ def process_record(raw: dict, cns_esperado: str, fonte: str) -> InventoryRecord:
         "localizacao_invalida" in rec.status_extracao
         or "cns_divergente" in rec.status_extracao
         or "numero_registro_invalido" in rec.status_extracao
-        or any(a in alertas for a in [
-            "rural_com_sinais_urbanos", "urbano_com_sinais_rurais"
-        ])
+        or any(a in alertas for a in ["rural_com_sinais_urbanos", "urbano_com_sinais_rurais"])
     ):
         rec.status_revisao_ri = "needs_manual_review"
 
@@ -575,6 +578,7 @@ def scan_file_anti_pii(path: Path) -> list[tuple[str, int, str]]:
     if is_csv:
         try:
             import io
+
             reader = csv.DictReader(io.StringIO(content))
             for row_num, row in enumerate(reader, start=2):
                 for col, val in row.items():
@@ -627,7 +631,9 @@ def scan_sqlite_anti_pii(db_path: Path, table: str) -> list[tuple[str, str, str]
         cur.execute(f"PRAGMA table_info({table})")
         cols = [row[1] for row in cur.fetchall()]
         if "CONTRIBUINTE" in cols or "contribuinte" in cols:
-            issues.append(("coluna_contribuinte", table, "Coluna CONTRIBUINTE encontrada no SQLite"))
+            issues.append(
+                ("coluna_contribuinte", table, "Coluna CONTRIBUINTE encontrada no SQLite")
+            )
         conn.close()
     except Exception as e:
         issues.append(("erro_scan", str(e), "Erro ao escanear SQLite"))
@@ -665,17 +671,26 @@ def compute_metrics(records: list[InventoryRecord]) -> dict:
     rurais_sem_denom = [r for r in rurais if not r.rural.tem_denominacao_rural]
 
     urbanos_com_rurais = [
-        r for r in urbanos
-        if r.rural.tem_car or r.rural.tem_nirf or r.rural.tem_ccir
-        or r.rural.tem_numero_incra or r.rural.tem_sigef
+        r
+        for r in urbanos
+        if r.rural.tem_car
+        or r.rural.tem_nirf
+        or r.rural.tem_ccir
+        or r.rural.tem_numero_incra
+        or r.rural.tem_sigef
     ]
 
     inconsistentes = [
-        r for r in records
-        if any(a in r.observacoes_tecnicas_sem_pii for a in [
-            "rural_com_sinais_urbanos", "urbano_com_sinais_rurais",
-            "urbano_com_campos_rurais_preenchidos",
-        ])
+        r
+        for r in records
+        if any(
+            a in r.observacoes_tecnicas_sem_pii
+            for a in [
+                "rural_com_sinais_urbanos",
+                "urbano_com_sinais_rurais",
+                "urbano_com_campos_rurais_preenchidos",
+            ]
+        )
     ]
 
     needs_review = [r for r in records if r.status_revisao_ri == "needs_manual_review"]
@@ -830,7 +845,9 @@ INSERT OR REPLACE INTO ri_real_json_inventory VALUES (
 """
 
 
-def write_sqlite(records: list[InventoryRecord], db_path: Path, metrics: dict, fonte: str, cns: str) -> None:
+def write_sqlite(
+    records: list[InventoryRecord], db_path: Path, metrics: dict, fonte: str, cns: str
+) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     conn.execute(_CREATE_TABLE_SQL)
@@ -840,10 +857,20 @@ def write_sqlite(records: list[InventoryRecord], db_path: Path, metrics: dict, f
     for rec in records:
         d = record_to_dict(rec)
         # Converter bool para int para SQLite
-        for k in ["tem_quadra", "tem_lote", "tem_loteamento", "tem_condominio",
-                   "tem_car", "tem_nirf", "tem_ccir", "tem_numero_incra",
-                   "tem_sigef", "tem_denominacao_rural", "tem_acidente_geografico",
-                   "possui_georreferenciamento"]:
+        for k in [
+            "tem_quadra",
+            "tem_lote",
+            "tem_loteamento",
+            "tem_condominio",
+            "tem_car",
+            "tem_nirf",
+            "tem_ccir",
+            "tem_numero_incra",
+            "tem_sigef",
+            "tem_denominacao_rural",
+            "tem_acidente_geografico",
+            "possui_georreferenciamento",
+        ]:
             d[k] = int(d[k])
         rows.append(d)
 
@@ -853,7 +880,9 @@ def write_sqlite(records: list[InventoryRecord], db_path: Path, metrics: dict, f
     conn.execute(
         "INSERT OR REPLACE INTO ri_real_json_runs VALUES (?,?,?,?,?,?,?,?)",
         (
-            run_id, fonte, cns,
+            run_id,
+            fonte,
+            cns,
             metrics["total_registros"],
             metrics["total_urbano"],
             metrics["total_rural"],
@@ -869,11 +898,20 @@ def write_sqlite(records: list[InventoryRecord], db_path: Path, metrics: dict, f
 # Escrever CSV de revisão manual (somente campos-chave, sem PII)
 # ---------------------------------------------------------------------------
 _REVIEW_FIELDS = [
-    "matricula_numero", "numero_registro", "natureza_imovel",
-    "tem_car", "tem_nirf", "nirf_status", "tem_ccir",
-    "tem_numero_incra", "tem_sigef", "possui_georreferenciamento",
-    "georreferenciamento_criterio", "status_extracao",
-    "status_revisao_ri", "observacoes_tecnicas_sem_pii",
+    "matricula_numero",
+    "numero_registro",
+    "natureza_imovel",
+    "tem_car",
+    "tem_nirf",
+    "nirf_status",
+    "tem_ccir",
+    "tem_numero_incra",
+    "tem_sigef",
+    "possui_georreferenciamento",
+    "georreferenciamento_criterio",
+    "status_extracao",
+    "status_revisao_ri",
+    "observacoes_tecnicas_sem_pii",
 ]
 
 
@@ -1195,7 +1233,9 @@ def run(
                 print(f"[ANTI-PII] {p.name}: OK")
 
     if pii_issues_total > 0:
-        print(f"\n[ANTI-PII] ATENÇÃO: {pii_issues_total} ocorrências suspeitas detectadas nos derivados.")
+        print(
+            f"\n[ANTI-PII] ATENÇÃO: {pii_issues_total} ocorrências suspeitas detectadas nos derivados."
+        )
         print("[ANTI-PII] Revisar manualmente antes de compartilhar arquivos.")
     else:
         print("\n[ANTI-PII] Varredura concluída: nenhuma PII detectada nos derivados.")
@@ -1212,12 +1252,17 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--input", required=True, help="Caminho para o Indicador_Real.json")
     p.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Processa e exibe métricas sem escrever nenhum arquivo",
     )
     p.add_argument("--write-sanitized", action="store_true", help="Escrever CSV e JSON sanitizados")
     p.add_argument("--write-db", action="store_true", help="Escrever/atualizar SQLite")
-    p.add_argument("--write-reports", action="store_true", help="Escrever relatórios Markdown e CSVs de revisão")
+    p.add_argument(
+        "--write-reports",
+        action="store_true",
+        help="Escrever relatórios Markdown e CSVs de revisão",
+    )
     return p
 
 

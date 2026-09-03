@@ -61,9 +61,7 @@ def test_list_returns_200_empty(client: TestClient) -> None:
     assert resp.json() == []
 
 
-def test_list_returns_status_with_disclaimer(
-    client: TestClient, db_session: Session
-) -> None:
+def test_list_returns_status_with_disclaimer(client: TestClient, db_session: Session) -> None:
     _seed_req(db_session, "RT_DISC")
     client.post("/api/v1/compliance/requirements/RT_DISC/status/recompute")
 
@@ -136,9 +134,7 @@ def test_get_status_by_code_404_if_not_yet_computed(
     assert resp.status_code == 404
 
 
-def test_get_status_by_code_returns_disclaimer(
-    client: TestClient, db_session: Session
-) -> None:
+def test_get_status_by_code_returns_disclaimer(client: TestClient, db_session: Session) -> None:
     _seed_req(db_session, "RT_GET_OK")
     client.post("/api/v1/compliance/requirements/RT_GET_OK/status/recompute")
     resp = client.get("/api/v1/compliance/requirements/RT_GET_OK/status")

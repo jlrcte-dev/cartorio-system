@@ -27,6 +27,7 @@ from scripts.local_tools.consolidate_ri_real_json_reports import (
 # Helpers sintéticos
 # ---------------------------------------------------------------------------
 
+
 def make_registro(
     matricula: str = "1",
     natureza: str = "rural",
@@ -69,6 +70,7 @@ def make_records(**kwargs) -> dict[str, Registro]:
 # 1. check_pii detecta padrões
 # ---------------------------------------------------------------------------
 
+
 class TestCheckPii:
     def test_cpf_detectado(self):
         hits = check_pii("contribuinte 123.456.789-09 dados")
@@ -102,6 +104,7 @@ class TestAssertNoPii:
 # ---------------------------------------------------------------------------
 # 2. Registro.classificar
 # ---------------------------------------------------------------------------
+
 
 class TestClassificar:
     def test_rural_sem_car(self):
@@ -165,19 +168,23 @@ class TestClassificar:
 # 5–8. Prioridade
 # ---------------------------------------------------------------------------
 
+
 class TestPrioridade:
     def test_needs_review_alta(self):
         rec = make_registro(status_revisao="needs_manual_review")
         from scripts.local_tools.consolidate_ri_real_json_reports import prioridade
+
         assert prioridade(rec.classificar()) == "ALTA"
 
     def test_urbano_com_rurais_alta(self):
         rec = make_registro(natureza="urbano", tem_ccir="True")
         from scripts.local_tools.consolidate_ri_real_json_reports import prioridade
+
         assert prioridade(rec.classificar()) == "ALTA"
 
     def test_rural_sem_car_media(self):
         from scripts.local_tools.consolidate_ri_real_json_reports import prioridade
+
         # sem CCIR → ALTA; com CCIR/NIRF mas sem CAR → MEDIA ou mais
         rec2 = make_registro(
             natureza="rural",
@@ -201,6 +208,7 @@ class TestPrioridade:
             tem_numero_incra="True",
         )
         from scripts.local_tools.consolidate_ri_real_json_reports import prioridade
+
         tipos = rec.classificar()
         # GEO presente → MEDIA no mínimo
         pri = prioridade(tipos)
@@ -210,6 +218,7 @@ class TestPrioridade:
 # ---------------------------------------------------------------------------
 # 9. Campos de preenchimento manual existem no CSV
 # ---------------------------------------------------------------------------
+
 
 class TestCsvColunas:
     def test_colunas_manuais_presentes(self):
@@ -241,15 +250,23 @@ class TestCsvColunas:
 # 10. Relatório Markdown contém sumário executivo
 # ---------------------------------------------------------------------------
 
+
 class TestRelatorioMarkdown:
     def test_relatorio_tem_sumario(self, tmp_path):
         stats = Stats(
-            total=10, urbanos=8, rurais=2,
-            rural_com_car=1, rural_sem_car=1,
-            rural_com_nirf=1, rural_sem_nirf=1,
-            rural_com_ccir=1, rural_sem_ccir=1,
-            rural_com_geo=0, rural_sem_geo=2,
-            needs_review=1, urbano_com_rurais=0,
+            total=10,
+            urbanos=8,
+            rurais=2,
+            rural_com_car=1,
+            rural_sem_car=1,
+            rural_com_nirf=1,
+            rural_sem_nirf=1,
+            rural_com_ccir=1,
+            rural_sem_ccir=1,
+            rural_com_geo=0,
+            rural_sem_geo=2,
+            needs_review=1,
+            urbano_com_rurais=0,
             total_pendencias=2,
         )
         out = tmp_path / "relatorio.md"
@@ -277,6 +294,7 @@ class TestRelatorioMarkdown:
 # ---------------------------------------------------------------------------
 # 11. Checklist é gerado
 # ---------------------------------------------------------------------------
+
 
 class TestChecklist:
     def test_checklist_gerado(self, tmp_path):
@@ -309,6 +327,7 @@ class TestChecklist:
 # 12. Arquivos finais não contêm PII
 # ---------------------------------------------------------------------------
 
+
 class TestAntipii:
     def test_csv_sem_pii(self, tmp_path):
         records = {
@@ -323,9 +342,7 @@ class TestAntipii:
         assert hits == [], f"PII encontrada: {hits}"
 
     def test_csv_rejeita_pii(self, tmp_path):
-        records = {
-            "1": make_registro("1", obs="proprietario João da Silva")
-        }
+        records = {"1": make_registro("1", obs="proprietario João da Silva")}
         rows = build_csv_rows(records)
         out = tmp_path / "bad.csv"
         with pytest.raises(ValueError, match="BLOQUEADO"):
@@ -352,6 +369,7 @@ class TestAntipii:
 # ---------------------------------------------------------------------------
 # 13. Dados sintéticos — garantia
 # ---------------------------------------------------------------------------
+
 
 class TestDadosSinteticos:
     def test_sem_cpf_nos_fixtures(self):

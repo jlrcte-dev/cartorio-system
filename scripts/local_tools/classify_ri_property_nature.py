@@ -35,8 +35,7 @@ INSTITUTIONAL_TOTAL = 3523
 MISSING_MATRICULAS = [1431, 1490, 2804, 2974]
 
 _ORDER_BY = (
-    "m.matricula_numero ASC, m.fonte_relatorio ASC, "
-    "m.pagina_origem ASC, m.ordem_no_relatorio ASC"
+    "m.matricula_numero ASC, m.fonte_relatorio ASC, m.pagina_origem ASC, m.ordem_no_relatorio ASC"
 )
 
 # ---------------------------------------------------------------------------
@@ -102,7 +101,7 @@ URBAN_MODERATE_TERMS: list[str] = [
 # Note: "jardim" excluded — too common in rural property names in Goiás
 
 # Area thresholds for urban signal via m²
-_URBAN_AREA_STRONG_M2: float = 500.0   # < 500 m²: strong area-urban indicator
+_URBAN_AREA_STRONG_M2: float = 500.0  # < 500 m²: strong area-urban indicator
 _URBAN_AREA_MODERATE_M2: float = 5000.0  # < 5000 m²: moderate area-urban indicator
 
 # PII detection patterns (for anti-PII scan)
@@ -129,19 +128,20 @@ _PII_CHECKERS: list[tuple[str, re.Pattern[str]]] = [
 class NatureClassification:
     """Result of property nature classification — no PII."""
 
-    natureza_imovel: str              # rural | urbano | misto | indeterminado
-    natureza_imovel_confidence: str   # confirmado | provavel | baixa_confianca | manual
-    natureza_imovel_fonte: str        # source(s) of main signal
-    excluir_metricas_rurais: bool     # exclude from rural metrics?
-    motivo_exclusao_metricas: str     # reason for exclusion (empty = not excluded)
-    status_revisao_ri: str            # ok | needs_manual_review | excluir_metricas_rurais
-    sinais_urbanos_detectados: str    # semicolon-separated urban signal tags
-    sinais_rurais_detectados: str     # semicolon-separated rural signal tags
+    natureza_imovel: str  # rural | urbano | misto | indeterminado
+    natureza_imovel_confidence: str  # confirmado | provavel | baixa_confianca | manual
+    natureza_imovel_fonte: str  # source(s) of main signal
+    excluir_metricas_rurais: bool  # exclude from rural metrics?
+    motivo_exclusao_metricas: str  # reason for exclusion (empty = not excluded)
+    status_revisao_ri: str  # ok | needs_manual_review | excluir_metricas_rurais
+    sinais_urbanos_detectados: str  # semicolon-separated urban signal tags
+    sinais_rurais_detectados: str  # semicolon-separated rural signal tags
 
 
 # ---------------------------------------------------------------------------
 # Signal detection
 # ---------------------------------------------------------------------------
+
 
 def _normalize_nome(nome: str | None) -> str:
     """Lowercase and normalize nome_imovel_sanitizado for term matching."""
@@ -150,10 +150,16 @@ def _normalize_nome(nome: str | None) -> str:
     # Normalize common accented characters for term matching
     text = nome.lower()
     replacements = {
-        "á": "a", "à": "a", "â": "a", "ã": "a",
-        "é": "e", "ê": "e",
+        "á": "a",
+        "à": "a",
+        "â": "a",
+        "ã": "a",
+        "é": "e",
+        "ê": "e",
         "í": "i",
-        "ó": "o", "ô": "o", "õ": "o",
+        "ó": "o",
+        "ô": "o",
+        "õ": "o",
         "ú": "u",
         "ç": "c",
     }
@@ -239,6 +245,7 @@ def detect_urban_signals(
 # Core classifier (pure function — no DB access)
 # ---------------------------------------------------------------------------
 
+
 def classify_property_nature(record: dict[str, Any]) -> NatureClassification:  # noqa: C901
     """
     Classify the nature of a property record from ri_matriculas_inventory.
@@ -289,7 +296,13 @@ def classify_property_nature(record: dict[str, Any]) -> NatureClassification:  #
     # 2. Only area-urban signal with no rural context → indeterminado
     #    (small m² is insufficient without name context)
     # -----------------------------------------------------------------------
-    if area_urban and not strong_rural and not support_rural and not strong_urban and not moderate_urban:
+    if (
+        area_urban
+        and not strong_rural
+        and not support_rural
+        and not strong_urban
+        and not moderate_urban
+    ):
         return NatureClassification(
             natureza_imovel="indeterminado",
             natureza_imovel_confidence="baixa_confianca",
@@ -370,7 +383,9 @@ def classify_property_nature(record: dict[str, Any]) -> NatureClassification:  #
         return NatureClassification(
             natureza_imovel="rural",
             natureza_imovel_confidence="confirmado",
-            natureza_imovel_fonte="nome_imovel_sanitizado;area" if has_rural_area else "nome_imovel_sanitizado;georref",
+            natureza_imovel_fonte="nome_imovel_sanitizado;area"
+            if has_rural_area
+            else "nome_imovel_sanitizado;georref",
             excluir_metricas_rurais=False,
             motivo_exclusao_metricas="",
             status_revisao_ri="ok",
@@ -502,17 +517,19 @@ def _run_classification(conn: sqlite3.Connection) -> dict[str, int]:
         }
         cls = classify_property_nature(record)
         counts[cls.natureza_imovel] = counts.get(cls.natureza_imovel, 0) + 1
-        inserts.append((
-            mat,
-            cls.natureza_imovel,
-            cls.natureza_imovel_confidence,
-            cls.natureza_imovel_fonte,
-            int(cls.excluir_metricas_rurais),
-            cls.motivo_exclusao_metricas or "",
-            cls.status_revisao_ri,
-            cls.sinais_urbanos_detectados,
-            cls.sinais_rurais_detectados,
-        ))
+        inserts.append(
+            (
+                mat,
+                cls.natureza_imovel,
+                cls.natureza_imovel_confidence,
+                cls.natureza_imovel_fonte,
+                int(cls.excluir_metricas_rurais),
+                cls.motivo_exclusao_metricas or "",
+                cls.status_revisao_ri,
+                cls.sinais_urbanos_detectados,
+                cls.sinais_rurais_detectados,
+            )
+        )
 
     conn.executemany(
         """
@@ -568,21 +585,42 @@ _N_COLS = [
 ]
 
 _REPORT_FIELDNAMES = [
-    "matricula_numero", "tipo_registro", "fonte_relatorio", "municipio",
-    "nome_imovel_sanitizado", "area_texto_original", "area_valor_normalizado",
-    "area_unidade", "tem_georreferenciamento", "georreferenciamento_valor",
-    "tem_incra", "incra_codigo", "tem_nirf", "nirf_codigo",
-    "tem_reserva", "reserva_valor", "pagina_origem", "ordem_no_relatorio",
-    "status_extracao", "observacoes_tecnicas_sem_pii",
-    "natureza_imovel", "natureza_imovel_confidence", "natureza_imovel_fonte",
-    "excluir_metricas_rurais", "motivo_exclusao_metricas", "status_revisao_ri",
-    "sinais_urbanos_detectados", "sinais_rurais_detectados",
+    "matricula_numero",
+    "tipo_registro",
+    "fonte_relatorio",
+    "municipio",
+    "nome_imovel_sanitizado",
+    "area_texto_original",
+    "area_valor_normalizado",
+    "area_unidade",
+    "tem_georreferenciamento",
+    "georreferenciamento_valor",
+    "tem_incra",
+    "incra_codigo",
+    "tem_nirf",
+    "nirf_codigo",
+    "tem_reserva",
+    "reserva_valor",
+    "pagina_origem",
+    "ordem_no_relatorio",
+    "status_extracao",
+    "observacoes_tecnicas_sem_pii",
+    "natureza_imovel",
+    "natureza_imovel_confidence",
+    "natureza_imovel_fonte",
+    "excluir_metricas_rurais",
+    "motivo_exclusao_metricas",
+    "status_revisao_ri",
+    "sinais_urbanos_detectados",
+    "sinais_rurais_detectados",
 ]
 
 
 def _build_select(conn: sqlite3.Connection) -> str:
     has_direto = _has_col(conn, "ri_matriculas_inventory", "georreferenciamento_detectado_direto")
-    has_inferido = _has_col(conn, "ri_matriculas_inventory", "georreferenciamento_inferido_por_fonte")
+    has_inferido = _has_col(
+        conn, "ri_matriculas_inventory", "georreferenciamento_inferido_por_fonte"
+    )
     extra_cols = []
     if has_direto:
         extra_cols.append("m.georreferenciamento_detectado_direto")
@@ -609,7 +647,9 @@ def _base_query(conn: sqlite3.Connection, where: str = "") -> str:
 def _fieldnames_for(conn: sqlite3.Connection) -> list[str]:
     """Return fieldname list matching _build_select column order."""
     has_direto = _has_col(conn, "ri_matriculas_inventory", "georreferenciamento_detectado_direto")
-    has_inferido = _has_col(conn, "ri_matriculas_inventory", "georreferenciamento_inferido_por_fonte")
+    has_inferido = _has_col(
+        conn, "ri_matriculas_inventory", "georreferenciamento_inferido_por_fonte"
+    )
     fields = list(_REPORT_FIELDNAMES)
     extra = []
     if has_direto:
@@ -643,6 +683,7 @@ def _write_report(
 # Anti-PII scan
 # ---------------------------------------------------------------------------
 
+
 def _scan_file_for_pii(path: Path) -> list[str]:
     alerts: list[str] = []
     content = path.read_text(encoding="utf-8")
@@ -660,6 +701,7 @@ def _scan_outputs(files: list[Path]) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 # Summary report
 # ---------------------------------------------------------------------------
+
 
 def _db_stats(conn: sqlite3.Connection) -> dict[str, Any]:
     s: dict[str, Any] = {}
@@ -703,9 +745,13 @@ def _db_stats(conn: sqlite3.Connection) -> dict[str, Any]:
 
     # Georref/INCRA
     has_direto = _has_col(conn, "ri_matriculas_inventory", "georreferenciamento_detectado_direto")
-    s["georref_direto"] = q(
-        "SELECT COUNT(*) FROM ri_matriculas_inventory WHERE georreferenciamento_detectado_direto=1"
-    ) if has_direto else 0
+    s["georref_direto"] = (
+        q(
+            "SELECT COUNT(*) FROM ri_matriculas_inventory WHERE georreferenciamento_detectado_direto=1"
+        )
+        if has_direto
+        else 0
+    )
     s["incra_sem_georref"] = q(
         "SELECT COUNT(*) FROM ri_matriculas_inventory WHERE tem_incra=1 AND tem_georreferenciamento=0"
     )
@@ -758,122 +804,134 @@ def _generate_summary(
     excluir = s["excluir_total"]
     urban_or_misto = s["n_urbano"] + s["n_misto"]
 
-    lines = [
-        "# RI Inventory — Classificação de Natureza dos Imóveis",
-        "",
-        "Sprint: **RI-NATURE-1** — classificação conservadora, sem exclusão automática.",
-        "Banco: `_local_data/ri_inventory/db/ri_inventory.sqlite`",
-        "",
-        "---",
-        "",
-        "## 1. Totais Gerais",
-        "",
-        "| Indicador | Valor |",
-        "|---|---|",
-        f"| Registros totais extraídos (base bruta) | {s['total_rows']} |",
-        f"| Matrículas únicas reconciliadas | **{s['unique_matriculas']}** |",
-        f"| Total institucional da serventia | {INSTITUTIONAL_TOTAL} |",
-        f"| Diferença vs institucional | {s['unique_matriculas'] - INSTITUTIONAL_TOTAL:+d} |",
-        f"| Matrículas faltantes no sequencial | `{missing_str}` |",
-        "",
-        "---",
-        "",
-        "## 2. Classificação de Natureza",
-        "",
-        "| Categoria | Únicas | % do total |",
-        "|---|---|---|",
-        f"| Rural confirmado | **{s['rural_confirmado']}** | {s['rural_confirmado']/rural_base*100:.1f}% |",
-        f"| Rural provável | {s['rural_provavel']} | {s['rural_provavel']/rural_base*100:.1f}% |",
-        f"| Urbano / provável urbano | {s['n_urbano']} | {s['n_urbano']/rural_base*100:.1f}% |",
-        f"| Misto / conflito urbano-rural | {s['n_misto']} | {s['n_misto']/rural_base*100:.1f}% |",
-        f"| Indeterminado | {s['n_indeterminado']} | {s['n_indeterminado']/rural_base*100:.1f}% |",
-        f"| Excluído das métricas rurais | **{excluir}** | {excluir/rural_base*100:.1f}% |",
-        f"| Pendente de revisão manual | {s['needs_review']} | {s['needs_review']/rural_base*100:.1f}% |",
-        "",
-        "> **Impacto estimado:** O número mínimo conservador de imóveis rurais confirmados é "
-        f"**{rural_confirmed}**. Excluindo-se registros com forte indício urbano ({excluir}), "
-        f"o número máximo possível é **{rural_base - excluir}**.",
-        "",
-        "---",
-        "",
-        "## 3. Georreferenciamento e INCRA",
-        "",
-        "| Indicador | Valor |",
-        "|---|---|",
-        f"| Georref direto confirmado (Sim explícito) | {s['georref_direto']} |",
-        f"| INCRA sem georref explícito | {s['incra_sem_georref']} |",
-        f"| Com INCRA | {s['com_incra']} |",
-        "",
-        "---",
-        "",
-        "## 4. NIRF e Reserva",
-        "",
-        "| Indicador | Valor |",
-        "|---|---|",
-        f"| NIRF válido | {s['nirf_valido']} |",
-        f"| Reserva Sim | {s['reserva_sim']} |",
-        f"| Reserva Não | {s['reserva_nao']} |",
-        "",
-        "---",
-        "",
-        "## 5. Duplicidades",
-        "",
-        f"| Matrículas duplicadas | {s['dup_total']} |",
-        "|---|---|",
-        "",
-        "---",
-        "",
-        "## 6. Amostras — número e flags técnicas apenas",
-        "",
-        "### 6.1 Rural Confirmado (primeiras 50)",
-        "```",
-        "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
-    ] + sample_where("n.natureza_imovel='rural' AND n.natureza_imovel_confidence='confirmado'") + [
-        "```",
-        "",
-        "### 6.2 Rural Provável (primeiras 50)",
-        "```",
-        "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
-    ] + sample_where("n.natureza_imovel='rural' AND n.natureza_imovel_confidence='provavel'") + [
-        "```",
-        "",
-        "### 6.3 Indícios Urbanos (primeiras 50)",
-        "```",
-        "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
-    ] + sample_where("n.natureza_imovel='urbano'") + [
-        "```",
-        "",
-        "### 6.4 Conflito Urbano/Rural (primeiras 50)",
-        "```",
-        "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
-    ] + sample_where("n.natureza_imovel='misto'") + [
-        "```",
-        "",
-        "### 6.5 Indeterminado (primeiras 50)",
-        "```",
-        "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
-    ] + sample_where("n.natureza_imovel='indeterminado'") + [
-        "```",
-        "",
-        "---",
-        "",
-        "## 7. Arquivos gerados",
-        "",
-        "| Arquivo | Conteúdo |",
-        "|---|---|",
-        "| `ri_inventory_rural_confirmed_review.csv` | Rural confirmado |",
-        "| `ri_inventory_rural_probable_review.csv` | Rural provável |",
-        "| `ri_inventory_urban_signals_in_rural_report.csv` | Com indício urbano |",
-        "| `ri_inventory_urban_rural_conflicts_review.csv` | Conflito urbano/rural |",
-        "| `ri_inventory_indeterminate_nature_review.csv` | Indeterminado |",
-        "| `ri_inventory_excluded_from_rural_metrics.csv` | Excluído das métricas |",
-        "| `ri_inventory_nature_classification_summary.md` | Este resumo |",
-        "",
-        "---",
-        "",
-        "*Anti-PII: varredura executada — nenhum dado pessoal nos arquivos gerados.*",
-        "*Nenhum registro foi excluído da base sanitizada — apenas classificado.*",
-    ]
+    lines = (
+        [
+            "# RI Inventory — Classificação de Natureza dos Imóveis",
+            "",
+            "Sprint: **RI-NATURE-1** — classificação conservadora, sem exclusão automática.",
+            "Banco: `_local_data/ri_inventory/db/ri_inventory.sqlite`",
+            "",
+            "---",
+            "",
+            "## 1. Totais Gerais",
+            "",
+            "| Indicador | Valor |",
+            "|---|---|",
+            f"| Registros totais extraídos (base bruta) | {s['total_rows']} |",
+            f"| Matrículas únicas reconciliadas | **{s['unique_matriculas']}** |",
+            f"| Total institucional da serventia | {INSTITUTIONAL_TOTAL} |",
+            f"| Diferença vs institucional | {s['unique_matriculas'] - INSTITUTIONAL_TOTAL:+d} |",
+            f"| Matrículas faltantes no sequencial | `{missing_str}` |",
+            "",
+            "---",
+            "",
+            "## 2. Classificação de Natureza",
+            "",
+            "| Categoria | Únicas | % do total |",
+            "|---|---|---|",
+            f"| Rural confirmado | **{s['rural_confirmado']}** | {s['rural_confirmado'] / rural_base * 100:.1f}% |",
+            f"| Rural provável | {s['rural_provavel']} | {s['rural_provavel'] / rural_base * 100:.1f}% |",
+            f"| Urbano / provável urbano | {s['n_urbano']} | {s['n_urbano'] / rural_base * 100:.1f}% |",
+            f"| Misto / conflito urbano-rural | {s['n_misto']} | {s['n_misto'] / rural_base * 100:.1f}% |",
+            f"| Indeterminado | {s['n_indeterminado']} | {s['n_indeterminado'] / rural_base * 100:.1f}% |",
+            f"| Excluído das métricas rurais | **{excluir}** | {excluir / rural_base * 100:.1f}% |",
+            f"| Pendente de revisão manual | {s['needs_review']} | {s['needs_review'] / rural_base * 100:.1f}% |",
+            "",
+            "> **Impacto estimado:** O número mínimo conservador de imóveis rurais confirmados é "
+            f"**{rural_confirmed}**. Excluindo-se registros com forte indício urbano ({excluir}), "
+            f"o número máximo possível é **{rural_base - excluir}**.",
+            "",
+            "---",
+            "",
+            "## 3. Georreferenciamento e INCRA",
+            "",
+            "| Indicador | Valor |",
+            "|---|---|",
+            f"| Georref direto confirmado (Sim explícito) | {s['georref_direto']} |",
+            f"| INCRA sem georref explícito | {s['incra_sem_georref']} |",
+            f"| Com INCRA | {s['com_incra']} |",
+            "",
+            "---",
+            "",
+            "## 4. NIRF e Reserva",
+            "",
+            "| Indicador | Valor |",
+            "|---|---|",
+            f"| NIRF válido | {s['nirf_valido']} |",
+            f"| Reserva Sim | {s['reserva_sim']} |",
+            f"| Reserva Não | {s['reserva_nao']} |",
+            "",
+            "---",
+            "",
+            "## 5. Duplicidades",
+            "",
+            f"| Matrículas duplicadas | {s['dup_total']} |",
+            "|---|---|",
+            "",
+            "---",
+            "",
+            "## 6. Amostras — número e flags técnicas apenas",
+            "",
+            "### 6.1 Rural Confirmado (primeiras 50)",
+            "```",
+            "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
+        ]
+        + sample_where("n.natureza_imovel='rural' AND n.natureza_imovel_confidence='confirmado'")
+        + [
+            "```",
+            "",
+            "### 6.2 Rural Provável (primeiras 50)",
+            "```",
+            "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
+        ]
+        + sample_where("n.natureza_imovel='rural' AND n.natureza_imovel_confidence='provavel'")
+        + [
+            "```",
+            "",
+            "### 6.3 Indícios Urbanos (primeiras 50)",
+            "```",
+            "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
+        ]
+        + sample_where("n.natureza_imovel='urbano'")
+        + [
+            "```",
+            "",
+            "### 6.4 Conflito Urbano/Rural (primeiras 50)",
+            "```",
+            "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
+        ]
+        + sample_where("n.natureza_imovel='misto'")
+        + [
+            "```",
+            "",
+            "### 6.5 Indeterminado (primeiras 50)",
+            "```",
+            "mat   | natureza         | confiança        | pág  georref incra nirf excluir",
+        ]
+        + sample_where("n.natureza_imovel='indeterminado'")
+        + [
+            "```",
+            "",
+            "---",
+            "",
+            "## 7. Arquivos gerados",
+            "",
+            "| Arquivo | Conteúdo |",
+            "|---|---|",
+            "| `ri_inventory_rural_confirmed_review.csv` | Rural confirmado |",
+            "| `ri_inventory_rural_probable_review.csv` | Rural provável |",
+            "| `ri_inventory_urban_signals_in_rural_report.csv` | Com indício urbano |",
+            "| `ri_inventory_urban_rural_conflicts_review.csv` | Conflito urbano/rural |",
+            "| `ri_inventory_indeterminate_nature_review.csv` | Indeterminado |",
+            "| `ri_inventory_excluded_from_rural_metrics.csv` | Excluído das métricas |",
+            "| `ri_inventory_nature_classification_summary.md` | Este resumo |",
+            "",
+            "---",
+            "",
+            "*Anti-PII: varredura executada — nenhum dado pessoal nos arquivos gerados.*",
+            "*Nenhum registro foi excluído da base sanitizada — apenas classificado.*",
+        ]
+    )
 
     path = out_dir / "ri_inventory_nature_classification_summary.md"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -884,6 +942,7 @@ def _generate_summary(
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main(db_path: Path = _DEFAULT_DB) -> None:
     if not db_path.exists():
@@ -963,9 +1022,9 @@ def main(db_path: Path = _DEFAULT_DB) -> None:
         print("=" * 60)
         print("CLASSIFICACAO DE NATUREZA — CONCLUIDA")
         print("=" * 60)
-        unique = conn.execute(
-            "SELECT COUNT(*) FROM ri_property_nature_classification"
-        ).fetchone()[0]
+        unique = conn.execute("SELECT COUNT(*) FROM ri_property_nature_classification").fetchone()[
+            0
+        ]
         print(f"  Matriculas classificadas: {unique}")
         print(f"  Arquivos gerados: {len(generated)}")
         print(f"  Anti-PII: {'ALERTA' if any_pii else 'LIMPO'}")

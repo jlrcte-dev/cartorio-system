@@ -57,6 +57,7 @@ _CNPJ_RE = re.compile(r"\d{2}[\.\s]?\d{3}[\.\s]?\d{3}[\.\s\/]?\d{4}[\-\.\s]?\d{2
 # Leitura das fontes de dados
 # ---------------------------------------------------------------------------
 
+
 def _count_csv(path: Path) -> int:
     if not path.exists():
         return -1
@@ -91,6 +92,7 @@ def _matriculas_from_csv(path: Path) -> list[int]:
 # Consultas SQLite
 # ---------------------------------------------------------------------------
 
+
 def _db_stats(conn: sqlite3.Connection) -> dict[str, Any]:
     """Retorna estatísticas agregadas do SQLite — sem PII."""
     stats: dict[str, Any] = {}
@@ -102,9 +104,9 @@ def _db_stats(conn: sqlite3.Connection) -> dict[str, Any]:
     ):
         stats[f"sqlite_{row[0]}"] = row[1]
 
-    stats["sqlite_total"] = conn.execute(
-        "SELECT COUNT(*) FROM ri_matriculas_inventory"
-    ).fetchone()[0]
+    stats["sqlite_total"] = conn.execute("SELECT COUNT(*) FROM ri_matriculas_inventory").fetchone()[
+        0
+    ]
 
     stats["sqlite_unicos"] = conn.execute(
         "SELECT COUNT(DISTINCT matricula_numero) FROM ri_matriculas_inventory"
@@ -182,8 +184,7 @@ def _db_stats(conn: sqlite3.Connection) -> dict[str, Any]:
 
     # Área
     stats["com_area"] = conn.execute(
-        "SELECT COUNT(*) FROM ri_matriculas_inventory "
-        "WHERE area_valor_normalizado IS NOT NULL"
+        "SELECT COUNT(*) FROM ri_matriculas_inventory WHERE area_valor_normalizado IS NOT NULL"
     ).fetchone()[0]
 
     # needs_review
@@ -208,9 +209,7 @@ def _find_missing_matriculas(conn: sqlite3.Connection) -> list[int]:
     """Lista matrículas ausentes entre 1 e 3523 — apenas números."""
     all_nums = {
         row[0]
-        for row in conn.execute(
-            "SELECT DISTINCT matricula_numero FROM ri_matriculas_inventory"
-        )
+        for row in conn.execute("SELECT DISTINCT matricula_numero FROM ri_matriculas_inventory")
     }
     expected = set(range(1, _TOTAL_GERAL_SERVENTIA + 1))
     return sorted(expected - all_nums)
@@ -271,12 +270,18 @@ def _classify_duplicates(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         else:
             # Identificar quais campos técnicos diferem (sem PII)
             campos_nomes = [
-                "nome_imovel_sanitizado", "municipio",
-                "area_texto_original", "area_valor_normalizado",
-                "tem_georreferenciamento", "georreferenciamento_valor",
-                "tem_incra", "incra_codigo",
-                "tem_nirf", "nirf_codigo",
-                "tem_reserva", "reserva_valor",
+                "nome_imovel_sanitizado",
+                "municipio",
+                "area_texto_original",
+                "area_valor_normalizado",
+                "tem_georreferenciamento",
+                "georreferenciamento_valor",
+                "tem_incra",
+                "incra_codigo",
+                "tem_nirf",
+                "nirf_codigo",
+                "tem_reserva",
+                "reserva_valor",
             ]
             campos_diff = []
             for i, campo in enumerate(campos_nomes):
@@ -298,16 +303,18 @@ def _classify_duplicates(conn: sqlite3.Connection) -> list[dict[str, Any]]:
                 classificacao = "NEEDS_MANUAL_REVIEW"
                 tem_diferenca = False
 
-        results.append({
-            "matricula_numero": num,
-            "ocorrencias": n,
-            "fontes": fontes,
-            "hashes_distintos": hashes_unicos,
-            "paginas": paginas,
-            "tem_diferenca_tecnica": tem_diferenca,
-            "campos_tecnicos_diferentes": campos_diff,
-            "classificacao": classificacao,
-        })
+        results.append(
+            {
+                "matricula_numero": num,
+                "ocorrencias": n,
+                "fontes": fontes,
+                "hashes_distintos": hashes_unicos,
+                "paginas": paginas,
+                "tem_diferenca_tecnica": tem_diferenca,
+                "campos_tecnicos_diferentes": campos_diff,
+                "classificacao": classificacao,
+            }
+        )
 
     return results
 
@@ -315,6 +322,7 @@ def _classify_duplicates(conn: sqlite3.Connection) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Análise de totais no PDF (via runs table)
 # ---------------------------------------------------------------------------
+
 
 def _get_runs_info(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     rows = conn.execute(
@@ -342,6 +350,7 @@ def _get_runs_info(conn: sqlite3.Connection) -> list[dict[str, Any]]:
 # Varredura anti-PII do relatório gerado
 # ---------------------------------------------------------------------------
 
+
 def _scan_report_for_pii(text: str) -> list[str]:
     """Varre texto de relatório por padrões CPF/CNPJ. Retorna lista de alertas."""
     alerts = []
@@ -357,6 +366,7 @@ def _scan_report_for_pii(text: str) -> list[str]:
 # Geração do relatório de reconciliação
 # ---------------------------------------------------------------------------
 
+
 def _generate_reconciliation_report(
     csv_rural: int,
     json_rural: int,
@@ -370,9 +380,7 @@ def _generate_reconciliation_report(
 ) -> str:
 
     sqlite_rural = db_stats.get("sqlite_Relatorio_matriculas_rurais.pdf", "?")
-    sqlite_georref = db_stats.get(
-        "sqlite_Relatorio_matriculas_rurais_georrefrenciadas.pdf", "?"
-    )
+    sqlite_georref = db_stats.get("sqlite_Relatorio_matriculas_rurais_georrefrenciadas.pdf", "?")
     # Também pode ter a versão com nome correto
     if sqlite_georref == "?":
         sqlite_georref = db_stats.get(
@@ -422,9 +430,7 @@ def _generate_reconciliation_report(
     # Matrículas faltantes
     missing_str = ", ".join(str(m) for m in missing) if missing else "Nenhuma"
     diff_serventia = (
-        _TOTAL_GERAL_SERVENTIA - sqlite_unicos
-        if isinstance(sqlite_unicos, int)
-        else "?"
+        _TOTAL_GERAL_SERVENTIA - sqlite_unicos if isinstance(sqlite_unicos, int) else "?"
     )
 
     # Duplicidades: contagem por classificação
@@ -443,7 +449,7 @@ def _generate_reconciliation_report(
         for d in duplicates[:50]
     )
     if len(duplicates) > 50:
-        dup_table_rows += f"\n| ... | ... | {len(duplicates)-50} registros adicionais | | | | | |"
+        dup_table_rows += f"\n| ... | ... | {len(duplicates) - 50} registros adicionais | | | | | |"
 
     # Runs info
     runs_rows = "\n".join(
@@ -454,9 +460,13 @@ def _generate_reconciliation_report(
 
     # Flags por fonte (do DB)
     georref_direto = db_stats.get("georref_direto")
-    georref_direto_str = str(georref_direto) if georref_direto is not None else "campo não existe (DB pré-v3)"
+    georref_direto_str = (
+        str(georref_direto) if georref_direto is not None else "campo não existe (DB pré-v3)"
+    )
     georref_fonte = db_stats.get("georref_inferido_fonte")
-    georref_fonte_str = str(georref_fonte) if georref_fonte is not None else "campo não existe (DB pré-v3)"
+    georref_fonte_str = (
+        str(georref_fonte) if georref_fonte is not None else "campo não existe (DB pré-v3)"
+    )
     incra_sem = db_stats.get("incra_sem_georref_explicito")
     incra_sem_str = str(incra_sem) if incra_sem is not None else "campo não existe (DB pré-v3)"
 
@@ -475,7 +485,7 @@ def _generate_reconciliation_report(
 |---|---|---|---|
 | Relatório Rural | {csv_rural} | {json_rural} | {sqlite_rural} |
 | Relatório Georref | {csv_georref} | {json_georref} | {sqlite_georref} |
-| **TOTAL** | **{csv_rural+csv_georref if csv_rural > 0 and csv_georref > 0 else '?'}** | **{json_rural+json_georref if json_rural > 0 and json_georref > 0 else '?'}** | **{sqlite_total}** |
+| **TOTAL** | **{csv_rural + csv_georref if csv_rural > 0 and csv_georref > 0 else "?"}** | **{json_rural + json_georref if json_rural > 0 and json_georref > 0 else "?"}** | **{sqlite_total}** |
 
 ---
 
@@ -537,30 +547,30 @@ def _generate_reconciliation_report(
 
 | Indicador | Quantidade |
 |---|---|
-| Georref. total (direto + inferido) | {db_stats.get('georref_total', '?')} |
+| Georref. total (direto + inferido) | {db_stats.get("georref_total", "?")} |
 | Georref. detectado direto (Sim explícito em Georef.) | {georref_direto_str} |
 | Georref. inferido por fonte (relatório georref) | {georref_fonte_str} |
-| INCRA total | {db_stats.get('incra_total', '?')} |
+| INCRA total | {db_stats.get("incra_total", "?")} |
 | INCRA sem Georef. explícito | {incra_sem_str} |
 
 ### 4.2 NIRF
 
 | Indicador | Quantidade |
 |---|---|
-| NIRF válido detectado | {db_stats.get('nirf_valido', '?')} |
-| NIRF zerado/placeholder ignorado | {db_stats.get('nirf_zerado', '?')} |
-| NIRF ambíguo | {db_stats.get('nirf_ambiguo', '?')} |
-| NIRF ausente | {db_stats.get('sqlite_total', 0) - db_stats.get('nirf_valido', 0) - db_stats.get('nirf_zerado', 0) - db_stats.get('nirf_ambiguo', 0)} |
+| NIRF válido detectado | {db_stats.get("nirf_valido", "?")} |
+| NIRF zerado/placeholder ignorado | {db_stats.get("nirf_zerado", "?")} |
+| NIRF ambíguo | {db_stats.get("nirf_ambiguo", "?")} |
+| NIRF ausente | {db_stats.get("sqlite_total", 0) - db_stats.get("nirf_valido", 0) - db_stats.get("nirf_zerado", 0) - db_stats.get("nirf_ambiguo", 0)} |
 
 ### 4.3 Outros campos
 
 | Indicador | Quantidade |
 |---|---|
-| Reserva Sim | {db_stats.get('reserva_sim', '?')} |
-| Reserva Não | {db_stats.get('reserva_nao', '?')} |
-| Reserva não informada | {db_stats.get('sqlite_total', 0) - db_stats.get('reserva_sim', 0) - db_stats.get('reserva_nao', 0)} |
-| Com área extraída | {db_stats.get('com_area', '?')} |
-| needs_review | {db_stats.get('needs_review', '?')} |
+| Reserva Sim | {db_stats.get("reserva_sim", "?")} |
+| Reserva Não | {db_stats.get("reserva_nao", "?")} |
+| Reserva não informada | {db_stats.get("sqlite_total", 0) - db_stats.get("reserva_sim", 0) - db_stats.get("reserva_nao", 0)} |
+| Com área extraída | {db_stats.get("com_area", "?")} |
+| needs_review | {db_stats.get("needs_review", "?")} |
 
 ---
 
@@ -584,10 +594,10 @@ def _generate_reconciliation_report(
 
 | Classificação | Quantidade |
 |---|---|
-| EXACT_DUPLICATE (mesmo hash) | {dup_counts.get('EXACT_DUPLICATE', 0)} |
-| TECHNICAL_DUPLICATE (mesmos campos técnicos, hash diferente) | {dup_counts.get('TECHNICAL_DUPLICATE', 0)} |
-| CONFLICT_DUPLICATE (campos técnicos divergentes) | {dup_counts.get('CONFLICT_DUPLICATE', 0)} |
-| NEEDS_MANUAL_REVIEW | {dup_counts.get('NEEDS_MANUAL_REVIEW', 0)} |
+| EXACT_DUPLICATE (mesmo hash) | {dup_counts.get("EXACT_DUPLICATE", 0)} |
+| TECHNICAL_DUPLICATE (mesmos campos técnicos, hash diferente) | {dup_counts.get("TECHNICAL_DUPLICATE", 0)} |
+| CONFLICT_DUPLICATE (campos técnicos divergentes) | {dup_counts.get("CONFLICT_DUPLICATE", 0)} |
+| NEEDS_MANUAL_REVIEW | {dup_counts.get("NEEDS_MANUAL_REVIEW", 0)} |
 
 ### Detalhamento (matrícula, ocorrências, classificação)
 
@@ -610,7 +620,8 @@ def _generate_reconciliation_report(
 
 
 def _build_alertas(
-    csv_rural: int, csv_georref: int,
+    csv_rural: int,
+    csv_georref: int,
     db_stats: dict[str, Any],
     missing: list[int],
     duplicates: list[dict[str, Any]],
@@ -672,6 +683,7 @@ def _build_alertas(
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     print("[INFO] Iniciando auditoria de reconciliação...")
@@ -750,7 +762,9 @@ def main() -> None:
     # Varredura anti-PII do relatório
     pii_alerts = _scan_report_for_pii(report)
     if pii_alerts:
-        print("[ERRO] PII detectada no relatório gerado — NÃO SALVO.", file=__import__("sys").stderr)
+        print(
+            "[ERRO] PII detectada no relatório gerado — NÃO SALVO.", file=__import__("sys").stderr
+        )
         for a in pii_alerts:
             print(f"  {a}", file=__import__("sys").stderr)
         __import__("sys").exit(1)
@@ -773,9 +787,7 @@ def main() -> None:
     print("  Anti-PII: LIMPO")
 
 
-def _generate_duplicates_report(
-    duplicates: list[dict[str, Any]], run_ts: str
-) -> str:
+def _generate_duplicates_report(duplicates: list[dict[str, Any]], run_ts: str) -> str:
     dup_counts: dict[str, int] = {}
     for d in duplicates:
         c = d["classificacao"]
@@ -806,10 +818,10 @@ def _generate_duplicates_report(
 
 | Classificação | Quantidade |
 |---|---|
-| EXACT_DUPLICATE | {dup_counts.get('EXACT_DUPLICATE', 0)} |
-| TECHNICAL_DUPLICATE | {dup_counts.get('TECHNICAL_DUPLICATE', 0)} |
-| CONFLICT_DUPLICATE | {dup_counts.get('CONFLICT_DUPLICATE', 0)} |
-| NEEDS_MANUAL_REVIEW | {dup_counts.get('NEEDS_MANUAL_REVIEW', 0)} |
+| EXACT_DUPLICATE | {dup_counts.get("EXACT_DUPLICATE", 0)} |
+| TECHNICAL_DUPLICATE | {dup_counts.get("TECHNICAL_DUPLICATE", 0)} |
+| CONFLICT_DUPLICATE | {dup_counts.get("CONFLICT_DUPLICATE", 0)} |
+| NEEDS_MANUAL_REVIEW | {dup_counts.get("NEEDS_MANUAL_REVIEW", 0)} |
 | **TOTAL** | **{len(duplicates)}** |
 
 ---

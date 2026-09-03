@@ -130,20 +130,22 @@ def test_list_links_filter_by_requirement_code(db_session: Session) -> None:
     _seed_requirement(db_session, "REQ_A")
     _seed_requirement(db_session, "REQ_B")
     service.create_finding_link(
-        db_session, RequirementFindingLinkCreate(
+        db_session,
+        RequirementFindingLinkCreate(
             requirement_code="REQ_A",
             source_module=ComplianceLinkSourceModule.AUDIT,
             source_type=ComplianceLinkSourceType.FINDING,
             source_ref="A-001",
-        )
+        ),
     )
     service.create_finding_link(
-        db_session, RequirementFindingLinkCreate(
+        db_session,
+        RequirementFindingLinkCreate(
             requirement_code="REQ_B",
             source_module=ComplianceLinkSourceModule.AUDIT,
             source_type=ComplianceLinkSourceType.FINDING,
             source_ref="B-001",
-        )
+        ),
     )
 
     result = service.list_finding_links(db_session, requirement_code="REQ_A")
@@ -153,14 +155,17 @@ def test_list_links_filter_by_requirement_code(db_session: Session) -> None:
 
 def test_list_links_filter_by_source_module(db_session: Session) -> None:
     _seed_requirement(db_session)
-    service.create_finding_link(db_session, _base_payload(
-        source_module=ComplianceLinkSourceModule.AUDIT, source_ref="A-1"
-    ))
-    service.create_finding_link(db_session, _base_payload(
-        source_module=ComplianceLinkSourceModule.RETENTION,
-        source_type=ComplianceLinkSourceType.SIGNAL,
-        source_ref="R-1",
-    ))
+    service.create_finding_link(
+        db_session, _base_payload(source_module=ComplianceLinkSourceModule.AUDIT, source_ref="A-1")
+    )
+    service.create_finding_link(
+        db_session,
+        _base_payload(
+            source_module=ComplianceLinkSourceModule.RETENTION,
+            source_type=ComplianceLinkSourceType.SIGNAL,
+            source_ref="R-1",
+        ),
+    )
 
     result = service.list_finding_links(
         db_session, source_module=ComplianceLinkSourceModule.RETENTION
@@ -170,18 +175,19 @@ def test_list_links_filter_by_source_module(db_session: Session) -> None:
 
 def test_list_links_filter_by_source_type(db_session: Session) -> None:
     _seed_requirement(db_session)
-    service.create_finding_link(db_session, _base_payload(
-        source_type=ComplianceLinkSourceType.FINDING, source_ref="F-1"
-    ))
-    service.create_finding_link(db_session, _base_payload(
-        source_module=ComplianceLinkSourceModule.LGPD,
-        source_type=ComplianceLinkSourceType.ACTION,
-        source_ref="AC-2",
-    ))
-
-    result = service.list_finding_links(
-        db_session, source_type=ComplianceLinkSourceType.ACTION
+    service.create_finding_link(
+        db_session, _base_payload(source_type=ComplianceLinkSourceType.FINDING, source_ref="F-1")
     )
+    service.create_finding_link(
+        db_session,
+        _base_payload(
+            source_module=ComplianceLinkSourceModule.LGPD,
+            source_type=ComplianceLinkSourceType.ACTION,
+            source_ref="AC-2",
+        ),
+    )
+
+    result = service.list_finding_links(db_session, source_type=ComplianceLinkSourceType.ACTION)
     assert all(lnk.source_type == ComplianceLinkSourceType.ACTION for lnk in result)
 
 
@@ -197,12 +203,12 @@ def test_list_links_filter_by_source_ref(db_session: Session) -> None:
 
 def test_list_links_filter_by_risk_level(db_session: Session) -> None:
     _seed_requirement(db_session)
-    service.create_finding_link(db_session, _base_payload(
-        source_ref="H-1", risk_level=ComplianceLinkRiskLevel.HIGH
-    ))
-    service.create_finding_link(db_session, _base_payload(
-        source_ref="L-1", risk_level=ComplianceLinkRiskLevel.LOW
-    ))
+    service.create_finding_link(
+        db_session, _base_payload(source_ref="H-1", risk_level=ComplianceLinkRiskLevel.HIGH)
+    )
+    service.create_finding_link(
+        db_session, _base_payload(source_ref="L-1", risk_level=ComplianceLinkRiskLevel.LOW)
+    )
 
     result = service.list_finding_links(db_session, risk_level=ComplianceLinkRiskLevel.HIGH)
     assert all(lnk.risk_level == ComplianceLinkRiskLevel.HIGH for lnk in result)
@@ -279,9 +285,7 @@ def test_update_link_does_not_change_requirement(db_session: Session) -> None:
 
 def test_update_link_nonexistent_raises_404(db_session: Session) -> None:
     with pytest.raises(HTTPException) as exc_info:
-        service.update_finding_link(
-            db_session, 999_999, RequirementFindingLinkUpdate(notes="x")
-        )
+        service.update_finding_link(db_session, 999_999, RequirementFindingLinkUpdate(notes="x"))
     assert exc_info.value.status_code == 404
 
 
@@ -340,40 +344,52 @@ def test_create_duplicate_link_raises_400(db_session: Session) -> None:
 def test_same_source_ref_different_requirement_allowed_in_service(db_session: Session) -> None:
     _seed_requirement(db_session, "SVC_UQ_A")
     _seed_requirement(db_session, "SVC_UQ_B")
-    service.create_finding_link(db_session, RequirementFindingLinkCreate(
-        requirement_code="SVC_UQ_A",
-        source_module=ComplianceLinkSourceModule.AUDIT,
-        source_type=ComplianceLinkSourceType.FINDING,
-        source_ref="SHARED",
-    ))
-    link_b = service.create_finding_link(db_session, RequirementFindingLinkCreate(
-        requirement_code="SVC_UQ_B",
-        source_module=ComplianceLinkSourceModule.AUDIT,
-        source_type=ComplianceLinkSourceType.FINDING,
-        source_ref="SHARED",
-    ))
+    service.create_finding_link(
+        db_session,
+        RequirementFindingLinkCreate(
+            requirement_code="SVC_UQ_A",
+            source_module=ComplianceLinkSourceModule.AUDIT,
+            source_type=ComplianceLinkSourceType.FINDING,
+            source_ref="SHARED",
+        ),
+    )
+    link_b = service.create_finding_link(
+        db_session,
+        RequirementFindingLinkCreate(
+            requirement_code="SVC_UQ_B",
+            source_module=ComplianceLinkSourceModule.AUDIT,
+            source_type=ComplianceLinkSourceType.FINDING,
+            source_ref="SHARED",
+        ),
+    )
     assert link_b.id is not None
 
 
 def test_same_requirement_different_source_type_allowed_in_service(db_session: Session) -> None:
     _seed_requirement(db_session)
-    service.create_finding_link(db_session, _base_payload(
-        source_type=ComplianceLinkSourceType.FINDING, source_ref="MULTI-TYPE"
-    ))
-    link2 = service.create_finding_link(db_session, _base_payload(
-        source_type=ComplianceLinkSourceType.DIAGNOSIS, source_ref="MULTI-TYPE"
-    ))
+    service.create_finding_link(
+        db_session,
+        _base_payload(source_type=ComplianceLinkSourceType.FINDING, source_ref="MULTI-TYPE"),
+    )
+    link2 = service.create_finding_link(
+        db_session,
+        _base_payload(source_type=ComplianceLinkSourceType.DIAGNOSIS, source_ref="MULTI-TYPE"),
+    )
     assert link2.id is not None
 
 
 def test_same_requirement_different_source_module_allowed_in_service(db_session: Session) -> None:
     _seed_requirement(db_session)
-    service.create_finding_link(db_session, _base_payload(
-        source_module=ComplianceLinkSourceModule.AUDIT, source_ref="MULTI-MOD"
-    ))
-    link2 = service.create_finding_link(db_session, _base_payload(
-        source_module=ComplianceLinkSourceModule.LGPD,
-        source_type=ComplianceLinkSourceType.ACTION,
-        source_ref="MULTI-MOD",
-    ))
+    service.create_finding_link(
+        db_session,
+        _base_payload(source_module=ComplianceLinkSourceModule.AUDIT, source_ref="MULTI-MOD"),
+    )
+    link2 = service.create_finding_link(
+        db_session,
+        _base_payload(
+            source_module=ComplianceLinkSourceModule.LGPD,
+            source_type=ComplianceLinkSourceType.ACTION,
+            source_ref="MULTI-MOD",
+        ),
+    )
     assert link2.id is not None

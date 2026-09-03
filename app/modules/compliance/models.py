@@ -525,21 +525,13 @@ class ComplianceRequirementStatus(Base):
     last_evidence_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
-    last_link_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    human_review_required: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False
-    )
+    last_link_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    human_review_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     status_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    computed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     reviewed_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -607,9 +599,7 @@ class ComplianceRequirementStatusHistory(Base):
     critical_risk_link_count: Mapped[int] = mapped_column(Integer, nullable=False)
     human_review_required: Mapped[bool] = mapped_column(Boolean, nullable=False)
     change_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    computed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

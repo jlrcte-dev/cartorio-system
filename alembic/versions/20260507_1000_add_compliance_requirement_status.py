@@ -99,16 +99,12 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     with op.batch_alter_table("compliance_requirement_statuses", schema=None) as batch_op:
-        batch_op.create_index(
-            "ix_compliance_requirement_status_status", ["status"]
-        )
+        batch_op.create_index("ix_compliance_requirement_status_status", ["status"])
         batch_op.create_index(
             "ix_compliance_requirement_status_human_review_required",
             ["human_review_required"],
         )
-        batch_op.create_index(
-            "ix_compliance_requirement_status_computed_at", ["computed_at"]
-        )
+        batch_op.create_index("ix_compliance_requirement_status_computed_at", ["computed_at"])
 
     op.create_table(
         "compliance_requirement_status_history",
@@ -136,25 +132,19 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id"),
     )
-    with op.batch_alter_table(
-        "compliance_requirement_status_history", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("compliance_requirement_status_history", schema=None) as batch_op:
         batch_op.create_index(
             "ix_compliance_requirement_status_history_requirement_id",
             ["requirement_id"],
         )
-        batch_op.create_index(
-            "ix_compliance_requirement_status_history_new_status", ["new_status"]
-        )
+        batch_op.create_index("ix_compliance_requirement_status_history_new_status", ["new_status"])
         batch_op.create_index(
             "ix_compliance_requirement_status_history_computed_at", ["computed_at"]
         )
 
 
 def downgrade() -> None:
-    with op.batch_alter_table(
-        "compliance_requirement_status_history", schema=None
-    ) as batch_op:
+    with op.batch_alter_table("compliance_requirement_status_history", schema=None) as batch_op:
         batch_op.drop_index("ix_compliance_requirement_status_history_computed_at")
         batch_op.drop_index("ix_compliance_requirement_status_history_new_status")
         batch_op.drop_index("ix_compliance_requirement_status_history_requirement_id")

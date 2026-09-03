@@ -192,9 +192,7 @@ def rule_credential_by_name(files: list[FileDict], scanner_run_id: str) -> list[
             continue
 
         # Check for contextual keywords
-        matched_contextual = next(
-            (kw for kw in _CONTEXTUAL_KEYWORDS if kw in p or kw in n), None
-        )
+        matched_contextual = next((kw for kw in _CONTEXTUAL_KEYWORDS if kw in p or kw in n), None)
         if matched_contextual is not None and not _is_financial_context(p):
             candidates.append(
                 DiagnosisCandidate(
@@ -227,8 +225,7 @@ def rule_credential_by_name(files: list[FileDict], scanner_run_id: str) -> list[
                     rule_id="DIAG-001",
                     rule_name="credential_by_name",
                     confidence=0.40,
-                    notes=f"Termo contextual: '{matched_contextual}'. Baseado em "
-                    f"nome/caminho.",
+                    notes=f"Termo contextual: '{matched_contextual}'. Baseado em nome/caminho.",
                 )
             )
             if len(candidates) >= _MAX_PER_RULE:

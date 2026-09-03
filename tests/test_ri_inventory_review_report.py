@@ -120,13 +120,31 @@ def _insert(
         ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
-            tipo, matricula, nome, municipio,
-            area_txt, area_val, "ha", 1,
-            georref, georref_direto,
-            georref_inferido, "Sim" if georref_direto else None,
-            incra, incra_cod, nirf, nirf_cod,
-            reserva, reserva_val, fonte,
-            pagina, ordem, h, status, obs, "2026-01-01",
+            tipo,
+            matricula,
+            nome,
+            municipio,
+            area_txt,
+            area_val,
+            "ha",
+            1,
+            georref,
+            georref_direto,
+            georref_inferido,
+            "Sim" if georref_direto else None,
+            incra,
+            incra_cod,
+            nirf,
+            nirf_cod,
+            reserva,
+            reserva_val,
+            fonte,
+            pagina,
+            ordem,
+            h,
+            status,
+            obs,
+            "2026-01-01",
         ),
     )
     conn.commit()
@@ -150,6 +168,7 @@ def _insert_dup(
 # ---------------------------------------------------------------------------
 # TestPiiDetection
 # ---------------------------------------------------------------------------
+
 
 class TestPiiDetection:
     def test_clean_text_returns_empty(self) -> None:
@@ -204,6 +223,7 @@ class TestFilePiiScan:
 # TestBuildSelectCols
 # ---------------------------------------------------------------------------
 
+
 class TestBuildSelectCols:
     def test_v3_cols_included_when_present(self) -> None:
         conn = _make_conn()
@@ -233,6 +253,7 @@ class TestBuildSelectCols:
 # ---------------------------------------------------------------------------
 # TestFetch — ordering
 # ---------------------------------------------------------------------------
+
 
 class TestFetchOrdering:
     def test_ordered_by_matricula_asc(self) -> None:
@@ -268,6 +289,7 @@ class TestFetchOrdering:
 # TestProject
 # ---------------------------------------------------------------------------
 
+
 class TestProject:
     def test_project_restricts_cols(self) -> None:
         rows = [{"a": 1, "b": 2, "c": 3}]
@@ -284,6 +306,7 @@ class TestProject:
 # ---------------------------------------------------------------------------
 # TestClassifyDuplicates
 # ---------------------------------------------------------------------------
+
 
 class TestClassifyDuplicates:
     def test_exact_duplicate_same_hash(self) -> None:
@@ -344,6 +367,7 @@ class TestClassifyDuplicates:
 # TestWriteCsv
 # ---------------------------------------------------------------------------
 
+
 class TestWriteCsv:
     def test_creates_file_with_header(self, tmp_path: Path) -> None:
         path = tmp_path / "out.csv"
@@ -365,6 +389,7 @@ class TestWriteCsv:
 # ---------------------------------------------------------------------------
 # TestGeorefDirect
 # ---------------------------------------------------------------------------
+
 
 class TestGeorefDirect:
     def test_only_direct_georref_in_report(self) -> None:
@@ -389,13 +414,20 @@ class TestGeorefDirect:
 # TestIncraWithoutGeoref
 # ---------------------------------------------------------------------------
 
+
 class TestIncraWithoutGeoref:
     def test_incra_no_georref_in_report(self) -> None:
         conn = _make_conn()
-        _insert(conn, 50, incra=1, incra_cod="93018000099888", georref=0,
-                hash_val="H-i00001")
-        _insert(conn, 60, incra=1, incra_cod="93018000099777", georref=1,
-                georref_direto=1, hash_val="H-i00002")
+        _insert(conn, 50, incra=1, incra_cod="93018000099888", georref=0, hash_val="H-i00001")
+        _insert(
+            conn,
+            60,
+            incra=1,
+            incra_cod="93018000099777",
+            georref=1,
+            georref_direto=1,
+            hash_val="H-i00002",
+        )
         _insert(conn, 70, incra=0, georref=0, hash_val="H-i00003")
         cols = _build_select_cols(conn)
         rows = _fetch(conn, cols, "tem_incra = 1 AND tem_georreferenciamento = 0")
@@ -418,13 +450,22 @@ class TestIncraWithoutGeoref:
 # TestDbSummaryStats
 # ---------------------------------------------------------------------------
 
+
 class TestDbSummaryStats:
     def _populated_conn(self) -> sqlite3.Connection:
         conn = _make_conn()
-        _insert(conn, 1, georref=1, georref_direto=1, incra=1, nirf=0,
-                reserva=0, hash_val="H-s00001")
-        _insert(conn, 2, georref=0, incra=1, incra_cod="93018000099", hash_val="H-s00002",
-                obs="incra_sem_georef_explicito")
+        _insert(
+            conn, 1, georref=1, georref_direto=1, incra=1, nirf=0, reserva=0, hash_val="H-s00001"
+        )
+        _insert(
+            conn,
+            2,
+            georref=0,
+            incra=1,
+            incra_cod="93018000099",
+            hash_val="H-s00002",
+            obs="incra_sem_georef_explicito",
+        )
         _insert(conn, 3, georref=0, incra=0, nirf=1, reserva=1, hash_val="H-s00003")
         _insert(conn, 4, status="needs_review", hash_val="H-s00004")
         _insert(conn, 5, status="area_ambigua", hash_val="H-s00005")
@@ -467,6 +508,7 @@ class TestDbSummaryStats:
 # TestRunAntiPiiScan
 # ---------------------------------------------------------------------------
 
+
 class TestRunAntiPiiScan:
     def test_clean_files_all_empty_alerts(self, tmp_path: Path) -> None:
         f1 = tmp_path / "a.csv"
@@ -486,9 +528,7 @@ class TestRunAntiPiiScan:
     def test_incra_codes_not_flagged(self, tmp_path: Path) -> None:
         f = tmp_path / "incra.csv"
         f.write_text(
-            "matricula_numero,incra_codigo\n"
-            "100,93018000305004\n"
-            "200,00010015002\n",
+            "matricula_numero,incra_codigo\n100,93018000305004\n200,00010015002\n",
             encoding="utf-8",
         )
         results = _run_anti_pii_scan([f])
@@ -503,6 +543,7 @@ class TestRunAntiPiiScan:
 # ---------------------------------------------------------------------------
 # TestConstants
 # ---------------------------------------------------------------------------
+
 
 class TestConstants:
     def test_institutional_total(self) -> None:

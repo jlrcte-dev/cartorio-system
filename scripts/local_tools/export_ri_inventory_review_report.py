@@ -27,10 +27,7 @@ _OUTPUT_DIR = Path("_local_data/ri_inventory/reports/manual_review")
 INSTITUTIONAL_TOTAL = 3523
 MISSING_MATRICULAS = [1431, 1490, 2804, 2974]
 
-_ORDER_BY = (
-    "matricula_numero ASC, fonte_relatorio ASC, "
-    "pagina_origem ASC, ordem_no_relatorio ASC"
-)
+_ORDER_BY = "matricula_numero ASC, fonte_relatorio ASC, pagina_origem ASC, ordem_no_relatorio ASC"
 
 # Base columns always present in ri_matriculas_inventory
 _BASE_SELECT_COLS = [
@@ -119,6 +116,7 @@ def _scan_file_for_pii(path: Path) -> list[str]:
 # DB helpers
 # ---------------------------------------------------------------------------
 
+
 def _has_col(conn: sqlite3.Connection, table: str, col: str) -> bool:
     existing = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
     return col in existing
@@ -160,6 +158,7 @@ def _project(rows: list[dict[str, Any]], cols: list[str]) -> list[dict[str, Any]
 # Duplicate classification
 # ---------------------------------------------------------------------------
 
+
 def _classify_duplicates(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     """
     For each matricula in ri_inventory_duplicates, classify by comparing
@@ -173,13 +172,15 @@ def _classify_duplicates(conn: sqlite3.Connection) -> list[dict[str, Any]]:
         mat, occ, fontes, _obs = dup_row
 
         # Fetch all DB rows for this matricula (hash + tech fields + page/fonte)
-        db_rows = list(conn.execute(
-            f"SELECT hash_bloco_origem, {', '.join(_TECH_COMPARE_COLS)}, "
-            f"pagina_origem, fonte_relatorio "
-            f"FROM ri_matriculas_inventory WHERE matricula_numero = ? "
-            f"ORDER BY pagina_origem ASC, fonte_relatorio ASC",
-            (mat,),
-        ))
+        db_rows = list(
+            conn.execute(
+                f"SELECT hash_bloco_origem, {', '.join(_TECH_COMPARE_COLS)}, "
+                f"pagina_origem, fonte_relatorio "
+                f"FROM ri_matriculas_inventory WHERE matricula_numero = ? "
+                f"ORDER BY pagina_origem ASC, fonte_relatorio ASC",
+                (mat,),
+            )
+        )
 
         if not db_rows:
             continue
@@ -210,15 +211,17 @@ def _classify_duplicates(conn: sqlite3.Connection) -> list[dict[str, Any]]:
             tem_diff = True
             diff_fields = ";".join(diff_cols)
 
-        result.append({
-            "matricula_numero": mat,
-            "ocorrencias": occ,
-            "fontes": fontes,
-            "paginas": ";".join(str(p) for p in paginas),
-            "classificacao_duplicidade": cls,
-            "tem_diferenca_tecnica": int(tem_diff),
-            "campos_tecnicos_diferentes": diff_fields,
-        })
+        result.append(
+            {
+                "matricula_numero": mat,
+                "ocorrencias": occ,
+                "fontes": fontes,
+                "paginas": ";".join(str(p) for p in paginas),
+                "classificacao_duplicidade": cls,
+                "tem_diferenca_tecnica": int(tem_diff),
+                "campos_tecnicos_diferentes": diff_fields,
+            }
+        )
 
     return result
 
@@ -226,6 +229,7 @@ def _classify_duplicates(conn: sqlite3.Connection) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # CSV writer
 # ---------------------------------------------------------------------------
+
 
 def _write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> int:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -239,6 +243,7 @@ def _write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) ->
 # ---------------------------------------------------------------------------
 # Report 1 & 2: Full inventory (CSV + Markdown)
 # ---------------------------------------------------------------------------
+
 
 def _report_full(
     conn: sqlite3.Connection,
@@ -272,14 +277,22 @@ def _write_full_md(
 ) -> None:
     # Compact display columns for the MD table (too many cols = unreadable)
     md_cols = [
-        "matricula_numero", "fonte_relatorio", "municipio",
-        "nome_imovel_sanitizado", "area_texto_original",
+        "matricula_numero",
+        "fonte_relatorio",
+        "municipio",
+        "nome_imovel_sanitizado",
+        "area_texto_original",
         "tem_georreferenciamento",
     ]
     if "georreferenciamento_detectado_direto" in select_cols:
         md_cols.append("georreferenciamento_detectado_direto")
-    md_cols += ["tem_incra", "tem_nirf", "tem_reserva", "status_extracao",
-                "classificacao_duplicidade"]
+    md_cols += [
+        "tem_incra",
+        "tem_nirf",
+        "tem_reserva",
+        "status_extracao",
+        "classificacao_duplicidade",
+    ]
 
     sample = rows[:100]
     lines: list[str] = [
@@ -311,13 +324,20 @@ def _write_full_md(
 # ---------------------------------------------------------------------------
 
 _GEOREF_COLS = [
-    "matricula_numero", "municipio", "nome_imovel_sanitizado",
-    "area_texto_original", "area_valor_normalizado",
-    "tem_georreferenciamento", "georreferenciamento_valor",
+    "matricula_numero",
+    "municipio",
+    "nome_imovel_sanitizado",
+    "area_texto_original",
+    "area_valor_normalizado",
+    "tem_georreferenciamento",
+    "georreferenciamento_valor",
     "georreferenciamento_detectado_direto",
     "georreferenciamento_inferido_por_fonte",
-    "tem_incra", "incra_codigo",
-    "pagina_origem", "fonte_relatorio", "status_extracao",
+    "tem_incra",
+    "incra_codigo",
+    "pagina_origem",
+    "fonte_relatorio",
+    "status_extracao",
 ]
 
 
@@ -326,9 +346,11 @@ def _report_georef_direct(
     select_cols: list[str],
     out_dir: Path,
 ) -> tuple[int, Path]:
-    where = "georreferenciamento_detectado_direto = 1" if _has_col(
-        conn, "ri_matriculas_inventory", "georreferenciamento_detectado_direto"
-    ) else "tem_georreferenciamento = 1"
+    where = (
+        "georreferenciamento_detectado_direto = 1"
+        if _has_col(conn, "ri_matriculas_inventory", "georreferenciamento_detectado_direto")
+        else "tem_georreferenciamento = 1"
+    )
     rows = _fetch(conn, select_cols, where)
     export_cols = [c for c in _GEOREF_COLS if c in select_cols]
     projected = _project(rows, export_cols)
@@ -342,11 +364,17 @@ def _report_georef_direct(
 # ---------------------------------------------------------------------------
 
 _INCRA_NO_GEOREF_COLS = [
-    "matricula_numero", "municipio", "nome_imovel_sanitizado",
-    "area_texto_original", "area_valor_normalizado",
-    "tem_incra", "incra_codigo",
-    "tem_georreferenciamento", "georreferenciamento_valor",
-    "pagina_origem", "fonte_relatorio",
+    "matricula_numero",
+    "municipio",
+    "nome_imovel_sanitizado",
+    "area_texto_original",
+    "area_valor_normalizado",
+    "tem_incra",
+    "incra_codigo",
+    "tem_georreferenciamento",
+    "georreferenciamento_valor",
+    "pagina_origem",
+    "fonte_relatorio",
     "observacoes_tecnicas_sem_pii",
 ]
 
@@ -370,19 +398,36 @@ def _report_incra_no_georef(
 # ---------------------------------------------------------------------------
 
 _DUP_COLS = [
-    "matricula_numero", "ocorrencias", "fontes", "paginas",
-    "classificacao_duplicidade", "tem_diferenca_tecnica",
+    "matricula_numero",
+    "ocorrencias",
+    "fontes",
+    "paginas",
+    "classificacao_duplicidade",
+    "tem_diferenca_tecnica",
     "campos_tecnicos_diferentes",
 ]
 
 _DUP_DETAIL_COLS = [
-    "matricula_numero", "tipo_registro", "fonte_relatorio", "municipio",
-    "nome_imovel_sanitizado", "area_texto_original", "area_valor_normalizado",
-    "area_unidade", "tem_georreferenciamento", "georreferenciamento_valor",
-    "tem_incra", "incra_codigo", "tem_nirf", "nirf_codigo",
-    "tem_reserva", "reserva_valor",
-    "pagina_origem", "ordem_no_relatorio",
-    "status_extracao", "observacoes_tecnicas_sem_pii",
+    "matricula_numero",
+    "tipo_registro",
+    "fonte_relatorio",
+    "municipio",
+    "nome_imovel_sanitizado",
+    "area_texto_original",
+    "area_valor_normalizado",
+    "area_unidade",
+    "tem_georreferenciamento",
+    "georreferenciamento_valor",
+    "tem_incra",
+    "incra_codigo",
+    "tem_nirf",
+    "nirf_codigo",
+    "tem_reserva",
+    "reserva_valor",
+    "pagina_origem",
+    "ordem_no_relatorio",
+    "status_extracao",
+    "observacoes_tecnicas_sem_pii",
 ]
 
 
@@ -415,14 +460,23 @@ def _report_duplicates(
 # ---------------------------------------------------------------------------
 
 _NEEDS_REVIEW_COLS = [
-    "matricula_numero", "fonte_relatorio", "pagina_origem",
-    "municipio", "nome_imovel_sanitizado",
-    "area_texto_original", "area_valor_normalizado",
-    "tem_georreferenciamento", "georreferenciamento_valor",
-    "tem_incra", "incra_codigo",
-    "tem_nirf", "nirf_codigo",
-    "tem_reserva", "reserva_valor",
-    "status_extracao", "observacoes_tecnicas_sem_pii",
+    "matricula_numero",
+    "fonte_relatorio",
+    "pagina_origem",
+    "municipio",
+    "nome_imovel_sanitizado",
+    "area_texto_original",
+    "area_valor_normalizado",
+    "tem_georreferenciamento",
+    "georreferenciamento_valor",
+    "tem_incra",
+    "incra_codigo",
+    "tem_nirf",
+    "nirf_codigo",
+    "tem_reserva",
+    "reserva_valor",
+    "status_extracao",
+    "observacoes_tecnicas_sem_pii",
 ]
 
 _NEEDS_REVIEW_WHERE = """
@@ -455,12 +509,14 @@ def _report_needs_review(
             rows.extend(extra)
 
     # Sort by standard ordering
-    rows.sort(key=lambda r: (
-        r.get("matricula_numero") or 0,
-        r.get("fonte_relatorio") or "",
-        r.get("pagina_origem") or 0,
-        r.get("ordem_no_relatorio") or 0,
-    ))
+    rows.sort(
+        key=lambda r: (
+            r.get("matricula_numero") or 0,
+            r.get("fonte_relatorio") or "",
+            r.get("pagina_origem") or 0,
+            r.get("ordem_no_relatorio") or 0,
+        )
+    )
 
     # Annotate duplicate classification
     for r in rows:
@@ -478,6 +534,7 @@ def _report_needs_review(
 # Report 7: Executive summary markdown
 # ---------------------------------------------------------------------------
 
+
 def _db_summary_stats(conn: sqlite3.Connection) -> dict[str, Any]:
     s: dict[str, Any] = {}
 
@@ -493,14 +550,24 @@ def _db_summary_stats(conn: sqlite3.Connection) -> dict[str, Any]:
 
     # Georref
     has_direto = _has_col(conn, "ri_matriculas_inventory", "georreferenciamento_detectado_direto")
-    has_inferido = _has_col(conn, "ri_matriculas_inventory", "georreferenciamento_inferido_por_fonte")
+    has_inferido = _has_col(
+        conn, "ri_matriculas_inventory", "georreferenciamento_inferido_por_fonte"
+    )
 
-    s["georref_direto"] = q(
-        "SELECT COUNT(*) FROM ri_matriculas_inventory WHERE georreferenciamento_detectado_direto = 1"
-    ) if has_direto else 0
-    s["georref_inferido"] = q(
-        "SELECT COUNT(*) FROM ri_matriculas_inventory WHERE georreferenciamento_inferido_por_fonte = 1"
-    ) if has_inferido else 0
+    s["georref_direto"] = (
+        q(
+            "SELECT COUNT(*) FROM ri_matriculas_inventory WHERE georreferenciamento_detectado_direto = 1"
+        )
+        if has_direto
+        else 0
+    )
+    s["georref_inferido"] = (
+        q(
+            "SELECT COUNT(*) FROM ri_matriculas_inventory WHERE georreferenciamento_inferido_por_fonte = 1"
+        )
+        if has_inferido
+        else 0
+    )
     s["georref_total"] = q(
         "SELECT COUNT(*) FROM ri_matriculas_inventory WHERE tem_georreferenciamento = 1"
     )
@@ -565,23 +632,19 @@ def _report_summary(
     def _sample_rows(where: str, limit: int = 30) -> list[str]:
         rows = _fetch(conn, select_cols, where)[:limit]
         return [
-            f"{r['matricula_numero']:>5} | {r.get('fonte_relatorio','')[:8]:8} | "
-            f"pg {r.get('pagina_origem','?'):>4} | "
-            f"georref={r.get('tem_georreferenciamento',0)} "
-            f"incra={r.get('tem_incra',0)} "
-            f"nirf={r.get('tem_nirf',0)} "
-            f"reserva={r.get('tem_reserva','?')} | "
-            f"{r.get('status_extracao','')}"
+            f"{r['matricula_numero']:>5} | {r.get('fonte_relatorio', '')[:8]:8} | "
+            f"pg {r.get('pagina_origem', '?'):>4} | "
+            f"georref={r.get('tem_georreferenciamento', 0)} "
+            f"incra={r.get('tem_incra', 0)} "
+            f"nirf={r.get('tem_nirf', 0)} "
+            f"reserva={r.get('tem_reserva', '?')} | "
+            f"{r.get('status_extracao', '')}"
             for r in rows
         ]
 
     sample_all = _sample_rows("1=1")
-    sample_incra_no_georef = _sample_rows(
-        "tem_incra = 1 AND tem_georreferenciamento = 0"
-    )
-    sample_needs_review = _sample_rows(
-        "status_extracao IN ('needs_review', 'area_ambigua')"
-    )
+    sample_incra_no_georef = _sample_rows("tem_incra = 1 AND tem_georreferenciamento = 0")
+    sample_needs_review = _sample_rows("status_extracao IN ('needs_review', 'area_ambigua')")
     sample_dup = [
         f"{d['matricula_numero']:>5} | occ={d['ocorrencias']} | "
         f"{d['classificacao_duplicidade']} | diff={d['campos_tecnicos_diferentes']}"
@@ -590,139 +653,149 @@ def _report_summary(
 
     missing_str = ", ".join(str(m) for m in MISSING_MATRICULAS)
 
-    lines = [
-        "# RI Inventory — Resumo Executivo de Conferência Manual",
-        "",
-        "Gerado em sprint **RI-RECON-1** — extração v3 sanitizada.",
-        "Banco: `_local_data/ri_inventory/db/ri_inventory.sqlite`",
-        "",
-        "---",
-        "",
-        "## 1. Totais Gerais",
-        "",
-        "| Indicador | Valor |",
-        "|---|---|",
-        f"| Matrículas únicas no SQLite | **{s['unique_matriculas']}** |",
-        f"| Total institucional (referência) | {INSTITUTIONAL_TOTAL} |",
-        f"| Diferença vs institucional | {s['unique_matriculas'] - INSTITUTIONAL_TOTAL:+d} |",
-        f"| Registros totais (com duplicatas) | {s['total_rows']} |",
-        f"| Menor matrícula | {s['min_matricula']} |",
-        f"| Maior matrícula | {s['max_matricula']} |",
-        f"| Matrículas faltantes no sequencial | `{missing_str}` |",
-        "",
-        "---",
-        "",
-        "## 2. Georreferenciamento",
-        "",
-        "| Indicador | Valor |",
-        "|---|---|",
-        f"| Georref direto confirmado (Sim explícito) | **{s['georref_direto']}** |",
-        f"| Georref inferido por fonte | {s['georref_inferido']} |",
-        f"| Georref total (tem_georreferenciamento=1) | {s['georref_total']} |",
-        f"| INCRA sem georref explícito | **{s['incra_sem_georef']}** |",
-        f"| Georreferenciamento ambíguo | {s['georref_ambiguo']} |",
-        "",
-        "---",
-        "",
-        "## 3. INCRA",
-        "",
-        "| Indicador | Valor |",
-        "|---|---|",
-        f"| Com INCRA | {s['com_incra']} |",
-        f"| Sem INCRA | {s['sem_incra']} |",
-        f"| INCRA sem georref explícito | {s['incra_sem_georef']} |",
-        "",
-        "---",
-        "",
-        "## 4. NIRF",
-        "",
-        "| Indicador | Valor |",
-        "|---|---|",
-        f"| NIRF válido | {s['nirf_valido']} |",
-        f"| NIRF zerado ignorado | {s['nirf_zerado']} |",
-        f"| NIRF ambíguo | {s['nirf_ambiguo']} |",
-        f"| NIRF ausente | {s['nirf_ausente']} |",
-        "",
-        "---",
-        "",
-        "## 5. Reserva Legal",
-        "",
-        "| Indicador | Valor |",
-        "|---|---|",
-        f"| Reserva Sim | {s['reserva_sim']} |",
-        f"| Reserva Não | {s['reserva_nao']} |",
-        f"| Reserva ausente/nula | {s['reserva_nula']} |",
-        f"| Reserva ambígua | {s['reserva_ambigua']} |",
-        "",
-        "---",
-        "",
-        "## 6. Duplicidades",
-        "",
-        "| Indicador | Valor |",
-        "|---|---|",
-        f"| Matrículas duplicadas (total) | **{total_dup}** |",
-        f"| EXACT_DUPLICATE | {dup_counts.get('EXACT_DUPLICATE', 0)} |",
-        f"| TECHNICAL_DUPLICATE | {dup_counts.get('TECHNICAL_DUPLICATE', 0)} |",
-        f"| CONFLICT_DUPLICATE | {dup_counts.get('CONFLICT_DUPLICATE', 0)} |",
-        f"| NEEDS_MANUAL_REVIEW | {dup_counts.get('NEEDS_MANUAL_REVIEW', 0)} |",
-        "",
-        "---",
-        "",
-        "## 7. Status de Extração",
-        "",
-        "| Status | Count |",
-        "|---|---|",
-        f"| ok | {s['status_ok']} |",
-        f"| needs_review | {s['status_needs_review']} |",
-        f"| area_ambigua | {s['status_area_ambigua']} |",
-        "",
-        "---",
-        "",
-        "## 8. Amostras — primeiras 30 matrículas (números e flags técnicas apenas)",
-        "",
-        "### 8.1 Relatório Geral",
-        "```",
-        "mat   | fonte    | pág  | georref incra nirf reserva | status",
-    ] + sample_all + [
-        "```",
-        "",
-        "### 8.2 INCRA sem Georref Explícito",
-        "```",
-        "mat   | fonte    | pág  | georref incra nirf reserva | status",
-    ] + sample_incra_no_georef + [
-        "```",
-        "",
-        "### 8.3 Duplicidades",
-        "```",
-        "mat   | occ | classificação                | campos divergentes",
-    ] + sample_dup + [
-        "```",
-        "",
-        "### 8.4 Needs Review",
-        "```",
-        "mat   | fonte    | pág  | georref incra nirf reserva | status",
-    ] + sample_needs_review + [
-        "```",
-        "",
-        "---",
-        "",
-        "## 9. Arquivos gerados",
-        "",
-        "| Arquivo | Conteúdo |",
-        "|---|---|",
-        "| `ri_inventory_manual_review_full.csv` | Todos os registros com flag de duplicidade |",
-        "| `ri_inventory_manual_review_full.md` | Primeiros 100 registros em tabela Markdown |",
-        "| `ri_inventory_georef_direct_review.csv` | Georref direto confirmado (Sim explícito) |",
-        "| `ri_inventory_incra_without_georef_review.csv` | INCRA sem georref explícito |",
-        "| `ri_inventory_duplicates_review.csv` | Resumo de duplicidades com classificação |",
-        "| `ri_inventory_duplicates_detail_review.csv` | Detalhe linha-a-linha das duplicidades |",
-        "| `ri_inventory_needs_review.csv` | Todos os registros que requerem atenção manual |",
-        "| `ri_inventory_manual_review_summary.md` | Este resumo |",
-        "",
-        "---",
-        "",
-        "*Anti-PII: varredura executada — nenhum dado pessoal nos arquivos gerados.*",
-    ]
+    lines = (
+        [
+            "# RI Inventory — Resumo Executivo de Conferência Manual",
+            "",
+            "Gerado em sprint **RI-RECON-1** — extração v3 sanitizada.",
+            "Banco: `_local_data/ri_inventory/db/ri_inventory.sqlite`",
+            "",
+            "---",
+            "",
+            "## 1. Totais Gerais",
+            "",
+            "| Indicador | Valor |",
+            "|---|---|",
+            f"| Matrículas únicas no SQLite | **{s['unique_matriculas']}** |",
+            f"| Total institucional (referência) | {INSTITUTIONAL_TOTAL} |",
+            f"| Diferença vs institucional | {s['unique_matriculas'] - INSTITUTIONAL_TOTAL:+d} |",
+            f"| Registros totais (com duplicatas) | {s['total_rows']} |",
+            f"| Menor matrícula | {s['min_matricula']} |",
+            f"| Maior matrícula | {s['max_matricula']} |",
+            f"| Matrículas faltantes no sequencial | `{missing_str}` |",
+            "",
+            "---",
+            "",
+            "## 2. Georreferenciamento",
+            "",
+            "| Indicador | Valor |",
+            "|---|---|",
+            f"| Georref direto confirmado (Sim explícito) | **{s['georref_direto']}** |",
+            f"| Georref inferido por fonte | {s['georref_inferido']} |",
+            f"| Georref total (tem_georreferenciamento=1) | {s['georref_total']} |",
+            f"| INCRA sem georref explícito | **{s['incra_sem_georef']}** |",
+            f"| Georreferenciamento ambíguo | {s['georref_ambiguo']} |",
+            "",
+            "---",
+            "",
+            "## 3. INCRA",
+            "",
+            "| Indicador | Valor |",
+            "|---|---|",
+            f"| Com INCRA | {s['com_incra']} |",
+            f"| Sem INCRA | {s['sem_incra']} |",
+            f"| INCRA sem georref explícito | {s['incra_sem_georef']} |",
+            "",
+            "---",
+            "",
+            "## 4. NIRF",
+            "",
+            "| Indicador | Valor |",
+            "|---|---|",
+            f"| NIRF válido | {s['nirf_valido']} |",
+            f"| NIRF zerado ignorado | {s['nirf_zerado']} |",
+            f"| NIRF ambíguo | {s['nirf_ambiguo']} |",
+            f"| NIRF ausente | {s['nirf_ausente']} |",
+            "",
+            "---",
+            "",
+            "## 5. Reserva Legal",
+            "",
+            "| Indicador | Valor |",
+            "|---|---|",
+            f"| Reserva Sim | {s['reserva_sim']} |",
+            f"| Reserva Não | {s['reserva_nao']} |",
+            f"| Reserva ausente/nula | {s['reserva_nula']} |",
+            f"| Reserva ambígua | {s['reserva_ambigua']} |",
+            "",
+            "---",
+            "",
+            "## 6. Duplicidades",
+            "",
+            "| Indicador | Valor |",
+            "|---|---|",
+            f"| Matrículas duplicadas (total) | **{total_dup}** |",
+            f"| EXACT_DUPLICATE | {dup_counts.get('EXACT_DUPLICATE', 0)} |",
+            f"| TECHNICAL_DUPLICATE | {dup_counts.get('TECHNICAL_DUPLICATE', 0)} |",
+            f"| CONFLICT_DUPLICATE | {dup_counts.get('CONFLICT_DUPLICATE', 0)} |",
+            f"| NEEDS_MANUAL_REVIEW | {dup_counts.get('NEEDS_MANUAL_REVIEW', 0)} |",
+            "",
+            "---",
+            "",
+            "## 7. Status de Extração",
+            "",
+            "| Status | Count |",
+            "|---|---|",
+            f"| ok | {s['status_ok']} |",
+            f"| needs_review | {s['status_needs_review']} |",
+            f"| area_ambigua | {s['status_area_ambigua']} |",
+            "",
+            "---",
+            "",
+            "## 8. Amostras — primeiras 30 matrículas (números e flags técnicas apenas)",
+            "",
+            "### 8.1 Relatório Geral",
+            "```",
+            "mat   | fonte    | pág  | georref incra nirf reserva | status",
+        ]
+        + sample_all
+        + [
+            "```",
+            "",
+            "### 8.2 INCRA sem Georref Explícito",
+            "```",
+            "mat   | fonte    | pág  | georref incra nirf reserva | status",
+        ]
+        + sample_incra_no_georef
+        + [
+            "```",
+            "",
+            "### 8.3 Duplicidades",
+            "```",
+            "mat   | occ | classificação                | campos divergentes",
+        ]
+        + sample_dup
+        + [
+            "```",
+            "",
+            "### 8.4 Needs Review",
+            "```",
+            "mat   | fonte    | pág  | georref incra nirf reserva | status",
+        ]
+        + sample_needs_review
+        + [
+            "```",
+            "",
+            "---",
+            "",
+            "## 9. Arquivos gerados",
+            "",
+            "| Arquivo | Conteúdo |",
+            "|---|---|",
+            "| `ri_inventory_manual_review_full.csv` | Todos os registros com flag de duplicidade |",
+            "| `ri_inventory_manual_review_full.md` | Primeiros 100 registros em tabela Markdown |",
+            "| `ri_inventory_georef_direct_review.csv` | Georref direto confirmado (Sim explícito) |",
+            "| `ri_inventory_incra_without_georef_review.csv` | INCRA sem georref explícito |",
+            "| `ri_inventory_duplicates_review.csv` | Resumo de duplicidades com classificação |",
+            "| `ri_inventory_duplicates_detail_review.csv` | Detalhe linha-a-linha das duplicidades |",
+            "| `ri_inventory_needs_review.csv` | Todos os registros que requerem atenção manual |",
+            "| `ri_inventory_manual_review_summary.md` | Este resumo |",
+            "",
+            "---",
+            "",
+            "*Anti-PII: varredura executada — nenhum dado pessoal nos arquivos gerados.*",
+        ]
+    )
 
     path = out_dir / "ri_inventory_manual_review_summary.md"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -733,6 +806,7 @@ def _report_summary(
 # ---------------------------------------------------------------------------
 # Anti-PII validation
 # ---------------------------------------------------------------------------
+
 
 def _run_anti_pii_scan(files: list[Path]) -> dict[str, list[str]]:
     """Scan all generated files. Returns {filename: [alerts]} (empty = clean)."""
@@ -747,6 +821,7 @@ def _run_anti_pii_scan(files: list[Path]) -> dict[str, list[str]]:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main(db_path: Path = _DEFAULT_DB) -> None:
     if not db_path.exists():
@@ -770,8 +845,7 @@ def main(db_path: Path = _DEFAULT_DB) -> None:
         print("  Classificando duplicidades...")
         dup_classified = _classify_duplicates(conn)
         dup_map: dict[int, str] = {
-            d["matricula_numero"]: d["classificacao_duplicidade"]
-            for d in dup_classified
+            d["matricula_numero"]: d["classificacao_duplicidade"] for d in dup_classified
         }
         conflict_set = {
             d["matricula_numero"]
@@ -809,9 +883,7 @@ def main(db_path: Path = _DEFAULT_DB) -> None:
 
         # Report 6: Needs review
         print("  Gerando relatório needs_review...")
-        n_rev, p_rev = _report_needs_review(
-            conn, select_cols, dup_map, conflict_set, out_dir
-        )
+        n_rev, p_rev = _report_needs_review(conn, select_cols, dup_map, conflict_set, out_dir)
         generated.append(p_rev)
         print(f"    {n_rev} registros: {p_rev.name}")
 
@@ -847,9 +919,7 @@ def main(db_path: Path = _DEFAULT_DB) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Export sanitized RI inventory review reports."
-    )
+    parser = argparse.ArgumentParser(description="Export sanitized RI inventory review reports.")
     parser.add_argument(
         "--db",
         type=Path,
