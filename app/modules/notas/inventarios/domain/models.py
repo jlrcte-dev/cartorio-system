@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import StrEnum
+from fractions import Fraction
 
 BENEFICIARIO_MEEIRO = "MEEIRO"
 
@@ -29,8 +30,18 @@ class Herdeiro:
 
 @dataclass(frozen=True)
 class Distribuicao:
+    """Participação de um beneficiário em um bem.
+
+    ``fracao_ideal`` é **opcional e sempre explícita**: o sistema não infere
+    fração a partir do percentual nem de relação sucessória (ADR-010). Quando
+    presente, é apenas uma segunda representação da mesma participação já
+    descrita por ``percentual`` — nunca uma informação nova, e nunca insumo de
+    cálculo.
+    """
+
     beneficiario: str
     percentual: Decimal
+    fracao_ideal: Fraction | None = None
 
 
 @dataclass(frozen=True)
@@ -54,11 +65,16 @@ class Inventario:
 
 @dataclass(frozen=True)
 class QuinhaoBem:
-    """Quanto cada beneficiário recebe de um bem específico."""
+    """Quanto cada beneficiário recebe de um bem específico.
+
+    ``fracao_ideal`` é transportada da ``Distribuicao`` correspondente sem
+    qualquer transformação — o calculador apenas a repassa.
+    """
 
     beneficiario: str
     percentual: Decimal
     valor: Decimal
+    fracao_ideal: Fraction | None = None
 
 
 @dataclass(frozen=True)

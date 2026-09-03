@@ -23,6 +23,11 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from app.modules.notas.inventarios.application.formatting import (
+    formatar_fracao,
+    formatar_monetario,
+    formatar_percentual,
+)
 from app.modules.notas.inventarios.domain.models import (
     BENEFICIARIO_MEEIRO,
     Inventario,
@@ -44,12 +49,14 @@ _AVISO_MINUTA = (
 )
 
 
-def _fmt_money(value: Decimal) -> str:
-    return f"R$ {value:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-
-def _fmt_pct(value: Decimal) -> str:
-    return f"{value:.2f}%".replace(".", ",")
+# Formatação delegada à camada autoritativa (ADR-010). Os aliases locais
+# preservam a legibilidade das f-strings deste módulo, que são muitas.
+#
+# Antes da ADR-010, `_fmt_pct` forçava 2 casas com o mesmo `.2f` do dinheiro,
+# e por isso apresentava 3,125% como "3,12%". Percentual e dinheiro passaram a
+# ter contratos de precisão distintos.
+_fmt_money = formatar_monetario
+_fmt_pct = formatar_percentual
 
 
 def render_resumo_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
@@ -96,19 +103,36 @@ def render_resumo_markdown(inv: Inventario, resumo: ResumoInventario) -> str:
 
     lines.append("## 4. Bens, direitos e valores")
     lines.append("")
+    # A coluna de fração ideal só aparece quando ao menos uma distribuição do
+    # inventário a declara. Documentos sem fração permanecem byte a byte
+    # idênticos ao formato anterior à ADR-010 — nenhum caso comum é afetado.
+    # A decisão é por documento, e não por bem, para que todas as tabelas do
+    # mesmo resumo tenham a mesma forma.
+    exibir_fracao = any(q.fracao_ideal is not None for r in resumo.bens for q in r.quinhoes)
     for bem in inv.bens:
         lines.append(f"### {bem.id} — {bem.tipo.value} — {_fmt_money(bem.valor)}")
         lines.append("")
         lines.append(f"> {bem.descricao_generica}")
         lines.append("")
-        lines.append("| Beneficiário | % | Valor |")
-        lines.append("|--------------|---|-------|")
+        if exibir_fracao:
+            lines.append("| Beneficiário | Fração ideal | % | Valor |")
+            lines.append("|--------------|--------------|---|-------|")
+        else:
+            lines.append("| Beneficiário | % | Valor |")
+            lines.append("|--------------|---|-------|")
         resumo_bem = next((r for r in resumo.bens if r.bem_id == bem.id), None)
         if resumo_bem:
             for q in resumo_bem.quinhoes:
-                lines.append(
-                    f"| `{q.beneficiario}` | {_fmt_pct(q.percentual)} | {_fmt_money(q.valor)} |"
-                )
+                if exibir_fracao:
+                    fracao = formatar_fracao(q.fracao_ideal) if q.fracao_ideal else "—"
+                    lines.append(
+                        f"| `{q.beneficiario}` | {fracao} | {_fmt_pct(q.percentual)} "
+                        f"| {_fmt_money(q.valor)} |"
+                    )
+                else:
+                    lines.append(
+                        f"| `{q.beneficiario}` | {_fmt_pct(q.percentual)} | {_fmt_money(q.valor)} |"
+                    )
         lines.append("")
 
     if resumo.divergencia_centavos > Decimal("0"):

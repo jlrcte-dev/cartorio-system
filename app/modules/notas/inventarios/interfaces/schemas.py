@@ -29,7 +29,9 @@ Pipeline atual:
 
 from __future__ import annotations
 
+import re
 from decimal import Decimal
+from fractions import Fraction
 from typing import Annotated, Literal
 
 from pydantic import (
@@ -51,6 +53,43 @@ from app.modules.notas.inventarios.domain.models import (
 )
 
 TIPO_ATO_SUPORTADO = "inventario_extrajudicial"
+
+# Fração ideal: apenas `inteiro/inteiro`, sem sinal, sem espaço, sem decimal.
+# Deliberadamente mais estrito que `Fraction(...)`, que também aceitaria
+# "0.5", "1e-2" e "-1/2" — formas que não são grafia de fração ideal em
+# escritura e cuja aceitação silenciosa seria uma armadilha.
+_PADRAO_FRACAO = re.compile(r"^(\d+)/(\d+)$")
+
+
+def _parse_fracao_ideal(value: object) -> Fraction:
+    """Converte ``"1/32"`` em :class:`~fractions.Fraction`, recusando o resto.
+
+    ``Fraction`` normaliza na construção, então ``"2/64"`` chega ao domínio já
+    como ``1/32`` — a forma canônica é consequência do tipo (ADR-010).
+    """
+
+    if isinstance(value, Fraction):
+        fracao = value
+    else:
+        if not isinstance(value, str):
+            raise ValueError(
+                "fracao_ideal deve ser texto no formato 'numerador/denominador' "
+                f"(recebido: {type(value).__name__})"
+            )
+        casado = _PADRAO_FRACAO.match(value.strip())
+        if casado is None:
+            raise ValueError(
+                f"fracao_ideal inválida: '{value}'. Formato esperado "
+                "'numerador/denominador' com inteiros positivos (ex.: '1/32')."
+            )
+        numerador, denominador = int(casado.group(1)), int(casado.group(2))
+        if denominador == 0:
+            raise ValueError("fracao_ideal inválida: denominador não pode ser zero.")
+        fracao = Fraction(numerador, denominador)
+
+    if fracao <= 0:
+        raise ValueError(f"fracao_ideal deve ser maior que zero (recebido: {fracao}).")
+    return fracao
 
 
 def _coerce_decimal_input(value: object) -> object:
@@ -77,6 +116,17 @@ class DistribuicaoSchema(BaseModel):
 
     beneficiario: str = Field(..., min_length=1)
     percentual: SafeDecimal
+    # Opcional por definição: a ausência é o caso comum e não gera fração
+    # inferida. A coerência entre fração e percentual é regra de negócio e fica
+    # no validador, não aqui.
+    fracao_ideal: str | None = None
+
+    @field_validator("fracao_ideal", mode="before")
+    @classmethod
+    def _validar_fracao(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        return str(_parse_fracao_ideal(value))
 
 
 class BemSchema(BaseModel):
@@ -133,7 +183,13 @@ class InventarioInputSchema(BaseModel):
                 descricao_generica=b.descricao_generica,
                 valor=b.valor,
                 distribuicao=tuple(
-                    Distribuicao(beneficiario=d.beneficiario, percentual=d.percentual)
+                    Distribuicao(
+                        beneficiario=d.beneficiario,
+                        percentual=d.percentual,
+                        fracao_ideal=(
+                            Fraction(d.fracao_ideal) if d.fracao_ideal is not None else None
+                        ),
+                    )
                     for d in b.distribuicao
                 ),
             )

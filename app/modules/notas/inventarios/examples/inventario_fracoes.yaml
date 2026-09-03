@@ -1,0 +1,84 @@
+# Exemplo fictício — sem dados pessoais reais.
+#
+# Caso de teste da Sprint NOTAS-INVENTARIO-FRACOES-1: reproduz a CLASSE do
+# problema que motivou a ADR-010 — quinhões cujo percentual exige mais de duas
+# casas decimais (3,125%) e cuja fração ideal (1/32) precisa ser preservada.
+#
+# Os valores são inteiramente sintéticos e NÃO reproduzem nenhum caso real:
+# escolheu-se um patrimônio divisível por 32 justamente para que o cenário
+# feche em centavos exatos e isole a questão de representação da política de
+# resíduo da ADR-009, que permanece intacta.
+#
+# Estrutura: 1 bem (veículo genérico), meeira com 1/2, nove herdeiros —
+# sete com 1/16 do bem e dois com 1/32 do bem.
+#
+#   frações do bem: 1/2 + 7 x 1/16 + 2 x 1/32 = 16/32 + 14/32 + 2/32 = 1
+#   percentuais:    50 + 7 x 6,25 + 2 x 3,125 = 50 + 43,75 + 6,25   = 100
+#   monte:          7 x 12,5 + 2 x 6,25       = 87,5 + 12,5         = 100
+
+tipo_ato: inventario_extrajudicial
+possui_meeiro: true
+percentual_meacao: "50"
+patrimonio_total: "32000.00"
+
+herdeiros:
+  # Quinhão integral: 1/16 do bem equivale a 12,5% do monte partilhável.
+  - id: HERDEIRO_1
+    percentual_heranca: "12.5"
+  - id: HERDEIRO_2
+    percentual_heranca: "12.5"
+  - id: HERDEIRO_3
+    percentual_heranca: "12.5"
+  - id: HERDEIRO_4
+    percentual_heranca: "12.5"
+  - id: HERDEIRO_5
+    percentual_heranca: "12.5"
+  - id: HERDEIRO_6
+    percentual_heranca: "12.5"
+  - id: HERDEIRO_7
+    percentual_heranca: "12.5"
+  # Meio quinhão: 1/32 do bem equivale a 6,25% do monte partilhável.
+  # A entrada apenas registra o percentual; o sistema NÃO conclui daí qualquer
+  # hipótese sucessória (representação, estirpe, pré-morte) — ver ADR-010.
+  - id: HERDEIRO_8
+    percentual_heranca: "6.25"
+  - id: HERDEIRO_9
+    percentual_heranca: "6.25"
+
+bens:
+  - id: VEICULO_1
+    tipo: veiculo
+    descricao_generica: "Veículo automotor placa [PLACA], chassi [CHASSI]"
+    valor: "32000.00"
+    distribuicao:
+      - beneficiario: MEEIRO
+        percentual: "50"
+        fracao_ideal: "1/2"
+      - beneficiario: HERDEIRO_1
+        percentual: "6.25"
+        fracao_ideal: "1/16"
+      - beneficiario: HERDEIRO_2
+        percentual: "6.25"
+        fracao_ideal: "1/16"
+      - beneficiario: HERDEIRO_3
+        percentual: "6.25"
+        fracao_ideal: "1/16"
+      - beneficiario: HERDEIRO_4
+        percentual: "6.25"
+        fracao_ideal: "1/16"
+      - beneficiario: HERDEIRO_5
+        percentual: "6.25"
+        fracao_ideal: "1/16"
+      - beneficiario: HERDEIRO_6
+        percentual: "6.25"
+        fracao_ideal: "1/16"
+      - beneficiario: HERDEIRO_7
+        percentual: "6.25"
+        fracao_ideal: "1/16"
+      # O caso crítico: 3,125% seria apresentado como "3,12%" antes da ADR-010.
+      - beneficiario: HERDEIRO_8
+        percentual: "3.125"
+        fracao_ideal: "1/32"
+      - beneficiario: HERDEIRO_9
+        percentual: "3.125"
+        fracao_ideal: "1/32"

@@ -9,8 +9,14 @@ from app.modules.notas.inventarios.application.calculator import (
     DECIMAL_TOLERANCIA,
     quantize_money,
 )
+from app.modules.notas.inventarios.application.formatting import (
+    formatar_fracao,
+    percentual_da_fracao,
+    tolerancia_percentual,
+)
 from app.modules.notas.inventarios.domain.models import (
     BENEFICIARIO_MEEIRO,
+    Distribuicao,
     Inventario,
 )
 
@@ -138,6 +144,7 @@ class InventarioValidator:
                         f"bem '{bem.id}': beneficiário '{d.beneficiario}' tem "
                         f"percentual negativo: {d.percentual}."
                     )
+                cls._validate_fracao_ideal(bem.id, d, result)
                 if d.beneficiario not in beneficiarios_permitidos:
                     if d.beneficiario == BENEFICIARIO_MEEIRO and not inv.possui_meeiro:
                         result.add(
@@ -149,6 +156,30 @@ class InventarioValidator:
                             f"bem '{bem.id}': beneficiário '{d.beneficiario}' não "
                             "consta na lista de herdeiros."
                         )
+
+    @staticmethod
+    def _validate_fracao_ideal(bem_id: str, d: Distribuicao, result: ValidationResult) -> None:
+        """Recusa fração ideal incoerente com o percentual declarado (ADR-010).
+
+        A comparação é feita com tolerância derivada da precisão do próprio
+        percentual — ver :func:`tolerancia_percentual`. Igualdade textual de
+        ``Decimal`` seria impossível de exigir: frações como ``1/3`` têm
+        expansão decimal infinita, e o percentual escrito na entrada é
+        necessariamente arredondado.
+        """
+
+        if d.fracao_ideal is None:
+            return
+
+        esperado = percentual_da_fracao(d.fracao_ideal)
+        tolerancia = tolerancia_percentual(d.percentual)
+        if abs(esperado - d.percentual) > tolerancia:
+            result.add(
+                f"bem '{bem_id}': beneficiário '{d.beneficiario}' declara fração "
+                f"{formatar_fracao(d.fracao_ideal)}, equivalente a "
+                f"{esperado.normalize():f}%, incompatível com o percentual "
+                f"informado {d.percentual}% (tolerância {tolerancia:f})."
+            )
 
     @staticmethod
     def _check_unique_non_empty(ids: list[str], rotulo: str, result: ValidationResult) -> None:

@@ -41,6 +41,11 @@ from app.modules.notas.inventarios.application.calculator import (
     DECIMAL_TOLERANCIA,
     InventarioCalculator,
 )
+from app.modules.notas.inventarios.application.formatting import (
+    formatar_fracao,
+    serializar_monetario,
+    serializar_percentual,
+)
 from app.modules.notas.inventarios.application.renderer import (
     render_minuta_markdown,
     render_resumo_markdown,
@@ -50,7 +55,11 @@ from app.modules.notas.inventarios.application.validator import (
     ValidationResult,
 )
 from app.modules.notas.inventarios.domain.errors import InventarioInputError
-from app.modules.notas.inventarios.domain.models import Inventario, ResumoInventario
+from app.modules.notas.inventarios.domain.models import (
+    Inventario,
+    QuinhaoBem,
+    ResumoInventario,
+)
 from app.modules.notas.inventarios.infrastructure.exporters import export_inventario_odt
 from app.modules.notas.inventarios.infrastructure.loaders import load_inventario
 from app.modules.notas.inventarios.infrastructure.output_dir import validate_output_dir
@@ -217,14 +226,7 @@ def _build_validacao_payload(
                     "id": r.bem_id,
                     "tipo": r.tipo.value,
                     "valor": _decimal_str(r.valor),
-                    "quinhoes": [
-                        {
-                            "beneficiario": q.beneficiario,
-                            "percentual": _decimal_str(q.percentual),
-                            "valor": _decimal_str(q.valor),
-                        }
-                        for q in r.quinhoes
-                    ],
+                    "quinhoes": [_quinhao_payload(q) for q in r.quinhoes],
                 }
                 for r in resumo.bens
             ],
@@ -232,8 +234,27 @@ def _build_validacao_payload(
     }
 
 
-def _decimal_str(value: Decimal) -> str:
-    return f"{value:.2f}"
+def _quinhao_payload(q: QuinhaoBem) -> dict[str, Any]:
+    """Serializa um quinhão preservando a precisão do percentual (ADR-010).
+
+    ``fracao_ideal`` é omitida quando ausente — que é o caso comum — para que o
+    artefato de casos sem fração permaneça idêntico ao formato anterior.
+    """
+
+    payload: dict[str, Any] = {
+        "beneficiario": q.beneficiario,
+        "percentual": serializar_percentual(q.percentual),
+        "valor": serializar_monetario(q.valor),
+    }
+    if q.fracao_ideal is not None:
+        payload["fracao_ideal"] = formatar_fracao(q.fracao_ideal)
+    return payload
+
+
+# Alias mantido para os valores monetários do payload: patrimônio, meação,
+# monte, quinhões por beneficiário e divergência de centavos seguem com
+# contrato fixo de 2 casas. Percentual tem contrato próprio (ADR-010).
+_decimal_str = serializar_monetario
 
 
 if __name__ == "__main__":

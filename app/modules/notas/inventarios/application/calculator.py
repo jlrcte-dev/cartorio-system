@@ -90,6 +90,10 @@ class InventarioCalculator:
                     beneficiario=d.beneficiario,
                     percentual=d.percentual,
                     valor=valor,
+                    # Repasse puro do metadado de representação (ADR-010).
+                    # Não entra em nenhuma conta: `valor` acima continua sendo
+                    # derivado exclusivamente de `bem.valor` e `d.percentual`.
+                    fracao_ideal=d.fracao_ideal,
                 )
             )
         return quinhoes
