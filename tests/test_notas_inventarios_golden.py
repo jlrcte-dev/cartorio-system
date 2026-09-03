@@ -84,6 +84,10 @@ def _assert_iguais(gerado: Path, golden: Path) -> None:
     [
         ("inventario_simples.yaml", "inventario_simples"),
         ("inventario_sem_meeiro.yaml", "inventario_sem_meeiro"),
+        # Caso da ADR-010: percentual de 3 casas (3,125%) e fração ideal
+        # explícita (1/32). Adicionado como caso NOVO — os dois goldens
+        # anteriores permanecem byte a byte idênticos.
+        ("inventario_fracoes.yaml", "inventario_fracoes"),
     ],
 )
 def test_golden_outputs_dos_exemplos_canonicos(

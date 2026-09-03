@@ -1,0 +1,106 @@
+{
+  "tipo_ato": "inventario_extrajudicial",
+  "validacao": {
+    "ok": true,
+    "erros": []
+  },
+  "alerta_centavos": null,
+  "resumo": {
+    "patrimonio_total": "32000.00",
+    "valor_meacao": "16000.00",
+    "monte_partilhavel": "16000.00",
+    "divergencia_centavos": "0.00",
+    "quinhao_por_herdeiro": {
+      "HERDEIRO_1": "2000.00",
+      "HERDEIRO_2": "2000.00",
+      "HERDEIRO_3": "2000.00",
+      "HERDEIRO_4": "2000.00",
+      "HERDEIRO_5": "2000.00",
+      "HERDEIRO_6": "2000.00",
+      "HERDEIRO_7": "2000.00",
+      "HERDEIRO_8": "1000.00",
+      "HERDEIRO_9": "1000.00"
+    },
+    "total_por_beneficiario": {
+      "MEEIRO": "16000.00",
+      "HERDEIRO_1": "2000.00",
+      "HERDEIRO_2": "2000.00",
+      "HERDEIRO_3": "2000.00",
+      "HERDEIRO_4": "2000.00",
+      "HERDEIRO_5": "2000.00",
+      "HERDEIRO_6": "2000.00",
+      "HERDEIRO_7": "2000.00",
+      "HERDEIRO_8": "1000.00",
+      "HERDEIRO_9": "1000.00"
+    },
+    "bens": [
+      {
+        "id": "VEICULO_1",
+        "tipo": "veiculo",
+        "valor": "32000.00",
+        "quinhoes": [
+          {
+            "beneficiario": "MEEIRO",
+            "percentual": "50.00",
+            "valor": "16000.00",
+            "fracao_ideal": "1/2"
+          },
+          {
+            "beneficiario": "HERDEIRO_1",
+            "percentual": "6.25",
+            "valor": "2000.00",
+            "fracao_ideal": "1/16"
+          },
+          {
+            "beneficiario": "HERDEIRO_2",
+            "percentual": "6.25",
+            "valor": "2000.00",
+            "fracao_ideal": "1/16"
+          },
+          {
+            "beneficiario": "HERDEIRO_3",
+            "percentual": "6.25",
+            "valor": "2000.00",
+            "fracao_ideal": "1/16"
+          },
+          {
+            "beneficiario": "HERDEIRO_4",
+            "percentual": "6.25",
+            "valor": "2000.00",
+            "fracao_ideal": "1/16"
+          },
+          {
+            "beneficiario": "HERDEIRO_5",
+            "percentual": "6.25",
+            "valor": "2000.00",
+            "fracao_ideal": "1/16"
+          },
+          {
+            "beneficiario": "HERDEIRO_6",
+            "percentual": "6.25",
+            "valor": "2000.00",
+            "fracao_ideal": "1/16"
+          },
+          {
+            "beneficiario": "HERDEIRO_7",
+            "percentual": "6.25",
+            "valor": "2000.00",
+            "fracao_ideal": "1/16"
+          },
+          {
+            "beneficiario": "HERDEIRO_8",
+            "percentual": "3.125",
+            "valor": "1000.00",
+            "fracao_ideal": "1/32"
+          },
+          {
+            "beneficiario": "HERDEIRO_9",
+            "percentual": "3.125",
+            "valor": "1000.00",
+            "fracao_ideal": "1/32"
+          }
+        ]
+      }
+    ]
+  }
+}
