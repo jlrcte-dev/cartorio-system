@@ -320,4 +320,4 @@ exports/audit/
 | [`regulatory/cnj_213/alignment.md`](../regulatory/cnj_213/alignment.md) | Como o módulo apoia a adequação ao Provimento |
 | [`quality/risk_register_model.md`](../quality/risk_register_model.md) | Modelo de campos para AuditFinding |
 | [`readiness/operating_flows_audit_plan.md`](../readiness/operating_flows_audit_plan.md) | Plano de auditoria de fluxos operacionais |
-| [`operations/engegraph.md`](../operations/engegraph.md) | Contexto e pendências técnicas do Engegraph |
+| [`infrastructure/infrastructure_roadmap.md`](../infrastructure/infrastructure_roadmap.md) | Contexto e pendências técnicas do Engegraph (ERP, banco, backup, contingência) |

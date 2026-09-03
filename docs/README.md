@@ -40,6 +40,11 @@
 | LGPD | [`modules/lgpd.md`](modules/lgpd.md) |
 | Retenção | [`modules/retention.md`](modules/retention.md) |
 | Finance | [`modules/finance.md`](modules/finance.md) |
+| **Notas — Inventários** | [`modules/notas_inventarios.md`](modules/notas_inventarios.md) |
+| **Notas — Checklist humano** | [`modules/notas_inventarios_checklist.md`](modules/notas_inventarios_checklist.md) |
+| **Notas — POP de uso do gerador** | [`modules/notas_inventarios/POP_USO_GERADOR_MINUTA_INVENTARIO.md`](modules/notas_inventarios/POP_USO_GERADOR_MINUTA_INVENTARIO.md) |
+| **Registro de Imóveis** | [`modules/registro_imoveis.md`](modules/registro_imoveis.md) |
+| **Registro de Imóveis — dicionário sanitizado** | [`ri_inventory/SANITIZED_DATA_DICTIONARY.md`](ri_inventory/SANITIZED_DATA_DICTIONARY.md) |
 
 ### Documentação operacional do módulo de auditoria
 
@@ -103,6 +108,8 @@
 | [`decisions/ADR-001-compliance-evidence-ownership.md`](decisions/ADR-001-compliance-evidence-ownership.md) | ComplianceEvidence como entidade central |
 | [`decisions/ADR-002-weak-references-between-regulatory-modules.md`](decisions/ADR-002-weak-references-between-regulatory-modules.md) | Referências fracas entre módulos |
 | [`decisions/ADR-003-document-registry-ownership.md`](decisions/ADR-003-document-registry-ownership.md) | Document Registry — ownership |
+| [`decisions/ADR-004..008`](decisions/) | Governança de IA e Knowledge Base — estado *Proposto* |
+| [`decisions/ADR-009-inventory-cent-rounding-policy.md`](decisions/ADR-009-inventory-cent-rounding-policy.md) | Política de centavos em inventários — o sistema alerta, não corrige |
 
 ---
 
@@ -118,8 +125,11 @@
 
 | Documento | Descrição |
 |-----------|-----------|
-| [`reports/RELATORIO_EXECUTIVO_CARTORIO_SYSTEM_DIRETORIA.md`](reports/RELATORIO_EXECUTIVO_CARTORIO_SYSTEM_DIRETORIA.md) | Relatório executivo para a diretoria |
+| [`reports/RELATORIO_CARTORIO_SYSTEM_STRATEGIC_REBASELINE_2026_1.md`](reports/RELATORIO_CARTORIO_SYSTEM_STRATEGIC_REBASELINE_2026_1.md) | **Rebaseline estratégico (2026-09-02) — diagnóstico autoritativo do estado atual** |
+| [`reports/RELATORIO_CARTORIO_SYSTEM_ENGINEERING_STABILIZATION_1.md`](reports/RELATORIO_CARTORIO_SYSTEM_ENGINEERING_STABILIZATION_1.md) | Estabilização de engenharia (2026-09-03): CI, dependências, formatação, migrations |
+| [`reports/RELATORIO_EXECUTIVO_CARTORIO_SYSTEM_DIRETORIA.md`](reports/RELATORIO_EXECUTIVO_CARTORIO_SYSTEM_DIRETORIA.md) | Relatório executivo para a diretoria (maio/2026 — histórico) |
 | [`reports/generated/`](reports/generated/) | Artefatos gerados (CSS, templates) |
+| [`audits/repository_rebaseline_2026_07/`](audits/repository_rebaseline_2026_07/) | Auditoria de repositório de julho/2026 (8 documentos + 2 CSV) |
 
 ---
 
@@ -129,6 +139,8 @@
 |-----------|----------|
 | [`analysis/`](analysis/) | Análises de domínio LGPD, matrizes de decisão |
 | [`document_registry/`](document_registry/) | Blueprint CNPFE-GO, conceito do módulo, matriz esperada |
+| [`proad/`](proad/) | Resposta ao PROAD da Corregedoria (Provimento CNJ 195/2025 — IERI-e e SIG-RI) |
+| [`ai/`](ai/) | Investigação sobre ferramentas jurídicas de IA (sem código) |
 
 ---
 

@@ -51,6 +51,7 @@ Arquivo: [`technical_decisions.md`](technical_decisions.md)
 | [ADR-006](ADR-006-dados-permitidos-e-proibidos-para-ia.md) | Política Inicial de Dados para Uso em IA | Proposto |
 | [ADR-007](ADR-007-mcp-e-agentes-fora-das-fases-iniciais.md) | MCP e Agentes Autônomos Fora das Fases Iniciais | Proposto |
 | [ADR-008](ADR-008-saida-de-ia-e-rascunho-sujeito-a-revisao.md) | Toda Saída de IA é Rascunho Sujeito à Revisão Humana | Proposto |
+| [ADR-009](ADR-009-inventory-cent-rounding-policy.md) | Política de centavos em inventários extrajudiciais — o sistema alerta e não corrige silenciosamente | Aceito |
 
 ---
 

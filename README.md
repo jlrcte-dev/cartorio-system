@@ -1,16 +1,37 @@
 # Sistema do Cartório
 
-Backend independente do **Cartório Costa Teixeira**. O foco principal a partir de
-Maio/2026 é o **Módulo de Auditoria da Serventia** — diagnóstico, inventário,
-evidências e preparação para vistoria (Provimento CNJ nº 213/2026, Classe 3).
-
-O módulo financeiro (Finance Core v1.2) está preservado e em backlog futuro.
+Backend independente do **Cartório Costa Teixeira**.
 
 O sistema **não substitui** o Engegraph (ERP cartorial existente) e **não**
 compartilha código, banco ou credenciais com outros projetos. Integrações
 futuras ocorrem por exports estruturados.
 
-## Foco atual — Módulo de Auditoria
+## Por onde começar
+
+| Se você quer... | Leia |
+|---|---|
+| Entender o estado real do sistema hoje | [`docs/reports/RELATORIO_CARTORIO_SYSTEM_STRATEGIC_REBASELINE_2026_1.md`](docs/reports/RELATORIO_CARTORIO_SYSTEM_STRATEGIC_REBASELINE_2026_1.md) |
+| Saber o que vem a seguir | [`docs/roadmap.md`](docs/roadmap.md) — **roadmap geral autoritativo** |
+| Entender a arquitetura | [`docs/architecture.md`](docs/architecture.md) |
+| Navegar a documentação | [`docs/README.md`](docs/README.md) |
+
+## Duas frentes ativas
+
+**Atos notariais — `notas/inventarios` (maduro, em uso real).** Gera a
+minuta-base de escritura pública de inventário e partilha a partir de entrada
+estruturada, com cálculo determinístico em `Decimal` e saída em Markdown e ODT.
+É o módulo com uso operacional comprovado — 6 casos reais entre maio e agosto de
+2026. Ver [`docs/modules/notas_inventarios.md`](docs/modules/notas_inventarios.md)
+e o [POP de uso](docs/modules/notas_inventarios/POP_USO_GERADOR_MINUTA_INVENTARIO.md).
+
+**Eixo regulatório — auditoria, LGPD, retenção e compliance.** Diagnóstico,
+inventário, evidências e preparação para vistoria (Provimento CNJ nº 213/2026,
+Classe 3). O scanner e o diagnóstico documental já foram executados em ambiente
+real; a camada de compliance está construída e **ainda não ativada**.
+
+O módulo financeiro (Finance Core v1.2) está preservado e em backlog futuro.
+
+## Módulo de Auditoria
 
 - [`docs/audit/module_roadmap.md`](docs/audit/module_roadmap.md) — **Roadmap
   principal:** 12 fases, Sprint 1 (Scanner Read-Only), critérios de aceite.
@@ -88,10 +109,14 @@ Healthcheck: <http://localhost:8000/api/v1/health>
 
 ## Validação
 
+Os mesmos comandos que o CI executa
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+
 ```bash
-ruff check .
 ruff format --check .
-pytest tests/ -v
+ruff check .
+pytest -q
+alembic check
 ```
 
 ## Estrutura do projeto
@@ -103,14 +128,20 @@ cartorio-system/
 │   ├── core/                # config, logging, errors
 │   ├── db/                  # session, base
 │   ├── modules/
-│   │   ├── finance/         # Finance Core v1.2 (backlog futuro)
-│   │   └── audit/           # Módulo de Auditoria (foco atual)
+│   │   ├── notas/           # atos notariais — inventarios (CLI, em uso real)
+│   │   ├── audit/           # scanner, diagnosis, findings
+│   │   ├── compliance/      # Matriz INOVA, evidências, status indicativo
+│   │   ├── lgpd/            # ações do plano LGPD
+│   │   ├── retention/       # temporalidade documental (sem router)
+│   │   └── finance/         # Finance Core v1.2 (backlog futuro)
 │   ├── interfaces/api/v1/   # router HTTP
 │   └── main.py
-├── tests/
+├── scripts/local_tools/     # pipeline do Registro de Imóveis (fora de app/)
+├── tests/                   # 904 testes; golden files em tests/golden/
 ├── docs/                    # documentação técnica + operacional + regulatória
 ├── exports/audit/           # artefatos do módulo de auditoria
 ├── exports/atlas/           # exports estruturados (futuros)
+├── .github/workflows/ci.yml # quality gate automático
 ├── .env.example
 ├── pyproject.toml
 └── README.md

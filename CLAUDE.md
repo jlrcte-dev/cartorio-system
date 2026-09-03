@@ -85,23 +85,32 @@ NÃO concordar automaticamente com decisões que apresentem risco técnico, regu
 ## 5. Comandos de validação
 
 ```bash
-# Sempre
+# Sempre — os mesmos três comandos que o CI executa
 pytest
 ruff check .
+ruff format --check .
 
-# Se tipagem configurada
+# Se tipagem configurada (mypy não está instalado hoje)
 mypy .
 
-# Se houver migration
+# Se houver migration — nunca contra cartorio.db
 alembic current
-alembic history
-alembic upgrade head
+alembic heads
+alembic check
+DATABASE_URL="sqlite:///./_tmp_check.db" alembic upgrade head && rm -f _tmp_check.db
 
 # Para mudanças sensíveis (auth, LGPD, banco, integração, secrets, infra)
 bandit -r app
 pip-audit
 gitleaks detect --source .
 ```
+
+> **Estado das ferramentas (2026-09-03):** `pytest`, `ruff` e `alembic` estão
+> instalados e rodam automaticamente em [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+> `mypy`, `bandit`, `pip-audit` e `gitleaks` **não estão instalados** — a
+> exigência acima permanece válida, mas hoje não é executável. Endereçar isso é
+> a dívida TD-10, prevista para sprint própria. Enquanto isso, mudanças
+> sensíveis exigem revisão humana explícita no lugar da verificação automática.
 
 ---
 
@@ -147,13 +156,24 @@ Criar ADR em `docs/decisions/ADR-NNN-titulo.md` quando:
 
 ## 9. Módulos e estado atual
 
-| Módulo | Estado |
-|--------|--------|
-| `finance` | Finance Core v1.2 — preservado, backlog futuro |
-| `audit` | Foco principal — Sprint 1 (Scanner) e Sprint 2 (Findings) concluídas |
-| `lgpd` | Sprint LGPD-1 implementada |
-| `retention` | Sprint retention-1A/1B implementada |
-| `compliance` | Compliance-1 a Compliance-4 implementadas (status indicativo) |
+Baseline: 2026-09-03. Detalhamento e evidências em
+[`docs/roadmap.md`](docs/roadmap.md) e no
+[rebaseline estratégico](docs/reports/RELATORIO_CARTORIO_SYSTEM_STRATEGIC_REBASELINE_2026_1.md).
+
+| Módulo | Interface | Estado |
+|--------|-----------|--------|
+| `notas/inventarios` | CLI | **Maduro e em uso real** — minuta-base de inventário extrajudicial; 6 casos reais entre 05 e 08/2026; golden files byte a byte; ADR-009 |
+| `audit/scanner` | CLI | Maduro — inventário read-only com SHA-256; validado em ambiente real |
+| `audit/diagnosis` | CLI | Maduro — 7 regras DIAG-* + 3 TEMP-*; calibrado após execução real |
+| `audit/findings` | REST | Funcional — CRUD sem DELETE físico; sem uso real ainda |
+| `compliance` | REST | Funcional — Compliance-1 a 4; seed da Matriz INOVA **ainda não aplicado** |
+| `lgpd` | REST | Funcional — Sprint LGPD-1; 25 ações importadas do plano INOVA |
+| `retention` | sem router | Parcial — regras e seed prontos; consumido por `audit/diagnosis`; tabela vazia ⇒ TEMP-* inativos |
+| `finance` | REST | Finance Core v1.2 — preservado, **backlog futuro; não expandir** |
+| Pipeline RI (`scripts/local_tools/`) | CLI | Funcional, **fora de `app/`** — inventário sanitizado de matrículas; base do dossiê PROAD. Promoção a módulo é decisão em aberto (DH-1) |
+| `clients` `documents` `exports` `protocols` `reports` `tasks` | — | Placeholders vazios, intencionais |
+| Autenticação, trilha transversal | — | **Não iniciados** — exigências do Provimento CNJ 213 |
+| Knowledge Base / IA, Document Registry, Atlas | — | Apenas blueprint; bloqueados por decisão humana |
 
 ---
 

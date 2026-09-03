@@ -159,7 +159,7 @@ A prioridade é derivada de severity + probability. Regra geral:
   "status": "OPEN",
   "identified_at": "2026-05-04T00:00:00Z",
   "reviewed_at": null,
-  "notes": "Pendência técnica aberta. Ver docs/operations/engegraph.md para detalhes."
+  "notes": "Pendência técnica aberta. Ver docs/infrastructure/infrastructure_roadmap.md para detalhes."
 }
 ```
 

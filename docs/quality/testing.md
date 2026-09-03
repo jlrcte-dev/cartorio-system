@@ -2,13 +2,45 @@
 
 ## Estado atual
 
-**48 testes passando** em 3 arquivos:
+> **Baseline: 2026-09-03.** Números conferidos por coleta real
+> (`pytest --collect-only -q`). Este documento descreve **como** os testes são
+> organizados; a contagem exata muda a cada sprint e não deve ser tratada como
+> contrato — a fonte da verdade é sempre a coleta do momento.
 
-| Arquivo                              | Quantidade | Foco                                |
-|--------------------------------------|------------|-------------------------------------|
-| `tests/test_health.py`               | 2          | Healthcheck                         |
-| `tests/test_finance_entries.py`      | 44         | Finance Core (CRUD, regras, summary)|
-| `tests/test_isolation.py`            | 2          | Isolamento de DB e logging 500      |
+Na data do baseline: **904 testes coletados em 38 arquivos** — 903 passando e
+1 skip condicional de plataforma. Zero warnings.
+
+O único skip é `tests/test_file_scanner.py`, que simula permissões via `chmod`
+e é pulado no Windows sem privilégios de administrador. Não é um teste
+desativado: ele roda no CI (Linux).
+
+### Distribuição por área
+
+| Área | Testes | Arquivos | % |
+|---|---:|---:|---:|
+| Pipeline RI (`test_ri_*`) | 334 | 6 | 36,9% |
+| Compliance (`test_compliance_*`) | 213 | 14 | 23,6% |
+| Notas / Inventários (`test_notas_*`) | 136 | 7 | 15,0% |
+| Audit — scanner, diagnosis, findings | 114 | 4 | 12,6% |
+| Finance | 44 | 1 | 4,9% |
+| LGPD | 37 | 1 | 4,1% |
+| Retention (+ integração com diagnosis) | 22 | 3 | 2,4% |
+| Infraestrutura (health, isolamento) | 4 | 2 | 0,4% |
+| **Total** | **904** | **38** | |
+
+Observação estrutural: a maior fatia de testes cobre o **pipeline RI**, que vive
+em `scripts/local_tools/` e não em `app/` — ver
+[`../architecture.md`](../architecture.md), seção "Ferramentas fora de `app/`".
+
+### Golden files
+
+`tests/golden/notas_inventarios/` contém 6 artefatos (minuta, resumo e JSON de
+validação para os dois exemplos canônicos) comparados **byte a byte**. O
+`.gitattributes` fixa `eol=lf` nesse diretório — sem isso, um checkout no
+Windows converteria para CRLF e quebraria a comparação.
+
+O procedimento de regeneração dos golden está em
+[`../modules/notas_inventarios.md`](../modules/notas_inventarios.md), § 7.
 
 ## Como rodar
 
@@ -90,97 +122,62 @@ pytest tests/ -v
 test ! -f cartorio.db && echo "OK: testes não tocaram cartorio.db"
 ```
 
-## Cobertura por área (resumo das 48 asserções)
+## O que cada área cobre
 
-### Healthcheck (2)
-- `GET /api/v1/health` retorna 200.
-- Body contém `status="ok"`, `app`, `version`.
+Descrição por intenção, não por contagem de asserções — a lista anterior
+enumerava as 48 asserções da Etapa 1.2 e ficou obsoleta em poucas sprints.
 
-### Finance Core — Criação básica (12)
-- Receita default (source `MANUAL`, direction `INFLOW`, audit `gestor`).
-- Despesa força `OUTFLOW`. Repasse força `OUTFLOW`. Receita força `INFLOW`.
-- Receita com `direction=OUTFLOW` → 422. Direction inválida → 422.
-- Ajuste com `INFLOW` e com `OUTFLOW`. Ajuste sem direction → 422.
-- Source explícita aceita; source inválida → 422.
-- `created_by` explícito espelha em `updated_by`.
+| Área | O que os testes garantem |
+|---|---|
+| **Infraestrutura** | `GET /api/v1/health` responde 200 com `status`, `app` e `version`; o lifespan não executa DDL; o handler 500 loga traceback |
+| **Finance** | Regras de `direction` por `entry_type`; regra `payment_date × status`; imutabilidade de `entry_type` e `competence_month` no PATCH; rejeição de `amount: null`; `compute_monthly_summary` |
+| **Audit — scanner** | Contrato read-only sobre o acervo; inventário com SHA-256; manifesto; travessia de diretórios e tratamento de permissões |
+| **Audit — diagnosis** | As 7 regras DIAG-* sobre inventários sintéticos em memória, sem caminhos reais; regras TEMP-* de temporalidade |
+| **Audit — findings** | CRUD sem `DELETE` físico; transições de status; arquivamento; histórico |
+| **LGPD** | Importação do CSV INOVA; CRUD de ações; histórico append-only; exportação CSV; sumário |
+| **Retention** | Regras de temporalidade; seed; integração que injeta as regras no `DocumentAnalyzer` |
+| **Compliance** | Seed idempotente com checksum; evidências; vínculos requisito↔achado por referência fraca; status indicativo e seu histórico; **isolamento entre módulos** (`test_compliance_isolation.py`) |
+| **Notas / Inventários** | Aritmética `Decimal` do calculator; as 11 regras do validator; contrato Pydantic de entrada; política de destino do `--output-dir`; redação da minuta cláusula a cláusula; exportador ODT determinístico; ausência de PII nas saídas; **golden files byte a byte** |
+| **Pipeline RI** | Extração sanitizada de matrículas; classificação de natureza; reconciliação CSV × JSON × SQLite; relatórios de revisão; contratos anti-PII (a extração aborta se detectar dado pessoal na saída) |
 
-### Finance Core — Validação de tipo/status/amount/competência (7)
-- Entry type inválido → 422.
-- Amount negativo → 422. Amount zero → 422.
-- Competência mal formatada → 422.
-- Status `PAID` em RECEITA → 422. Status `RECEIVED` em DESPESA → 422.
-- Status `TO_REVIEW` permitido em DESPESA.
+## Migrations
 
-### Finance Core — Regra `payment_date × status` (5)
-- `PAID` sem `payment_date` → 422.
-- `RECEIVED` sem `payment_date` → 422.
-- `PENDING` com `payment_date` → 422.
-- `TO_REVIEW` com `payment_date` → 422.
-- `CANCELLED` com `payment_date` → 422.
-
-### Finance Core — Listagem e GET (3)
-- Filtro por competência. Filtro composto por tipo + área. GET inexistente
-  → 404.
-
-### Finance Core — Update / Imutabilidade (10)
-- PATCH `PENDING → PAID` com `payment_date` válido.
-- PATCH com status inconsistente → 422.
-- PATCH `→ PAID` sem `payment_date` → 422. PATCH `→ RECEIVED` sem
-  `payment_date` → 422.
-- PATCH com `entry_type` → 422 (`extra="forbid"`). PATCH com
-  `competence_month` → 422.
-- PATCH com `amount: null` → 422. PATCH sem `amount` mantém valor.
-- PATCH com `amount` positivo atualiza. PATCH com `amount=0`/negativo →
-  422.
-- PATCH atualiza `updated_by`.
-
-### Finance Core — Monthly summary (5)
-- Cálculo completo com 8 lançamentos cobrindo receita, despesa, repasse,
-  ajuste in/out, cancelado, to_review, e uma competência diferente que fica
-  fora.
-- Cancelados excluídos de `result_estimate`.
-- TO_REVIEW excluídos de `result_estimate`.
-- Mês vazio retorna estrutura zerada.
-- Competência mal formatada na query → 422.
-
-### Isolamento (2)
-- Lifespan não toca `cartorio.db`.
-- Handler 500 emite `logger.exception` com traceback ao receber exceção
-  não tratada.
-
-## Round-trip Alembic
-
-Não é teste pytest (seria caro de manter), mas faz parte do bloco de
-validação manual:
+Desde 2026-09-03 as migrations são verificadas **automaticamente no CI**
+(`.github/workflows/ci.yml`), em banco SQLite temporário criado do zero:
 
 ```bash
-rm -f cartorio.db
-alembic upgrade head        # aplica todas as 3 revisões
-alembic downgrade base      # reverte tudo
-alembic upgrade head        # reaplica tudo
+alembic upgrade head    # aplica as 10 revisões a partir de <base>
+alembic current         # confirma o head
+alembic heads           # confirma que o head é único
+alembic check           # confirma que Base.metadata bate com o schema migrado
 ```
 
-Saída esperada (cada `INFO` corresponde a uma revisão):
+Para reproduzir localmente **sem tocar o banco de desenvolvimento**, aponte
+`DATABASE_URL` para um arquivo descartável:
 
+```bash
+DATABASE_URL="sqlite:///./_tmp_check.db" python -m alembic upgrade head
+DATABASE_URL="sqlite:///./_tmp_check.db" python -m alembic check
+rm -f _tmp_check.db
 ```
-Running upgrade  -> 8857af05ac59, initial finance core
-Running upgrade 8857af05ac59 -> b377f12ba37a, finance core hardening...
-Running upgrade b377f12ba37a -> 455f4efec848, drop competence_month glob check
-Running downgrade 455f4efec848 -> b377f12ba37a, ...
-Running downgrade b377f12ba37a -> 8857af05ac59, ...
-Running downgrade 8857af05ac59 -> , initial finance core
-Running upgrade  -> 8857af05ac59, ...
-Running upgrade 8857af05ac59 -> b377f12ba37a, ...
-Running upgrade b377f12ba37a -> 455f4efec848, ...
-```
+
+> **Nunca** apague `cartorio.db` para testar migrations. Versões anteriores
+> deste documento sugeriam `rm -f cartorio.db` antes do round-trip — instrução
+> perigosa e agora desnecessária, já que o ciclo roda em banco temporário.
+
+O round-trip completo (`upgrade head` → `downgrade base` → `upgrade head`)
+continua sendo validação manual, executada apenas em banco descartável.
 
 ## Lacunas conhecidas
 
-- **Sem `pytest-cov`** ainda. Cobertura objetiva fica para etapa futura.
-- **Sem `mypy`/`pyright`**. Tipos em `Mapped[...]` ficam só na confiança.
-- **Sem teste de carga / volume** — não há como prever performance da
-  função `compute_monthly_summary` em 10 mil lançamentos. Adequado para
-  hoje (volume da serventia).
-- **Sem teste programático de migração** (apenas validação manual).
-- **Sem teste de comportamento concorrente** — não há concorrência hoje
-  (gestor solo).
+- **Sem cobertura objetiva.** `pytest-cov` não está instalado; adotar cobertura
+  exige decisão sobre meta e sobre o custo no CI.
+- **Sem `mypy`/`pyright`.** Os tipos em `Mapped[...]` ficam na confiança.
+- **Sem verificação de segurança automatizada.** `bandit`, `pip-audit` e
+  `gitleaks` são exigidos pelo CLAUDE.md § 5 para mudanças sensíveis, mas não
+  estão instalados nem no CI (dívida TD-10, sprint própria).
+- **Sem teste de carga / volume.** Adequado ao volume atual da serventia.
+- **Sem teste de concorrência.** Não há concorrência hoje — uso monousuário.
+- **Testes verdes não significam uso comprovado.** Compliance, retention,
+  audit/findings e finance têm suíte extensa e **nenhum dado real** no banco.
+  A suíte prova corretude do código, não adequação ao uso operacional.
