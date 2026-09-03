@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Index, String, Text
+from sqlalchemy import (
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -20,6 +29,10 @@ _ENUM_KWARGS = {"native_enum": False}
 class LgpdAction(Base):
     __tablename__ = "lgpd_actions"
     __table_args__ = (
+        # A migration 20260505_1000 criou a unicidade de `action_code` como
+        # constraint nomeada e o índice `ix_lgpd_actions_action_code` como
+        # NÃO único. A unicidade continua garantida pela constraint.
+        UniqueConstraint("action_code", name="uq_lgpd_actions_action_code"),
         Index("ix_lgpd_actions_status", "status"),
         Index("ix_lgpd_actions_category", "category"),
         Index("ix_lgpd_actions_priority", "priority"),
@@ -29,7 +42,7 @@ class LgpdAction(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    action_code: Mapped[str] = mapped_column(String(10), nullable=False, unique=True, index=True)
+    action_code: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     category: Mapped[LgpdActionCategory] = mapped_column(
         Enum(LgpdActionCategory, name="lgpd_action_category_enum", length=24, **_ENUM_KWARGS),

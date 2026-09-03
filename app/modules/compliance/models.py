@@ -45,6 +45,10 @@ class ComplianceRequirement(Base):
 
     __tablename__ = "compliance_requirements"
     __table_args__ = (
+        # A migration 20260506_1000 criou a unicidade de `code` como constraint
+        # nomeada, além do índice único derivado de `unique=True` na coluna.
+        # Declarar as duas mantém `Base.metadata` fiel ao schema real.
+        UniqueConstraint("code", name="uq_compliance_requirements_code"),
         Index("ix_compliance_requirements_source", "source"),
         Index("ix_compliance_requirements_classification", "classification"),
         Index("ix_compliance_requirements_stage", "stage"),
@@ -143,6 +147,7 @@ class CompliancePolicyDocument(Base):
 
     __tablename__ = "compliance_policies"
     __table_args__ = (
+        UniqueConstraint("code", name="uq_compliance_policies_code"),
         Index("ix_compliance_policies_kind", "kind"),
         Index("ix_compliance_policies_classification", "classification"),
     )
@@ -617,6 +622,7 @@ class ComplianceSeedMeta(Base):
     """Metadados de seed da Matriz INOVA. Versionamento e checksum."""
 
     __tablename__ = "compliance_seed_meta"
+    __table_args__ = (UniqueConstraint("seed_name", name="uq_compliance_seed_meta_name"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     seed_name: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
