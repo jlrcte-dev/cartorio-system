@@ -1,0 +1,66 @@
+# Exemplo FICTÍCIO da configuração do coletor somente leitura do Drive do cartório.
+#
+# Copie para _local_data/drive_capture/config.yaml (ignorado pelo Git) e substitua os
+# valores. Nenhum ID, e-mail ou caminho abaixo é real. Guia: docs/modules/drive_capture.md
+#
+# Caminhos relativos são resolvidos a partir da pasta DESTE arquivo de configuração.
+# Dentro do repositório, só _local_data/ é aceito para credencial e dados.
+
+version: 1
+
+# Chave JSON da service account do cartório. Prefira um caminho FORA do repositório,
+# com acesso só do seu usuário (ver "Proteção local" no guia).
+credentials_file: C:/Users/SEU_USUARIO/.cartorio_drive/service-account.json
+
+# E-mail da service account. A coleta aborta se a credencial ou o Drive indicarem outra.
+expected_identity: leitor-drive@projeto-do-cartorio.iam.gserviceaccount.com
+
+# Capturas, manifestos, estado e relatório Markdown (padrão: a pasta deste arquivo).
+data_dir: .
+
+# Só preencha se o arquivo estiver num Drive compartilhado (Shared Drive) confirmado.
+# Ativa supportsAllDrives nas leituras; NÃO concede nem restringe acesso. Mesmo em Shared
+# Drive, compartilhe só o arquivo com a service account — nunca a torne membro do drive.
+# shared_drive_id: 0AbCdEfGhIjKlMnOpQ
+
+# Piloto: uma fonte em "files", "folders: []" e limits.max_sources: 1.
+
+# Arquivos ARMAZENADOS (não nativos do Google) aceitos para download no piloto.
+# Vazio = só Google Planilhas (→ XLSX) e Google Documentos (→ DOCX).
+accepted_stored_mime_types: []
+#  - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet   # .xlsx
+#  - application/vnd.oasis.opendocument.spreadsheet                      # .ods
+#  - text/csv
+#  - application/vnd.openxmlformats-officedocument.wordprocessingml.document  # .docx
+#  - application/pdf
+
+# Tetos do perfil piloto (opcional; valores abaixo são os padrões).
+limits:
+  max_sources: 10
+  max_file_bytes: 10485760        # 10 MiB — também é o limite de exportação do Drive
+  max_run_bytes: 52428800         # 50 MiB por execução
+  max_listing_pages: 5
+  page_size: 100
+  request_timeout_seconds: 60
+  max_retries: 2
+  max_run_seconds: 600
+
+# Arquivos fixos: só o ID explícito (o trecho entre /d/ e /edit na URL).
+# alias: identificador local seguro — NÃO use nome de cliente, colaborador ou título.
+# family: gerenciamento_financeiro | protestos | documentos_em_andamento | relatorios_colaboradores
+files:
+  - alias: financeiro_piloto
+    family: gerenciamento_financeiro
+    file_id: 1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+# Pastas de arquivos diários: só filhos DIRETOS, só os tipos listados. Sem recursão,
+# atalhos não são seguidos. Subpasta exige entrada própria. Pasta com conteúdo misto:
+# prefira IDs explícitos em "files" até existir um recorte seguro.
+folders: []
+#  - alias: protestos_diarios
+#    family: protestos
+#    folder_id: 1BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+#    include:
+#      mime_types:
+#        - application/vnd.google-apps.spreadsheet
+#      name_pattern: "Protestos *"   # opcional, sem distinção de maiúsculas; só filtra

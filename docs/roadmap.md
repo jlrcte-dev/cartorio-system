@@ -35,6 +35,8 @@
 | `finance` | Funcional, congelado | REST | Não — backlog futuro por decisão |
 | Pipeline RI (`scripts/local_tools/`) | Funcional, fora de `app/` | CLI | Sim — base do dossiê PROAD/IERI |
 | Autenticação, trilha transversal | Não iniciados | — | — |
+| `drive_capture` (Drive do cartório, somente leitura) | Implementado; acesso real validado em smoke local de uma fonte piloto (20/10/2026) — ADR-011 *Proposto* | CLI manual | Não |
+| `services_snapshot` (retrato de serviços da planilha piloto) | Atualização manual local; setores, status e indicadores de datas agregados (formato local 1.1) | CLI manual | Não |
 | Knowledge Base / IA, Document Registry, Atlas | Blueprint apenas | — | — |
 
 Diagnóstico completo e evidências:

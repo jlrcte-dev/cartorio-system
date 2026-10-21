@@ -44,6 +44,8 @@
 | **Notas — Checklist humano** | [`modules/notas_inventarios_checklist.md`](modules/notas_inventarios_checklist.md) |
 | **Notas — POP de uso do gerador** | [`modules/notas_inventarios/POP_USO_GERADOR_MINUTA_INVENTARIO.md`](modules/notas_inventarios/POP_USO_GERADOR_MINUTA_INVENTARIO.md) |
 | **Registro de Imóveis** | [`modules/registro_imoveis.md`](modules/registro_imoveis.md) |
+| Coletor somente leitura do Drive | [`modules/drive_capture.md`](modules/drive_capture.md) — acesso real validado em smoke local da fonte piloto |
+| Retrato de serviços por setor e status | [`modules/services_snapshot.md`](modules/services_snapshot.md) — atualização manual local, com indicadores de datas |
 | **Registro de Imóveis — dicionário sanitizado** | [`ri_inventory/SANITIZED_DATA_DICTIONARY.md`](ri_inventory/SANITIZED_DATA_DICTIONARY.md) |
 
 ### Documentação operacional do módulo de auditoria
@@ -110,6 +112,7 @@
 | [`decisions/ADR-003-document-registry-ownership.md`](decisions/ADR-003-document-registry-ownership.md) | Document Registry — ownership |
 | [`decisions/ADR-004..008`](decisions/) | Governança de IA e Knowledge Base — estado *Proposto* |
 | [`decisions/ADR-009-inventory-cent-rounding-policy.md`](decisions/ADR-009-inventory-cent-rounding-policy.md) | Política de centavos em inventários — o sistema alerta, não corrige |
+| [`decisions/ADR-011-drive-readonly-capture.md`](decisions/ADR-011-drive-readonly-capture.md) | Captura somente leitura do Drive do cartório — *Proposto* |
 
 ---
 

@@ -20,7 +20,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Coletor somente leitura do Drive do cartório (ADR-011). Extra separado: API e testes
+# não dependem dele — só a CLI o importa, ao montar o transporte real.
+drive = [
+    "google-auth[requests]>=2.29,<3",
+    # Leitura segura do XLSX capturado pelo retrato de serviços (services_snapshot refresh).
+    "defusedxml>=0.7,<1",
+]
 dev = [
+    # Os testes do retrato leem XLSX sintético com o mesmo parser do refresh.
+    "defusedxml>=0.7,<1",
     "pytest>=8.2.0",
     "pytest-asyncio>=0.23.0",
     "httpx>=0.27.0",
