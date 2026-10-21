@@ -1,0 +1,988 @@
+{
+  "formato": "cartorio_system.atlas.services_snapshot",
+  "versao": "1.0",
+  "origem": {
+    "formato_local": "cartorio_system.services_snapshot.local",
+    "versao_local": "1.1",
+    "escopo": "fonte_piloto_unica",
+    "fonte_alias": "servicos_andamento_piloto",
+    "familia": "documentos_em_andamento",
+    "run_id": "20261020T150000Z-0a1b2c"
+  },
+  "tempos": {
+    "capturada_em": "2026-10-20T15:00:05+00:00",
+    "relatorio_gerado_em": "2026-10-20T15:00:09+00:00",
+    "exportado_em": "2026-10-20T15:05:00+00:00",
+    "referencia_indicadores": "2026-10-20",
+    "fuso_referencia": "America/Sao_Paulo"
+  },
+  "atualizacao": {
+    "relacao": "confirmada",
+    "observada_em": "2026-10-20T15:05:00+00:00",
+    "tentativa": {
+      "tentativa_em": "2026-10-20T15:00:00+00:00",
+      "resultado": "sucesso",
+      "etapa": null,
+      "codigo": null,
+      "mesmo_run": true
+    }
+  },
+  "cobertura": {
+    "qualidade": "parcial",
+    "abas_total": 7,
+    "abas_interpretadas": 6,
+    "abas_pendentes": 1,
+    "abas_sem_vinculo_de_setor": 1,
+    "status_reconhecido_pct_do_total": 83.3,
+    "status_reconhecido_pct_dos_preenchidos": 93.8,
+    "reconciliacoes_ok": true
+  },
+  "agregado": {
+    "servicos": {
+      "total": 18,
+      "concluidos": 4,
+      "cancelados": 2,
+      "nao_encerrados": 9,
+      "sem_status": 2,
+      "status_nao_mapeado": 1,
+      "categorias": {
+        "em_execucao": 1,
+        "aguardando_assinatura": 1,
+        "aguardando_documentacao": 1,
+        "aguardando_pagamento": 1,
+        "pronto_para_finalizar": 1,
+        "nao_iniciado": 1,
+        "bloqueado": 1,
+        "aguardando_escritura": 1,
+        "pendente_protocolo": 1,
+        "concluido": 4,
+        "cancelado": 2
+      }
+    },
+    "datas": {
+      "abas_com_cadastro": [
+        "aba_01",
+        "aba_02",
+        "aba_03",
+        "aba_04",
+        "aba_05",
+        "aba_06"
+      ],
+      "abas_com_encerramento": [
+        "aba_01",
+        "aba_02",
+        "aba_03",
+        "aba_04",
+        "aba_05",
+        "aba_06"
+      ],
+      "cobertura": {
+        "cadastro": {
+          "nao_encerrados": {
+            "registros": 9,
+            "validas": 7,
+            "ausentes": 0,
+            "invalidas": 2,
+            "futuras": 0
+          },
+          "concluidos": {
+            "registros": 4,
+            "validas": 4,
+            "ausentes": 0,
+            "invalidas": 0,
+            "futuras": 0
+          },
+          "cancelados": {
+            "registros": 2,
+            "validas": 2,
+            "ausentes": 0,
+            "invalidas": 0,
+            "futuras": 0
+          },
+          "sem_status_reconhecido": {
+            "registros": 3,
+            "validas": 1,
+            "ausentes": 0,
+            "invalidas": 2,
+            "futuras": 0
+          }
+        },
+        "encerramento": {
+          "nao_encerrados": {
+            "registros": 9,
+            "validas": 0,
+            "ausentes": 9,
+            "invalidas": 0,
+            "futuras": 0
+          },
+          "concluidos": {
+            "registros": 4,
+            "validas": 3,
+            "ausentes": 1,
+            "invalidas": 0,
+            "futuras": 0
+          },
+          "cancelados": {
+            "registros": 2,
+            "validas": 1,
+            "ausentes": 1,
+            "invalidas": 0,
+            "futuras": 0
+          },
+          "sem_status_reconhecido": {
+            "registros": 3,
+            "validas": 0,
+            "ausentes": 3,
+            "invalidas": 0,
+            "futuras": 0
+          }
+        }
+      },
+      "idade_carteira": {
+        "base": 9,
+        "amostra": 7,
+        "faixas": {
+          "0_7": 1,
+          "8_15": 1,
+          "16_30": 1,
+          "31_60": 2,
+          "mais_de_60": 2
+        }
+      },
+      "duracao_conclusao": {
+        "base": 4,
+        "amostra": 3,
+        "media_dias": 5.7,
+        "mediana_dias": 6
+      },
+      "duracao_cancelamento": {
+        "base": 2,
+        "amostra": 1,
+        "media_dias": 10.0,
+        "mediana_dias": 10
+      },
+      "sinais": {
+        "encerramento_anterior_ao_cadastro": 0,
+        "nao_encerrado_com_data_final": 0,
+        "encerrado_sem_data_final": 2
+      }
+    }
+  },
+  "setores": [
+    {
+      "aba": "aba_01",
+      "setor": "Escrituras",
+      "situacao": "interpretada",
+      "motivo_pendencia": null,
+      "servicos": {
+        "total": 5,
+        "concluidos": 2,
+        "cancelados": 0,
+        "nao_encerrados": 2,
+        "sem_status": 1,
+        "status_nao_mapeado": 0,
+        "categorias": {
+          "em_execucao": 0,
+          "aguardando_assinatura": 1,
+          "aguardando_documentacao": 0,
+          "aguardando_pagamento": 0,
+          "pronto_para_finalizar": 0,
+          "nao_iniciado": 0,
+          "bloqueado": 1,
+          "aguardando_escritura": 0,
+          "pendente_protocolo": 0,
+          "concluido": 2,
+          "cancelado": 0
+        }
+      },
+      "lacunas": {
+        "sem_tarefa": 0,
+        "sem_responsavel": 0,
+        "sem_data_de_inicio": 0
+      },
+      "datas": {
+        "campos": {
+          "data_inicio": "identificado",
+          "data_termino": "identificado",
+          "data_prenotacao": "nao_identificado",
+          "vencimento_prenotacao": "nao_identificado"
+        },
+        "cobertura": {
+          "cadastro": {
+            "nao_encerrados": {
+              "registros": 2,
+              "validas": 2,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 2,
+              "validas": 2,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          },
+          "encerramento": {
+            "nao_encerrados": {
+              "registros": 2,
+              "validas": 0,
+              "ausentes": 2,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 2,
+              "validas": 1,
+              "ausentes": 1,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 1,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          }
+        },
+        "idade_carteira": {
+          "base": 2,
+          "amostra": 2,
+          "faixas": {
+            "0_7": 1,
+            "8_15": 0,
+            "16_30": 0,
+            "31_60": 0,
+            "mais_de_60": 1
+          }
+        },
+        "duracao_conclusao": {
+          "base": 2,
+          "amostra": 1,
+          "media_dias": 10.0,
+          "mediana_dias": 10
+        },
+        "duracao_cancelamento": {
+          "base": 0,
+          "amostra": 0,
+          "media_dias": null,
+          "mediana_dias": null
+        },
+        "sinais": {
+          "encerramento_anterior_ao_cadastro": 0,
+          "nao_encerrado_com_data_final": 0,
+          "encerrado_sem_data_final": 1
+        },
+        "prenotacao": null
+      }
+    },
+    {
+      "aba": "aba_02",
+      "setor": "Registro de Imóveis",
+      "situacao": "interpretada",
+      "motivo_pendencia": null,
+      "servicos": {
+        "total": 5,
+        "concluidos": 1,
+        "cancelados": 1,
+        "nao_encerrados": 3,
+        "sem_status": 0,
+        "status_nao_mapeado": 0,
+        "categorias": {
+          "em_execucao": 1,
+          "aguardando_assinatura": 0,
+          "aguardando_documentacao": 1,
+          "aguardando_pagamento": 0,
+          "pronto_para_finalizar": 0,
+          "nao_iniciado": 0,
+          "bloqueado": 0,
+          "aguardando_escritura": 0,
+          "pendente_protocolo": 1,
+          "concluido": 1,
+          "cancelado": 1
+        }
+      },
+      "lacunas": {
+        "sem_tarefa": 0,
+        "sem_responsavel": 0,
+        "sem_data_de_inicio": 0
+      },
+      "datas": {
+        "campos": {
+          "data_inicio": "identificado",
+          "data_termino": "identificado",
+          "data_prenotacao": "nao_identificado",
+          "vencimento_prenotacao": "identificado"
+        },
+        "cobertura": {
+          "cadastro": {
+            "nao_encerrados": {
+              "registros": 3,
+              "validas": 2,
+              "ausentes": 0,
+              "invalidas": 1,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          },
+          "encerramento": {
+            "nao_encerrados": {
+              "registros": 3,
+              "validas": 0,
+              "ausentes": 3,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          }
+        },
+        "idade_carteira": {
+          "base": 3,
+          "amostra": 2,
+          "faixas": {
+            "0_7": 0,
+            "8_15": 1,
+            "16_30": 0,
+            "31_60": 1,
+            "mais_de_60": 0
+          }
+        },
+        "duracao_conclusao": {
+          "base": 1,
+          "amostra": 1,
+          "media_dias": 6.0,
+          "mediana_dias": 6
+        },
+        "duracao_cancelamento": {
+          "base": 1,
+          "amostra": 1,
+          "media_dias": 10.0,
+          "mediana_dias": 10
+        },
+        "sinais": {
+          "encerramento_anterior_ao_cadastro": 0,
+          "nao_encerrado_com_data_final": 0,
+          "encerrado_sem_data_final": 0
+        },
+        "prenotacao": {
+          "base": 3,
+          "data_prenotacao": {
+            "estado_campo": "nao_identificado",
+            "contagens": null,
+            "media_dias_desde": null,
+            "mediana_dias_desde": null
+          },
+          "vencimento_informado": {
+            "estado_campo": "identificado",
+            "contagens": {
+              "validos": 2,
+              "ausentes": 1,
+              "invalidos": 0,
+              "anteriores_a_referencia": 1,
+              "na_referencia": 0,
+              "proximos_1_a_7_dias": 1,
+              "alem_de_7_dias": 0
+            }
+          }
+        }
+      }
+    },
+    {
+      "aba": "aba_03",
+      "setor": "Escrituras - Diversas",
+      "situacao": "interpretada",
+      "motivo_pendencia": null,
+      "servicos": {
+        "total": 2,
+        "concluidos": 0,
+        "cancelados": 0,
+        "nao_encerrados": 1,
+        "sem_status": 0,
+        "status_nao_mapeado": 1,
+        "categorias": {
+          "em_execucao": 0,
+          "aguardando_assinatura": 0,
+          "aguardando_documentacao": 0,
+          "aguardando_pagamento": 0,
+          "pronto_para_finalizar": 0,
+          "nao_iniciado": 0,
+          "bloqueado": 0,
+          "aguardando_escritura": 1,
+          "pendente_protocolo": 0,
+          "concluido": 0,
+          "cancelado": 0
+        }
+      },
+      "lacunas": {
+        "sem_tarefa": 0,
+        "sem_responsavel": 0,
+        "sem_data_de_inicio": 0
+      },
+      "datas": {
+        "campos": {
+          "data_inicio": "identificado",
+          "data_termino": "identificado",
+          "data_prenotacao": "nao_identificado",
+          "vencimento_prenotacao": "nao_identificado"
+        },
+        "cobertura": {
+          "cadastro": {
+            "nao_encerrados": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 1,
+              "futuras": 0
+            }
+          },
+          "encerramento": {
+            "nao_encerrados": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 1,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 1,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          }
+        },
+        "idade_carteira": {
+          "base": 1,
+          "amostra": 1,
+          "faixas": {
+            "0_7": 0,
+            "8_15": 0,
+            "16_30": 0,
+            "31_60": 0,
+            "mais_de_60": 1
+          }
+        },
+        "duracao_conclusao": {
+          "base": 0,
+          "amostra": 0,
+          "media_dias": null,
+          "mediana_dias": null
+        },
+        "duracao_cancelamento": {
+          "base": 0,
+          "amostra": 0,
+          "media_dias": null,
+          "mediana_dias": null
+        },
+        "sinais": {
+          "encerramento_anterior_ao_cadastro": 0,
+          "nao_encerrado_com_data_final": 0,
+          "encerrado_sem_data_final": 0
+        },
+        "prenotacao": null
+      }
+    },
+    {
+      "aba": "aba_04",
+      "setor": "Registro Civil",
+      "situacao": "interpretada",
+      "motivo_pendencia": null,
+      "servicos": {
+        "total": 2,
+        "concluidos": 1,
+        "cancelados": 0,
+        "nao_encerrados": 1,
+        "sem_status": 0,
+        "status_nao_mapeado": 0,
+        "categorias": {
+          "em_execucao": 0,
+          "aguardando_assinatura": 0,
+          "aguardando_documentacao": 0,
+          "aguardando_pagamento": 0,
+          "pronto_para_finalizar": 0,
+          "nao_iniciado": 1,
+          "bloqueado": 0,
+          "aguardando_escritura": 0,
+          "pendente_protocolo": 0,
+          "concluido": 1,
+          "cancelado": 0
+        }
+      },
+      "lacunas": {
+        "sem_tarefa": 0,
+        "sem_responsavel": 0,
+        "sem_data_de_inicio": 0
+      },
+      "datas": {
+        "campos": {
+          "data_inicio": "identificado",
+          "data_termino": "identificado",
+          "data_prenotacao": "nao_identificado",
+          "vencimento_prenotacao": "nao_identificado"
+        },
+        "cobertura": {
+          "cadastro": {
+            "nao_encerrados": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 1,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          },
+          "encerramento": {
+            "nao_encerrados": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 1,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          }
+        },
+        "idade_carteira": {
+          "base": 1,
+          "amostra": 0,
+          "faixas": {
+            "0_7": 0,
+            "8_15": 0,
+            "16_30": 0,
+            "31_60": 0,
+            "mais_de_60": 0
+          }
+        },
+        "duracao_conclusao": {
+          "base": 1,
+          "amostra": 1,
+          "media_dias": 1.0,
+          "mediana_dias": 1
+        },
+        "duracao_cancelamento": {
+          "base": 0,
+          "amostra": 0,
+          "media_dias": null,
+          "mediana_dias": null
+        },
+        "sinais": {
+          "encerramento_anterior_ao_cadastro": 0,
+          "nao_encerrado_com_data_final": 0,
+          "encerrado_sem_data_final": 0
+        },
+        "prenotacao": null
+      }
+    },
+    {
+      "aba": "aba_05",
+      "setor": "Procurações",
+      "situacao": "interpretada",
+      "motivo_pendencia": null,
+      "servicos": {
+        "total": 2,
+        "concluidos": 0,
+        "cancelados": 1,
+        "nao_encerrados": 1,
+        "sem_status": 0,
+        "status_nao_mapeado": 0,
+        "categorias": {
+          "em_execucao": 0,
+          "aguardando_assinatura": 0,
+          "aguardando_documentacao": 0,
+          "aguardando_pagamento": 0,
+          "pronto_para_finalizar": 1,
+          "nao_iniciado": 0,
+          "bloqueado": 0,
+          "aguardando_escritura": 0,
+          "pendente_protocolo": 0,
+          "concluido": 0,
+          "cancelado": 1
+        }
+      },
+      "lacunas": {
+        "sem_tarefa": 0,
+        "sem_responsavel": 0,
+        "sem_data_de_inicio": 0
+      },
+      "datas": {
+        "campos": {
+          "data_inicio": "identificado",
+          "data_termino": "identificado",
+          "data_prenotacao": "nao_identificado",
+          "vencimento_prenotacao": "nao_identificado"
+        },
+        "cobertura": {
+          "cadastro": {
+            "nao_encerrados": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          },
+          "encerramento": {
+            "nao_encerrados": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 1,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 1,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          }
+        },
+        "idade_carteira": {
+          "base": 1,
+          "amostra": 1,
+          "faixas": {
+            "0_7": 0,
+            "8_15": 0,
+            "16_30": 1,
+            "31_60": 0,
+            "mais_de_60": 0
+          }
+        },
+        "duracao_conclusao": {
+          "base": 0,
+          "amostra": 0,
+          "media_dias": null,
+          "mediana_dias": null
+        },
+        "duracao_cancelamento": {
+          "base": 1,
+          "amostra": 0,
+          "media_dias": null,
+          "mediana_dias": null
+        },
+        "sinais": {
+          "encerramento_anterior_ao_cadastro": 0,
+          "nao_encerrado_com_data_final": 0,
+          "encerrado_sem_data_final": 1
+        },
+        "prenotacao": null
+      }
+    },
+    {
+      "aba": "aba_06",
+      "setor": "Diversos",
+      "situacao": "interpretada",
+      "motivo_pendencia": null,
+      "servicos": {
+        "total": 2,
+        "concluidos": 0,
+        "cancelados": 0,
+        "nao_encerrados": 1,
+        "sem_status": 1,
+        "status_nao_mapeado": 0,
+        "categorias": {
+          "em_execucao": 0,
+          "aguardando_assinatura": 0,
+          "aguardando_documentacao": 0,
+          "aguardando_pagamento": 1,
+          "pronto_para_finalizar": 0,
+          "nao_iniciado": 0,
+          "bloqueado": 0,
+          "aguardando_escritura": 0,
+          "pendente_protocolo": 0,
+          "concluido": 0,
+          "cancelado": 0
+        }
+      },
+      "lacunas": {
+        "sem_tarefa": 0,
+        "sem_responsavel": 0,
+        "sem_data_de_inicio": 0
+      },
+      "datas": {
+        "campos": {
+          "data_inicio": "identificado",
+          "data_termino": "identificado",
+          "data_prenotacao": "nao_identificado",
+          "vencimento_prenotacao": "nao_identificado"
+        },
+        "cobertura": {
+          "cadastro": {
+            "nao_encerrados": {
+              "registros": 1,
+              "validas": 1,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 1,
+              "futuras": 0
+            }
+          },
+          "encerramento": {
+            "nao_encerrados": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 1,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "concluidos": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "cancelados": {
+              "registros": 0,
+              "validas": 0,
+              "ausentes": 0,
+              "invalidas": 0,
+              "futuras": 0
+            },
+            "sem_status_reconhecido": {
+              "registros": 1,
+              "validas": 0,
+              "ausentes": 1,
+              "invalidas": 0,
+              "futuras": 0
+            }
+          }
+        },
+        "idade_carteira": {
+          "base": 1,
+          "amostra": 1,
+          "faixas": {
+            "0_7": 0,
+            "8_15": 0,
+            "16_30": 0,
+            "31_60": 1,
+            "mais_de_60": 0
+          }
+        },
+        "duracao_conclusao": {
+          "base": 0,
+          "amostra": 0,
+          "media_dias": null,
+          "mediana_dias": null
+        },
+        "duracao_cancelamento": {
+          "base": 0,
+          "amostra": 0,
+          "media_dias": null,
+          "mediana_dias": null
+        },
+        "sinais": {
+          "encerramento_anterior_ao_cadastro": 0,
+          "nao_encerrado_com_data_final": 0,
+          "encerrado_sem_data_final": 0
+        },
+        "prenotacao": null
+      }
+    },
+    {
+      "aba": "aba_07",
+      "setor": null,
+      "situacao": "pendente",
+      "motivo_pendencia": "status_ausente",
+      "servicos": null,
+      "lacunas": null,
+      "datas": null
+    }
+  ]
+}

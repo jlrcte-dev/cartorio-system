@@ -162,3 +162,82 @@ def as_legacy_v10(report: dict) -> dict:
     legacy["agregado"] = {k: v for k, v in report["agregado"].items() if k != "datas"}
     legacy["abas"] = [{k: v for k, v in t.items() if k != "datas"} for t in report["abas"]]
     return legacy
+
+
+def example_export() -> dict:
+    """Exportação sintética determinística: seis setores, aba extra pendente, RI com
+    vencimento informado. É a fonte do exemplo do contrato em docs/modules."""
+    from datetime import UTC, date, datetime, timedelta
+
+    from app.modules.services_snapshot.atlas_export import build_export
+    from app.modules.services_snapshot.report import build_attempt, build_report
+    from app.modules.services_snapshot.rules import classify_workbook
+    from app.modules.services_snapshot.xlsx import parse_workbook
+
+    ref = date(2026, 10, 20)
+
+    def ago(days: int) -> Serial:
+        return Serial((ref - timedelta(days=days) - date(1899, 12, 30)).days)
+
+    ri_headers = [*STD, "Vencimento da Prenotação", "PRENOTAÇÃO"]
+    sheets = [
+        {
+            "name": "Escrituras",
+            "headers": STD,
+            "rows": [
+                row("Concluída", inicio=ago(12), termino=ago(2)),
+                row("Concluído", inicio=ago(30)),
+                row("falta ass", inicio=ago(3)),
+                row("Bloqueada", inicio=ago(90)),
+                row(None, inicio=ago(5)),
+            ],
+        },
+        {
+            "name": "Registro de Imóveis",
+            "headers": ri_headers,
+            "rows": [
+                [*row("Pendente de protocolo", inicio=ago(9)), ago(-3), "1001"],
+                [*row("FALTA DOCS", inicio=ago(40)), ago(2), "1002"],
+                [*row("Em execução"), None, "1003"],
+                [*row("Concluída", inicio=ago(20), termino=ago(14)), ago(25), "1004"],
+                [*row("Cancelada", inicio=ago(15), termino=ago(5)), None, None],
+            ],
+        },
+        {
+            "name": "Escrituras - Diversas",
+            "headers": STD,
+            "rows": [row("Aguardando escritura", inicio=ago(61)), row("Talvez")],
+        },
+        {
+            "name": "Registro Civil",
+            "headers": STD,
+            "rows": [row("Concluída", inicio=ago(1), termino=ago(0)), row("Não iniciada")],
+        },
+        {
+            "name": "Procurações",
+            "headers": STD,
+            "rows": [row("Finalização", inicio=ago(16)), row("Cancelado", inicio=ago(8))],
+        },
+        {
+            "name": "Diversos",
+            "headers": STD,
+            "rows": [row("Falta Pagamento", inicio=ago(31)), row(None)],
+        },
+        {"name": "Rascunho", "headers": ["Tarefa", "Prioridade"], "rows": [["a", "b"]]},
+    ]
+    tabs = classify_workbook(parse_workbook(xlsx_bytes(sheets)), ref)
+    report = build_report(
+        source_alias="servicos_andamento_piloto",
+        family="documentos_em_andamento",
+        run_id="20261020T150000Z-0a1b2c",
+        captured_at="2026-10-20T15:00:05Z",
+        drive_modified_time="2026-10-20T14:30:00Z",
+        drive_version="7",
+        tabs=tabs,
+        reference=ref,
+        generated_at=datetime(2026, 10, 20, 15, 0, 9, tzinfo=UTC),
+    )
+    attempt = build_attempt(
+        datetime(2026, 10, 20, 15, 0, 0, tzinfo=UTC), True, None, None, report["captura"]["run_id"]
+    )
+    return build_export(report, attempt, datetime(2026, 10, 20, 15, 5, 0, tzinfo=UTC))

@@ -2,7 +2,7 @@
 
 **Estado (2026-10-21):** atualização manual local da **única planilha piloto**
 (`documentos_em_andamento`), com indicadores temporais agregados (formato local 1.1).
-Sem agendamento, sem consumidor no Atlas. Depende do coletor
+Sem agendamento. O Atlas consome **só** a exportação `export-atlas` (contrato próprio, abaixo), por caminho configurado; nenhum transporte para a VPS existe. Depende do coletor
 [`drive_capture`](drive_capture.md) e da decisão de acesso da
 [ADR-011](../decisions/ADR-011-drive-readonly-capture.md) (*Proposta*).
 
@@ -13,6 +13,7 @@ A partir da raiz do repositório, com o venv do Cartório System:
 ```bash
 python -m app.modules.services_snapshot.cli refresh   # coleta + retrato + publicação
 python -m app.modules.services_snapshot.cli show      # último retrato válido; sem rede
+python -m app.modules.services_snapshot.cli export-atlas  # arquivo único para o Atlas; sem rede
 ```
 
 `--config <caminho>` aceita outra config (padrão `_local_data/drive_capture/config.yaml`).
@@ -169,9 +170,66 @@ individuais de pedidos, nomes de pessoas, protocolos, valores de células, obser
 cabeçalhos desconhecidos, IDs do Drive, e-mails, URLs, caminhos ou hashes. Status desconhecidos
 aparecem só como `desconhecido_NN` (diagnóstico daquele relatório, não identificador).
 
+## Exportação para o Atlas (`export-atlas`)
+
+```bash
+python -m app.modules.services_snapshot.cli export-atlas
+```
+
+Lê **só** `latest.json` e `last_attempt.json` (sem rede, sem autenticação, sem coleta) e
+grava um arquivo único, `<data_dir>/services_snapshot/atlas_snapshot.json`, dentro do
+mesmo perímetro privado e ignorado pelo Git. É o **único** formato que o Atlas consome; o
+formato local 1.1 continua interno.
+
+| Saída | Significado |
+|---|---|
+| 0 | exportado (inclusive com cobertura **parcial**) |
+| 2 | falha técnica: relatório ou registro local inválido, fonte divergente da piloto configurada, fora do recorte piloto, leitura instável, falha ao gravar — a exportação anterior é preservada |
+| 3 | nenhum relatório válido ainda |
+| 4 | refresh ou exportação em andamento (mesma trava `services_snapshot/run.lock`) |
+| 5 | relatório publicado no formato 1.0, sem datas: rode `refresh` (não há conversão implícita) |
+
+Regras:
+
+- Exige o relatório 1.1 e confere `fonte.alias`/`fonte.familia` contra a única fonte piloto
+  da config, sem exibi-la.
+- O objeto é montado **campo a campo** (`app/modules/services_snapshot/atlas_export.py`),
+  nunca copiado, e validado contra esquema fechado antes da troca atômica.
+- Os dois arquivos de entrada não formam transação: o par só é aceito se duas leituras
+  seguidas derem os mesmos bytes (até 3 tentativas; senão `leitura_instavel`).
+- A relação com a tentativa é a de `show` (`confirmada` / `falhou_depois` /
+  `nao_confirmada`): tentativa ausente, de outro run ou anterior ao relatório nunca vira
+  confirmação; tentativa inválida impede a exportação. É o estado **observado na
+  exportação** (`atualizacao.observada_em`): o Atlas não vê tentativas posteriores.
+- Reexportar não renova a captura: `tempos.capturada_em` é sempre o da leitura da planilha.
+
+### Contrato `cartorio_system.atlas.services_snapshot` 1.0
+
+Exemplo sintético completo, gerado pelo próprio exportador:
+[`services_snapshot_atlas.example.json`](services_snapshot_atlas.example.json) — um teste
+recusa divergência entre o exemplo e o código. Chaves fixas em todos os níveis; texto só
+de enumeração ou formato técnico; `null` = indisponível, nunca zero.
+
+| Bloco | Campos |
+|---|---|
+| `formato`, `versao` | `cartorio_system.atlas.services_snapshot`, `1.0` |
+| `origem` | `formato_local`, `versao_local` (`1.1`), `escopo` (`fonte_piloto_unica`), `fonte_alias`, `familia`, `run_id` |
+| `tempos` | `capturada_em`, `relatorio_gerado_em`, `exportado_em` (ISO 8601 UTC), `referencia_indicadores` (AAAA-MM-DD), `fuso_referencia` (`America/Sao_Paulo`) |
+| `atualizacao` | `relacao`, `observada_em` (= `exportado_em`), `tentativa`: `null` ou {`tentativa_em`, `resultado` sucesso/falha, `etapa`, `codigo`, `mesmo_run`} |
+| `cobertura` | `qualidade` completa/parcial, `abas_total`, `abas_interpretadas`, `abas_pendentes`, `abas_sem_vinculo_de_setor` (contagens), percentuais de status reconhecido, `reconciliacoes_ok` |
+| `agregado.servicos` | `total`, `concluidos`, `cancelados`, `nao_encerrados`, `sem_status`, `status_nao_mapeado`, `categorias` (11 chaves) |
+| `agregado.datas` | `abas_com_cadastro`, `abas_com_encerramento`, `cobertura` {cadastro, encerramento} por grupo, `idade_carteira` {base, amostra, faixas}, `duracao_conclusao` e `duracao_cancelamento` {base, amostra, media_dias, mediana_dias}, `sinais` |
+| `setores[]` | `aba`, `setor` (enum dos seis ou `null`), `situacao` interpretada/pendente, `motivo_pendencia` (token), `servicos`, `lacunas` {sem_tarefa, sem_responsavel, sem_data_de_inicio: número ou `campo_ausente`/`campo_ambiguo`}, `datas` {campos, cobertura, idade, durações, sinais, `prenotacao`} |
+| `setores[].datas.prenotacao` | só no RI: `base`, `data_prenotacao` {estado_campo, contagens, médias}, `vencimento_informado` {estado_campo, contagens com as quatro faixas} |
+
+Renomeações deliberadas em relação ao formato local: `calculaveis` → `amostra`;
+`nao_encerrados_reconhecidos` → `nao_encerrados`; `status_ausente` → `sem_status`;
+motivos e lacunas em tokens. Nada de datas individuais, nomes, protocolos, valores de
+células, IDs do Drive, e-mails, URLs, caminhos ou hashes.
+
 ## Fora do escopo
 
-Agendamento, consumo pelo Atlas, monitoramento diário, cálculo jurídico de prazos
+Agendamento, transporte para a VPS, consumo produtivo pelo Atlas, monitoramento diário, cálculo jurídico de prazos
 (dias úteis, feriados, suspensão/prorrogação, caducidade), SLA, atraso, produtividade
 individual, contagem de atos, deduplicação, transições por serviço. Diferença entre dois
 retratos não comprova entrada, conclusão ou produção de um serviço específico.
