@@ -73,6 +73,17 @@ exports/atlas/*
 !exports/atlas/.gitkeep
 
 # ---------------------------------------------------------------------------
+# Coletor do Drive (CARTORIO-DRIVE-READONLY-1) — capturas reais, estado com IDs,
+# config local e chave de service account. O padrão já fica em _local_data/; estas
+# linhas cobrem cópias soltas fora dele. Só o exemplo fictício é versionado.
+# ---------------------------------------------------------------------------
+/drive_capture/
+*drive_capture*.yaml
+!docs/modules/drive_capture.config.example.yaml
+*service-account*.json
+*service_account*.json
+
+# ---------------------------------------------------------------------------
 # Exports do módulo de auditoria e artefatos gerados — nunca versionar
 # ---------------------------------------------------------------------------
 exports/audit/

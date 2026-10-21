@@ -53,6 +53,7 @@ Arquivo: [`technical_decisions.md`](technical_decisions.md)
 | [ADR-008](ADR-008-saida-de-ia-e-rascunho-sujeito-a-revisao.md) | Toda Saída de IA é Rascunho Sujeito à Revisão Humana | Proposto |
 | [ADR-009](ADR-009-inventory-cent-rounding-policy.md) | Política de centavos em inventários extrajudiciais — o sistema alerta e não corrige silenciosamente | Aceito |
 | [ADR-010](ADR-010-inventory-fraction-percentage-rendering.md) | Representação de percentual e fração ideal em inventários — precisão derivada da entrada; fração opcional e nunca inferida | Aceito |
+| [ADR-011](ADR-011-drive-readonly-capture.md) | Captura local somente leitura de fontes do Google Drive do cartório — service account própria, escopo `drive.readonly`, allowlist explícita | Proposto |
 
 ---
 
