@@ -46,6 +46,7 @@
 | **Registro de Imóveis** | [`modules/registro_imoveis.md`](modules/registro_imoveis.md) |
 | Coletor somente leitura do Drive | [`modules/drive_capture.md`](modules/drive_capture.md) — acesso real validado em smoke local da fonte piloto |
 | Retrato de serviços por setor e status | [`modules/services_snapshot.md`](modules/services_snapshot.md) — atualização manual local, com indicadores de datas |
+| Leitura local do Financeiro (demonstrativo de caixa) | [`modules/finance_snapshot.md`](modules/finance_snapshot.md) — leitor offline experimental sobre captura existente |
 | **Registro de Imóveis — dicionário sanitizado** | [`ri_inventory/SANITIZED_DATA_DICTIONARY.md`](ri_inventory/SANITIZED_DATA_DICTIONARY.md) |
 
 ### Documentação operacional do módulo de auditoria
