@@ -90,6 +90,9 @@ class Sheet:
     hidden_rows: set[int]
     tables: list[Table] = field(default_factory=list)
     date1904: bool = False  # sistema de datas do workbook
+    # Faixas mescladas (linha1, col1, linha2, col2): o retrato de serviços as ignora; o
+    # demonstrativo financeiro precisa delas para achar a célula ao lado de um rótulo.
+    merges: list[tuple[int, int, int, int]] = field(default_factory=list)
 
     def rows(self) -> dict[int, dict[int, Cell]]:
         out: dict[int, dict[int, Cell]] = {}
@@ -210,7 +213,18 @@ def _sheet(
                 columns=[tc.get("name", "") for tc in tr.iter(M + "tableColumn")],
             )
         )
-    return Sheet(name=name, cells=cells, hidden_rows=hidden, tables=tables, date1904=date1904)
+    merge_cells = root.find(M + "mergeCells")
+    merges = [
+        parse_range(mc.get("ref", "")) for mc in (merge_cells if merge_cells is not None else [])
+    ]
+    return Sheet(
+        name=name,
+        cells=cells,
+        hidden_rows=hidden,
+        tables=tables,
+        date1904=date1904,
+        merges=merges,
+    )
 
 
 def parse_workbook(content: bytes) -> list[Sheet]:

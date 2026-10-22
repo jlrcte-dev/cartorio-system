@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import copy
+import io
 import json
+import zipfile
 from datetime import UTC, date, datetime
 
 import pytest
@@ -174,3 +176,25 @@ def test_corrupt_package_is_a_controlled_error() -> None:
     with pytest.raises(XlsxError) as exc:
         parse_workbook(b"PK\x03\x04" + b"lixo " + PEOPLE[0].encode())
     assert PEOPLE[0] not in str(exc.value)
+
+
+def test_parser_exposes_merges_without_changing_cells() -> None:
+    plain = standard_workbook()
+    sheets = parse_workbook(plain)
+    assert all(s.merges == [] for s in sheets)
+    src, buf = zipfile.ZipFile(io.BytesIO(plain)), io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as out:
+        for name in src.namelist():
+            data = src.read(name)
+            if name == "xl/worksheets/sheet1.xml":
+                merge = b'</sheetData><mergeCells count="1"><mergeCell ref="B2:C3"/></mergeCells>'
+                data = data.replace(b"</sheetData>", merge, 1)
+            out.writestr(name, data)
+    merged = parse_workbook(buf.getvalue())
+    assert merged[0].merges == [(2, 2, 3, 3)]
+    assert [(s.cells, s.hidden_rows, s.tables) for s in merged] == [
+        (s.cells, s.hidden_rows, s.tables) for s in sheets
+    ]
+    assert classify_workbook(merged, date(2026, 10, 20)) == classify_workbook(
+        sheets, date(2026, 10, 20)
+    )
