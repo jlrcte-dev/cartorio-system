@@ -1,0 +1,1678 @@
+{
+  "formato": "cartorio_system.atlas.finance_snapshot",
+  "versao": "1.0",
+  "origem": {
+    "formato_local": "cartorio_system.finance_snapshot.local",
+    "versao_local": "0.1",
+    "escopo": "fonte_financeira_unica",
+    "fonte_alias": "financeiro_teste",
+    "familia": "gerenciamento_financeiro",
+    "run_id": "20261022T150000Z-abc123"
+  },
+  "periodo": "2026-10",
+  "tempos": {
+    "capturada_em": "2026-10-22T15:00:00Z",
+    "relatorio_gerado_em": "2026-10-22T15:00:00+00:00",
+    "exportado_em": "2026-10-22T18:30:00+00:00",
+    "referencia_indicadores": "2026-10-22",
+    "fuso_referencia": "America/Sao_Paulo"
+  },
+  "limitacoes": [
+    "fonte_copia_de_desenvolvimento",
+    "sem_atualizacao_periodica",
+    "cancelamentos_estornos_nao_registrados",
+    "sem_consolidacao_entre_blocos",
+    "valores_conforme_gravados_na_planilha",
+    "pix_total_publicado_omite_linhas_do_bloco"
+  ],
+  "cobertura": {
+    "abas_total": 12,
+    "por_estado": {
+      "preenchido": 6,
+      "sem_lancamento": 1,
+      "feriado": 1,
+      "fora_do_padrao": 3,
+      "ignorada": 1
+    },
+    "por_temporalidade": {
+      "anterior": 9,
+      "referencia": 1,
+      "futura": 1,
+      "sem_data": 1
+    },
+    "datas_interpretadas": 10,
+    "datas_repetidas": 1,
+    "abas_com_campo_indisponivel": 3,
+    "campos_indisponiveis_por_motivo": {
+      "vazio": 1,
+      "formula_sem_resultado": 1,
+      "erro_de_formula": 0,
+      "nao_numerico": 0,
+      "numero_invalido": 0,
+      "formato_de_data": 0,
+      "bloco_indisponivel": 7,
+      "total_nao_confirmado": 0,
+      "sem_conferencia": 1,
+      "conferencia_indisponivel": 0
+    },
+    "valores_com_mais_de_duas_casas": 2,
+    "blocos": {
+      "dinheiro": {
+        "localizado": 10,
+        "nao_localizado": 1,
+        "nao_lido": 1
+      },
+      "verificacao": {
+        "localizado": 11,
+        "nao_localizado": 0,
+        "nao_lido": 1
+      },
+      "pix": {
+        "localizado": 11,
+        "nao_localizado": 0,
+        "nao_lido": 1
+      },
+      "protesto": {
+        "localizado": 11,
+        "nao_localizado": 0,
+        "nao_lido": 1
+      },
+      "maquininha": {
+        "localizado": 11,
+        "nao_localizado": 0,
+        "nao_lido": 1
+      }
+    },
+    "pix_formula_do_total": {
+      "cobre_o_bloco": 1,
+      "omite_linhas": 10,
+      "nao_verificavel": 0,
+      "nao_lido": 1
+    }
+  },
+  "checagens": {
+    "conferencia": {
+      "valida_zero": 5,
+      "valida_nao_zero": 1,
+      "sem_conferencia": 1,
+      "indisponivel": 0,
+      "nao_aplicavel": 5
+    },
+    "continuidade": {
+      "confere": 1,
+      "diverge": 4,
+      "indisponivel": 2,
+      "nao_aplicavel": 5
+    },
+    "soma": {
+      "dinheiro_entradas": {
+        "confere": 7,
+        "diverge": 0,
+        "indisponivel": 0,
+        "nao_aplicavel": 5
+      },
+      "dinheiro_saidas": {
+        "confere": 7,
+        "diverge": 0,
+        "indisponivel": 0,
+        "nao_aplicavel": 5
+      },
+      "pix": {
+        "confere": 6,
+        "diverge": 1,
+        "indisponivel": 0,
+        "nao_aplicavel": 5
+      },
+      "protesto_recebido": {
+        "confere": 7,
+        "diverge": 0,
+        "indisponivel": 0,
+        "nao_aplicavel": 5
+      },
+      "protesto_repassado": {
+        "confere": 7,
+        "diverge": 0,
+        "indisponivel": 0,
+        "nao_aplicavel": 5
+      },
+      "maquininha_a_receber": {
+        "confere": 7,
+        "diverge": 0,
+        "indisponivel": 0,
+        "nao_aplicavel": 5
+      },
+      "maquininha_cobrado": {
+        "confere": 7,
+        "diverge": 0,
+        "indisponivel": 0,
+        "nao_aplicavel": 5
+      }
+    },
+    "data_corpo": {
+      "concorda": 1,
+      "diverge": 5,
+      "indisponivel": 1,
+      "nao_aplicavel": 5
+    }
+  },
+  "dias": [
+    {
+      "posicao": 1,
+      "data": null,
+      "estado": "ignorada",
+      "motivo_estado": "nome_sem_data",
+      "temporalidade": null,
+      "blocos": null,
+      "checagens": {
+        "conferencia": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel",
+          "sinal": null
+        },
+        "continuidade": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel",
+          "base_data": null,
+          "dias_desde_base": null
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "dinheiro_saidas": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "pix": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "protesto_recebido": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "protesto_repassado": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "maquininha_a_receber": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "maquininha_cobrado": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          }
+        },
+        "data_corpo": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel"
+        }
+      }
+    },
+    {
+      "posicao": 2,
+      "data": "2026-10-05",
+      "estado": "preenchido",
+      "motivo_estado": null,
+      "temporalidade": "anterior",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "100",
+            "motivo": null
+          },
+          "registros": 3,
+          "total_entradas": {
+            "valor": "150.25",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "30",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": "20",
+            "motivo": null
+          },
+          "saldo_teorico": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "diferenca": {
+            "valor": "0",
+            "motivo": null
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "valida",
+          "motivo": null,
+          "sinal": "zero"
+        },
+        "continuidade": {
+          "estado": "indisponivel",
+          "motivo": "sem_base",
+          "base_data": null,
+          "dias_desde_base": null
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "dinheiro_saidas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "pix": {
+            "estado": "diverge",
+            "motivo": null
+          },
+          "protesto_recebido": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_repassado": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_a_receber": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_cobrado": {
+            "estado": "confere",
+            "motivo": null
+          }
+        },
+        "data_corpo": {
+          "estado": "concorda",
+          "motivo": null
+        }
+      }
+    },
+    {
+      "posicao": 3,
+      "data": "2026-10-06",
+      "estado": "preenchido",
+      "motivo_estado": null,
+      "temporalidade": "anterior",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "registros": 3,
+          "total_entradas": {
+            "valor": "150.25",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "30",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": "0",
+            "motivo": null
+          },
+          "saldo_teorico": {
+            "valor": "320.5",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": "320.375",
+            "motivo": null
+          },
+          "diferenca": {
+            "valor": "-0.125",
+            "motivo": null
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "valida",
+          "motivo": null,
+          "sinal": "nao_zero"
+        },
+        "continuidade": {
+          "estado": "confere",
+          "motivo": null,
+          "base_data": "2026-10-05",
+          "dias_desde_base": 1
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "dinheiro_saidas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "pix": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_recebido": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_repassado": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_a_receber": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_cobrado": {
+            "estado": "confere",
+            "motivo": null
+          }
+        },
+        "data_corpo": {
+          "estado": "indisponivel",
+          "motivo": null
+        }
+      }
+    },
+    {
+      "posicao": 4,
+      "data": "2026-10-07",
+      "estado": "preenchido",
+      "motivo_estado": null,
+      "temporalidade": "anterior",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "1",
+            "motivo": null
+          },
+          "registros": 3,
+          "total_entradas": {
+            "valor": "150.25",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "30",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": "20",
+            "motivo": null
+          },
+          "saldo_teorico": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": null,
+            "motivo": "vazio"
+          },
+          "diferenca": {
+            "valor": null,
+            "motivo": "sem_conferencia"
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "cobre_o_bloco"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "sem_conferencia",
+          "motivo": null,
+          "sinal": null
+        },
+        "continuidade": {
+          "estado": "diverge",
+          "motivo": null,
+          "base_data": "2026-10-06",
+          "dias_desde_base": 1
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "dinheiro_saidas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "pix": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_recebido": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_repassado": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_a_receber": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_cobrado": {
+            "estado": "confere",
+            "motivo": null
+          }
+        },
+        "data_corpo": {
+          "estado": "diverge",
+          "motivo": null
+        }
+      }
+    },
+    {
+      "posicao": 5,
+      "data": "2026-10-08",
+      "estado": "sem_lancamento",
+      "motivo_estado": null,
+      "temporalidade": "anterior",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "100",
+            "motivo": null
+          },
+          "registros": 0,
+          "total_entradas": {
+            "valor": "0",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "0",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": null,
+            "motivo": "formula_sem_resultado"
+          },
+          "saldo_teorico": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "diferenca": {
+            "valor": "0",
+            "motivo": null
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "0",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 0,
+          "total_recebido": {
+            "valor": "0",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "0",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "0",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "0",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "0",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "valida",
+          "motivo": null,
+          "sinal": "zero"
+        },
+        "continuidade": {
+          "estado": "diverge",
+          "motivo": null,
+          "base_data": "2026-10-07",
+          "dias_desde_base": 1
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "dinheiro_saidas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "pix": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_recebido": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_repassado": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_a_receber": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_cobrado": {
+            "estado": "confere",
+            "motivo": null
+          }
+        },
+        "data_corpo": {
+          "estado": "diverge",
+          "motivo": null
+        }
+      }
+    },
+    {
+      "posicao": 6,
+      "data": "2026-10-12",
+      "estado": "feriado",
+      "motivo_estado": null,
+      "temporalidade": "anterior",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "100",
+            "motivo": null
+          },
+          "registros": 3,
+          "total_entradas": {
+            "valor": "150.25",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "30",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": "20",
+            "motivo": null
+          },
+          "saldo_teorico": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "diferenca": {
+            "valor": "0",
+            "motivo": null
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "valida",
+          "motivo": null,
+          "sinal": "zero"
+        },
+        "continuidade": {
+          "estado": "diverge",
+          "motivo": null,
+          "base_data": "2026-10-08",
+          "dias_desde_base": 4
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "dinheiro_saidas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "pix": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_recebido": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_repassado": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_a_receber": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_cobrado": {
+            "estado": "confere",
+            "motivo": null
+          }
+        },
+        "data_corpo": {
+          "estado": "diverge",
+          "motivo": null
+        }
+      }
+    },
+    {
+      "posicao": 7,
+      "data": "2026-10-13",
+      "estado": "fora_do_padrao",
+      "motivo_estado": "bloco_nao_localizado",
+      "temporalidade": "anterior",
+      "blocos": {
+        "dinheiro": {
+          "localizado": false,
+          "motivo": "ancora_ausente",
+          "caixa_inicial": {
+            "valor": null,
+            "motivo": "bloco_indisponivel"
+          },
+          "registros": null,
+          "total_entradas": {
+            "valor": null,
+            "motivo": "bloco_indisponivel"
+          },
+          "total_saidas": {
+            "valor": null,
+            "motivo": "bloco_indisponivel"
+          },
+          "retirada_malote": {
+            "valor": null,
+            "motivo": "bloco_indisponivel"
+          },
+          "saldo_teorico": {
+            "valor": null,
+            "motivo": "bloco_indisponivel"
+          },
+          "saldo_conferido": {
+            "valor": null,
+            "motivo": "bloco_indisponivel"
+          },
+          "diferenca": {
+            "valor": null,
+            "motivo": "bloco_indisponivel"
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel",
+          "sinal": null
+        },
+        "continuidade": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel",
+          "base_data": null,
+          "dias_desde_base": null
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "dinheiro_saidas": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "pix": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "protesto_recebido": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "protesto_repassado": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "maquininha_a_receber": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "maquininha_cobrado": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          }
+        },
+        "data_corpo": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel"
+        }
+      }
+    },
+    {
+      "posicao": 8,
+      "data": "2026-10-14",
+      "estado": "fora_do_padrao",
+      "motivo_estado": "data_repetida",
+      "temporalidade": "anterior",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "100",
+            "motivo": null
+          },
+          "registros": 3,
+          "total_entradas": {
+            "valor": "150.25",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "30",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": "20",
+            "motivo": null
+          },
+          "saldo_teorico": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "diferenca": {
+            "valor": "0",
+            "motivo": null
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel",
+          "sinal": null
+        },
+        "continuidade": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel",
+          "base_data": null,
+          "dias_desde_base": null
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "dinheiro_saidas": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "pix": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "protesto_recebido": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "protesto_repassado": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "maquininha_a_receber": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "maquininha_cobrado": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          }
+        },
+        "data_corpo": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel"
+        }
+      }
+    },
+    {
+      "posicao": 9,
+      "data": "2026-10-14",
+      "estado": "fora_do_padrao",
+      "motivo_estado": "data_repetida",
+      "temporalidade": "anterior",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "100",
+            "motivo": null
+          },
+          "registros": 3,
+          "total_entradas": {
+            "valor": "150.25",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "30",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": "20",
+            "motivo": null
+          },
+          "saldo_teorico": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "diferenca": {
+            "valor": "0",
+            "motivo": null
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel",
+          "sinal": null
+        },
+        "continuidade": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel",
+          "base_data": null,
+          "dias_desde_base": null
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "dinheiro_saidas": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "pix": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "protesto_recebido": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "protesto_repassado": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "maquininha_a_receber": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          },
+          "maquininha_cobrado": {
+            "estado": "nao_aplicavel",
+            "motivo": "estado_nao_elegivel"
+          }
+        },
+        "data_corpo": {
+          "estado": "nao_aplicavel",
+          "motivo": "estado_nao_elegivel"
+        }
+      }
+    },
+    {
+      "posicao": 10,
+      "data": "2026-10-15",
+      "estado": "preenchido",
+      "motivo_estado": null,
+      "temporalidade": "anterior",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "100",
+            "motivo": null
+          },
+          "registros": 3,
+          "total_entradas": {
+            "valor": "150.25",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "30",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": "20",
+            "motivo": null
+          },
+          "saldo_teorico": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "diferenca": {
+            "valor": "0",
+            "motivo": null
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "valida",
+          "motivo": null,
+          "sinal": "zero"
+        },
+        "continuidade": {
+          "estado": "indisponivel",
+          "motivo": "base_ambigua",
+          "base_data": "2026-10-14",
+          "dias_desde_base": 1
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "dinheiro_saidas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "pix": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_recebido": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_repassado": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_a_receber": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_cobrado": {
+            "estado": "confere",
+            "motivo": null
+          }
+        },
+        "data_corpo": {
+          "estado": "diverge",
+          "motivo": null
+        }
+      }
+    },
+    {
+      "posicao": 11,
+      "data": "2026-10-22",
+      "estado": "preenchido",
+      "motivo_estado": null,
+      "temporalidade": "referencia",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "100",
+            "motivo": null
+          },
+          "registros": 3,
+          "total_entradas": {
+            "valor": "150.25",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "30",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": "20",
+            "motivo": null
+          },
+          "saldo_teorico": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "diferenca": {
+            "valor": "0",
+            "motivo": null
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "valida",
+          "motivo": null,
+          "sinal": "zero"
+        },
+        "continuidade": {
+          "estado": "diverge",
+          "motivo": null,
+          "base_data": "2026-10-15",
+          "dias_desde_base": 7
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "dinheiro_saidas": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "pix": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_recebido": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "protesto_repassado": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_a_receber": {
+            "estado": "confere",
+            "motivo": null
+          },
+          "maquininha_cobrado": {
+            "estado": "confere",
+            "motivo": null
+          }
+        },
+        "data_corpo": {
+          "estado": "diverge",
+          "motivo": null
+        }
+      }
+    },
+    {
+      "posicao": 12,
+      "data": "2026-10-23",
+      "estado": "preenchido",
+      "motivo_estado": null,
+      "temporalidade": "futura",
+      "blocos": {
+        "dinheiro": {
+          "localizado": true,
+          "motivo": null,
+          "caixa_inicial": {
+            "valor": "100",
+            "motivo": null
+          },
+          "registros": 3,
+          "total_entradas": {
+            "valor": "150.25",
+            "motivo": null
+          },
+          "total_saidas": {
+            "valor": "30",
+            "motivo": null
+          },
+          "retirada_malote": {
+            "valor": "20",
+            "motivo": null
+          },
+          "saldo_teorico": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "saldo_conferido": {
+            "valor": "200.25",
+            "motivo": null
+          },
+          "diferenca": {
+            "valor": "0",
+            "motivo": null
+          }
+        },
+        "verificacao": {
+          "localizado": true,
+          "motivo": null,
+          "preenchidas": 1,
+          "incompletas": 0
+        },
+        "pix": {
+          "localizado": true,
+          "motivo": null,
+          "total": {
+            "valor": "100",
+            "motivo": null
+          },
+          "formula_do_total": "omite_linhas"
+        },
+        "protesto": {
+          "localizado": true,
+          "motivo": null,
+          "registros": 1,
+          "total_recebido": {
+            "valor": "500",
+            "motivo": null
+          },
+          "total_repassado": {
+            "valor": "450",
+            "motivo": null
+          },
+          "total_emolumentos": {
+            "valor": "50",
+            "motivo": null
+          }
+        },
+        "maquininha": {
+          "localizado": true,
+          "motivo": null,
+          "total_a_receber": {
+            "valor": "97.5",
+            "motivo": null
+          },
+          "total_cobrado": {
+            "valor": "100",
+            "motivo": null
+          }
+        }
+      },
+      "checagens": {
+        "conferencia": {
+          "estado": "nao_aplicavel",
+          "motivo": "data_futura",
+          "sinal": null
+        },
+        "continuidade": {
+          "estado": "nao_aplicavel",
+          "motivo": "data_futura",
+          "base_data": null,
+          "dias_desde_base": null
+        },
+        "soma": {
+          "dinheiro_entradas": {
+            "estado": "nao_aplicavel",
+            "motivo": "data_futura"
+          },
+          "dinheiro_saidas": {
+            "estado": "nao_aplicavel",
+            "motivo": "data_futura"
+          },
+          "pix": {
+            "estado": "nao_aplicavel",
+            "motivo": "data_futura"
+          },
+          "protesto_recebido": {
+            "estado": "nao_aplicavel",
+            "motivo": "data_futura"
+          },
+          "protesto_repassado": {
+            "estado": "nao_aplicavel",
+            "motivo": "data_futura"
+          },
+          "maquininha_a_receber": {
+            "estado": "nao_aplicavel",
+            "motivo": "data_futura"
+          },
+          "maquininha_cobrado": {
+            "estado": "nao_aplicavel",
+            "motivo": "data_futura"
+          }
+        },
+        "data_corpo": {
+          "estado": "nao_aplicavel",
+          "motivo": "data_futura"
+        }
+      }
+    }
+  ]
+}
