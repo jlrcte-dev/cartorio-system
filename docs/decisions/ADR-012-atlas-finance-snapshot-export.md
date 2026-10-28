@@ -1,7 +1,9 @@
 # ADR-012 — Exportação financeira para o Atlas com contrato próprio e fechado
 
 - **Status:** Proposto — implementado e testado localmente com dados sintéticos; aceite
-  depende de revisão humana. Sem consumidor no Atlas, transporte ou ativação produtiva.
+  depende de revisão humana. *Nota factual (2026-10-27):* o contrato 1.0 passou a ter
+  consumidor no Atlas e uso produtivo desde 26/10/2026, por operação manual realizada fora
+  desta ADR. A ativação não a aceita nem altera seu status.
 - **Data:** 2026-10-22
 - **Sprint:** `CARTORIO-ATLAS-FINANCE-EXPORT-1`
 - **Módulo:** `app/modules/finance_snapshot/atlas_export.py`
@@ -78,6 +80,8 @@ contrato de export é definido.
 - O arquivo é **privado** (traz valores agregados por dia), e o transporte para a VPS
   ainda não está definido. Ele exigirá decisão própria, com o mesmo cuidado do canal de
   serviços.
+  *Nota de 2026-10-27:* o transporte foi realizado manualmente em 26/10/2026, por canal
+  próprio e fora do escopo desta ADR.
 - Sem registro de tentativas, o consumidor não distingue "nada mudou" de "a atualização
   falhou": só vê os tempos da captura e da exportação.
 - Trava órfã de processo interrompido exige remoção manual.

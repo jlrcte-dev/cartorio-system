@@ -1,11 +1,17 @@
 # Leitura local do Financeiro (`finance_snapshot`)
 
-**Estado (2026-10-22):** leitor **offline** e experimental do demonstrativo diário de caixa,
+**Estado (2026-10-27):** leitor **offline** e experimental do demonstrativo diário de caixa,
 sobre uma captura já feita pelo [coletor](drive_capture.md). Ele não coleta, não usa rede
-nem credencial e não tem transporte nem agendamento. A fonte é uma **cópia de
+nem credencial e não tem transporte nem agendamento próprios. A fonte é uma **cópia de
 desenvolvimento**, sem atualização periódica. O `export-atlas` (abaixo) grava, localmente,
-um arquivo com contrato próprio para um futuro consumidor no Atlas; **ainda não há
-consumidor, transporte nem ativação produtiva** (ADR-012, Proposto).
+um arquivo com contrato próprio e segue sendo uma **operação manual**. Esse arquivo tem
+consumidor no Atlas (`/cartorio_financeiro`) e está em uso produtivo desde a ativação de
+26/10/2026, feita manualmente e fora deste módulo (aceite do smoke baseado nas
+transcrições fornecidas por João; a correlação com o journal cobre o tratamento dos
+comandos, não o texto das respostas nem a data consultada). O arquivo ativo é uma
+**captura estática de desenvolvimento** (run `20261022T164644Z-d0fed2`, captura de
+22/10/2026): a atualização é manual, não há atualização periódica nem automática, e o
+Atlas não consulta o Google Sheets. A ativação não altera o status da ADR-012 (Proposto).
 
 ## Uso
 
@@ -298,6 +304,11 @@ própria.
 
 - Cancelamentos e estornos não são registrados na fonte.
 - Não há consolidação entre blocos ou meios, saldo global, conciliação nem integração
-  com o Finance pessoal. A exportação para o Atlas é só um arquivo local: não há
-  consumidor no Atlas, transporte, agendamento nem ativação produtiva.
+  com o Finance pessoal. A exportação para o Atlas é um arquivo local gerado por operação
+  manual. O Atlas o consome em produção (captura de 22/10/2026), mas não há agendamento,
+  renovação automática nem consulta do Atlas ao Google Sheets.
+- Relato de João, **pendente de validação**: a soma do bloco PIX da planilha de produção
+  teria sido corrigida manualmente. Não há confirmação de que o snapshot ativo (captura de
+  22/10/2026) a reflita, e a limitação publicada
+  `pix_total_publicado_omite_linhas_do_bloco` é preservada.
 - Os resultados descrevem a cópia lida, não a operação atual.
