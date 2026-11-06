@@ -1,17 +1,26 @@
 """Compatibilidade PostgreSQL da Fase B de homologação.
 
 Os testes que precisam de conexão real (marcados `_requires_real_postgres`) exigem
-`CARTORIO_TEST_POSTGRES_URL` apontando para um PostgreSQL descartável, vazio, de uso
-exclusivo desta bancada. Sem a variável, esses casos são pulados -- não entram no
-gate padrão (`pytest`), que continua só contra SQLite. Com a variável definida, banco
-já populado, esquema de URL inválido ou driver ausente são falha explícita, nunca
-skip silencioso: quem definiu a variável pediu este teste.
+`CARTORIO_TEST_POSTGRES_URL` apontando para a bancada descartável conhecida desta
+Fase B -- usuário e banco precisam casar exatamente com `_EXPECTED_BANCADA_USER` /
+`_EXPECTED_BANCADA_DBNAME`. Isso é deliberado: "estar vazio" não é suficiente para
+provar que um banco é o nosso, então a restrição é por identidade, não por estado.
+Sem a variável, esses casos são pulados -- não entram no gate padrão (`pytest`), que
+continua só contra SQLite. Com a variável definida, identidade errada, esquema de
+URL inválido ou driver ausente são falha explícita, nunca skip silencioso: quem
+definiu a variável pediu este teste.
+
+Dentro da bancada (já restrita por identidade), cada execução cria um schema
+PostgreSQL próprio, com nome único por sessão de teste, migra só dentro dele, e
+descarta exatamente esse schema ao final -- nunca `public`, nunca o banco inteiro.
+Isso limita o que qualquer execução pode apagar ao que ela mesma criou, mesmo que a
+bancada venha a ter outro conteúdo coexistindo (de uma execução anterior que tenha
+falhado em limpar, por exemplo).
 
 Os testes de validação de URL (`test_require_postgres_url_*`) são puros -- não abrem
 conexão nenhuma -- e por isso sempre rodam, mesmo no gate padrão sem Postgres.
 
-Nenhum dado real: tudo aqui é sintético. O banco reservado à bancada é sempre
-devolvido vazio ao final (mesmo em falha de setup ou de qualquer teste).
+Nenhum dado real: tudo aqui é sintético.
 """
 
 from __future__ import annotations
@@ -25,18 +34,22 @@ import time
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
+from urllib.parse import quote, urlsplit
 
 import httpx
 import pytest
 
 POSTGRES_URL = os.environ.get("CARTORIO_TEST_POSTGRES_URL")
 
+# Identidade da bancada descartável desta Fase B. Não é configurável por env var de
+# propósito: a restrição é "exatamente esta bancada conhecida", não "qualquer coisa
+# que o operador decida apontar hoje".
+_EXPECTED_BANCADA_USER = "cartorio_fase_b"
+_EXPECTED_BANCADA_DBNAME = "cartorio_fase_b_test"
+
 _requires_real_postgres = pytest.mark.skipif(
     POSTGRES_URL is None,
-    reason=(
-        "requer CARTORIO_TEST_POSTGRES_URL (PostgreSQL descartável, banco vazio, "
-        "de uso exclusivo da bancada)"
-    ),
+    reason=("requer CARTORIO_TEST_POSTGRES_URL (bancada descartável conhecida desta Fase B)"),
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -50,8 +63,9 @@ def _sanitize(text: str) -> str:
 
 
 def _require_postgres_url(url: str | None) -> str:
-    """Recusa qualquer alvo que não seja PostgreSQL -- nunca SQLite, nunca esquema
-    desconhecido. Validação pura, sem conexão: roda sempre, mesmo sem bancada."""
+    """Recusa qualquer alvo que não seja, por identidade, a bancada descartável
+    conhecida desta Fase B. Validação pura, sem conexão: roda sempre, mesmo sem
+    bancada. "Estar vazio" nunca é suficiente aqui -- só identidade."""
     if not url:
         raise RuntimeError("CARTORIO_TEST_POSTGRES_URL não definida.")
     if url.startswith("sqlite"):
@@ -62,6 +76,17 @@ def _require_postgres_url(url: str | None) -> str:
         raise RuntimeError(
             f"CARTORIO_TEST_POSTGRES_URL com esquema não suportado: {_sanitize(url)}"
         )
+
+    parsed = urlsplit(url)
+    dbname = parsed.path.lstrip("/")
+    if parsed.username != _EXPECTED_BANCADA_USER or dbname != _EXPECTED_BANCADA_DBNAME:
+        raise RuntimeError(
+            "CARTORIO_TEST_POSTGRES_URL não aponta para a bancada descartável "
+            f"conhecida desta Fase B (esperado usuário={_EXPECTED_BANCADA_USER!r}, "
+            f"banco={_EXPECTED_BANCADA_DBNAME!r}; recebeu "
+            f"usuário={parsed.username!r}, banco={dbname!r}). Estar vazio não basta "
+            "-- precisa ser exatamente esta bancada."
+        )
     return url
 
 
@@ -70,33 +95,36 @@ def _psycopg_conninfo(url: str) -> str:
     return url.replace("postgresql+psycopg://", "postgresql://", 1)
 
 
-def _assert_database_is_empty(url: str) -> None:
-    """Recusa prosseguir se o banco alvo já tiver qualquer tabela em `public` --
-    nunca escrever num banco que não está comprovadamente vazio, mesmo que a env
-    var aponte para o lugar errado por engano. Falha aqui NUNCA aciona descarte:
-    se o banco não é nosso, não tocamos nele."""
+def _scoped_url(base_url: str, schema: str) -> str:
+    """URL da mesma bancada, mas com `search_path` fixado no schema exclusivo desta
+    execução -- Alembic, o app e os INSERTs diretos passam a resolver tabelas sem
+    qualificação (`financial_entries`, não `esquema.financial_entries`) contra esse
+    schema, nunca contra `public`."""
+    separator = "&" if "?" in base_url else "?"
+    options = quote(f"-c search_path={schema}", safe="")
+    return f"{base_url}{separator}options={options}"
+
+
+def _create_schema(base_url: str, schema: str) -> None:
     import psycopg
+    from psycopg import sql
 
-    with psycopg.connect(_psycopg_conninfo(url)) as conn, conn.cursor() as cur:
-        cur.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'")
-        (count,) = cur.fetchone()
-    if count:
-        raise RuntimeError(
-            f"Banco de teste já tem {count} tabela(s) em 'public' -- recusando usar "
-            "um banco que não está vazio. Aponte CARTORIO_TEST_POSTGRES_URL para um "
-            "banco descartável vazio, de uso exclusivo desta bancada."
-        )
-
-
-def _wipe_database(url: str) -> None:
-    """Descarta todo o conteúdo do banco de teste, devolvendo-o vazio."""
-    import psycopg
-
-    with psycopg.connect(_psycopg_conninfo(url)) as conn:
+    with psycopg.connect(_psycopg_conninfo(base_url)) as conn:
         conn.autocommit = True
         with conn.cursor() as cur:
-            cur.execute("DROP SCHEMA public CASCADE")
-            cur.execute("CREATE SCHEMA public")
+            cur.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema)))
+
+
+def _drop_schema(base_url: str, schema: str) -> None:
+    """Descarta exatamente o schema desta execução -- nunca `public`, nunca o
+    banco inteiro. Idempotente: seguro mesmo se o schema nunca tiver sido criado."""
+    import psycopg
+    from psycopg import sql
+
+    with psycopg.connect(_psycopg_conninfo(base_url)) as conn:
+        conn.autocommit = True
+        with conn.cursor() as cur:
+            cur.execute(sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(schema)))
 
 
 def _run_alembic(
@@ -129,25 +157,29 @@ def _free_port() -> int:
 
 @pytest.fixture(scope="session")
 def postgres_db() -> Iterator[str]:
-    """Banco PostgreSQL vazio e migrado, exclusivo desta sessão de testes.
+    """Schema PostgreSQL exclusivo desta sessão de testes, dentro da bancada
+    descartável conhecida.
 
-    Recusa prosseguir se a URL não for PostgreSQL ou se o banco já tiver tabelas
-    (nesse caso não descarta nada -- o banco não é nosso). Se a migração em si
-    falhar, descarta o que foi escrito antes de propagar o erro. Ao final da
-    sessão -- inclusive se algum teste (setup ou smoke HTTP) falhar -- devolve o
-    banco vazio outra vez, para a próxima execução poder reusá-lo isoladamente.
+    Recusa prosseguir se a URL não apontar, por identidade, para a bancada
+    conhecida (nunca por "estar vazio"). Cria um schema com nome único, migra só
+    nele, e sempre o descarta no `finally` -- inclusive se o setup ou qualquer
+    teste (incluindo o smoke HTTP) falhar. Nunca toca em `public` ou em qualquer
+    outro schema que porventura já exista na bancada.
     """
-    url = _require_postgres_url(POSTGRES_URL)
-    _assert_database_is_empty(url)
+    base_url = _require_postgres_url(POSTGRES_URL)
+    schema = f"fase_b_test_{uuid.uuid4().hex[:12]}"
+    scoped_url = _scoped_url(base_url, schema)
+
+    _create_schema(base_url, schema)
     try:
-        _run_alembic("upgrade", "head", database_url=url)
+        _run_alembic("upgrade", "head", database_url=scoped_url)
     except Exception:
-        _wipe_database(url)
+        _drop_schema(base_url, schema)
         raise
     try:
-        yield url
+        yield scoped_url
     finally:
-        _wipe_database(url)
+        _drop_schema(base_url, schema)
 
 
 def test_require_postgres_url_rejects_sqlite() -> None:
@@ -165,9 +197,16 @@ def test_require_postgres_url_rejects_empty() -> None:
         _require_postgres_url(None)
 
 
+def test_require_postgres_url_rejects_wrong_identity() -> None:
+    """Um banco vazio, mas com usuário/nome diferentes da bancada conhecida, é
+    recusado -- "vazio" nunca foi, nem deveria ser, suficiente."""
+    with pytest.raises(RuntimeError, match="bancada descartável conhecida"):
+        _require_postgres_url("postgresql://outro_usuario:senha@127.0.0.1:5432/outro_banco")
+
+
 @_requires_real_postgres
 def test_alembic_upgrade_head_on_empty_postgres(postgres_db: str) -> None:
-    """A fixture já aplicou `upgrade head` num banco comprovadamente vazio;
+    """A fixture já aplicou `upgrade head` no schema exclusivo desta sessão;
     aqui confirmamos que o resultado é, de fato, a head esperada."""
     current = _run_alembic("current", database_url=postgres_db)
     assert "f4a5b6c7d8e9" in current.stdout + current.stderr
@@ -175,7 +214,7 @@ def test_alembic_upgrade_head_on_empty_postgres(postgres_db: str) -> None:
 
 @_requires_real_postgres
 def test_alembic_check_reports_no_drift(postgres_db: str) -> None:
-    """`alembic check` roda sozinho no banco recém-criado pela fixture, sem drift."""
+    """`alembic check` roda sozinho no schema recém-criado pela fixture, sem drift."""
     result = _run_alembic("check", database_url=postgres_db)
     assert "No new upgrade operations detected." in result.stdout + result.stderr
 
@@ -201,8 +240,8 @@ def test_boolean_defaults_resolve_to_false_on_insert(postgres_db: str) -> None:
 
     `retention_rules` (4 colunas) e `compliance_requirement_statuses.human_review_required`
     (a 5a, via a linha-pai obrigatória em `compliance_requirements`). Tudo numa
-    transação revertida ao final -- nada fica no banco, mesmo além do que a fixture
-    já descarta.
+    transação revertida ao final -- nada fica no schema, mesmo além do que a
+    fixture já descarta.
     """
     import psycopg
 
@@ -250,7 +289,8 @@ def test_boolean_defaults_resolve_to_false_on_insert(postgres_db: str) -> None:
 
 @_requires_real_postgres
 def test_api_write_and_read_against_postgres(postgres_db: str, tmp_path: Path) -> None:
-    """Escrita e leitura reais pela API HTTP, com o processo apontando para o Postgres.
+    """Escrita e leitura reais pela API HTTP, com o processo apontando para o
+    schema exclusivo desta sessão.
 
     Saída do Uvicorn vai para arquivo temporário (nunca `PIPE`, que pode travar sob
     buffer cheio); `httpx.Client(trust_env=False)` ignora proxy de ambiente; o
