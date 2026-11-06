@@ -20,6 +20,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Driver PostgreSQL (Fase B de homologação, ADR pendente). Extra separado: o
+# banco padrão continua SQLite, só quem roda DATABASE_URL=postgresql+psycopg://...
+# precisa deste pacote.
+postgres = [
+    "psycopg[binary]>=3.1,<4",
+]
 # Coletor somente leitura do Drive do cartório (ADR-011). Extra separado: API e testes
 # não dependem dele — só a CLI o importa, ao montar o transporte real.
 drive = [

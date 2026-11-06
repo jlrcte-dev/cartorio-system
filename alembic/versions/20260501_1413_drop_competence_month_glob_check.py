@@ -27,12 +27,17 @@ def upgrade() -> None:
 
     A validação de formato `YYYY-MM` agora é responsabilidade exclusiva do
     Pydantic. Isso é essencial para portabilidade futura para Postgres, que
-    não suporta o operador GLOB.
+    não suporta o operador GLOB — e lá a constraint nunca existiu (ver
+    8857af05ac59), então aqui é no-op.
     """
+    if op.get_bind().dialect.name != "sqlite":
+        return
     with op.batch_alter_table("financial_entries", schema=None) as batch_op:
         batch_op.drop_constraint(CHECK_NAME, type_="check")
 
 
 def downgrade() -> None:
+    if op.get_bind().dialect.name != "sqlite":
+        return
     with op.batch_alter_table("financial_entries", schema=None) as batch_op:
         batch_op.create_check_constraint(CHECK_NAME, CHECK_SQL)

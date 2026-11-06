@@ -68,7 +68,9 @@ def upgrade() -> None:
             "human_review_required",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("0"),
+            # "false", não "0" — Postgres exige literal booleano no DEFAULT de
+            # uma coluna BOOLEAN; SQLite aceita o mesmo literal desde a 3.23.
+            server_default=sa.text("false"),
         ),
         sa.Column("status_note", sa.String(length=500), nullable=True),
         sa.Column("computed_at", sa.DateTime(timezone=True), nullable=False),
