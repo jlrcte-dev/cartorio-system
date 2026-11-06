@@ -34,7 +34,7 @@ import time
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
-from urllib.parse import quote, urlsplit
+from urllib.parse import parse_qsl, quote, urlsplit
 
 import httpx
 import pytest
@@ -46,6 +46,12 @@ POSTGRES_URL = os.environ.get("CARTORIO_TEST_POSTGRES_URL")
 # que o operador decida apontar hoje".
 _EXPECTED_BANCADA_USER = "cartorio_fase_b"
 _EXPECTED_BANCADA_DBNAME = "cartorio_fase_b_test"
+
+# Palavras-chave libpq que redirecionam a conexão (host/porta/banco/usuário/perfil
+# inteiro via pg_service.conf). Checar só user/dbname na URI principal não basta --
+# libpq aceita essas mesmas chaves na querystring, e podem sobrepor o que já foi
+# validado ali. Recusar a presença de qualquer uma, não tentar adivinhar qual vale.
+_IDENTITY_OVERRIDE_QUERY_KEYS = {"host", "hostaddr", "port", "dbname", "user", "service"}
 
 _requires_real_postgres = pytest.mark.skipif(
     POSTGRES_URL is None,
@@ -86,6 +92,16 @@ def _require_postgres_url(url: str | None) -> str:
             f"banco={_EXPECTED_BANCADA_DBNAME!r}; recebeu "
             f"usuário={parsed.username!r}, banco={dbname!r}). Estar vazio não basta "
             "-- precisa ser exatamente esta bancada."
+        )
+
+    query_keys = {key.lower() for key, _ in parse_qsl(parsed.query)}
+    overrides = query_keys & _IDENTITY_OVERRIDE_QUERY_KEYS
+    if overrides:
+        raise RuntimeError(
+            "CARTORIO_TEST_POSTGRES_URL tem parâmetro(s) de query que podem sobrepor "
+            f"a identidade já validada na URI principal: {sorted(overrides)}. A "
+            "autoridade (usuário/banco) validada acima não é garantia nenhuma se a "
+            "querystring puder redirecionar a conexão de verdade -- recusado."
         )
     return url
 
@@ -202,6 +218,28 @@ def test_require_postgres_url_rejects_wrong_identity() -> None:
     recusado -- "vazio" nunca foi, nem deveria ser, suficiente."""
     with pytest.raises(RuntimeError, match="bancada descartável conhecida"):
         _require_postgres_url("postgresql://outro_usuario:senha@127.0.0.1:5432/outro_banco")
+
+
+def test_require_postgres_url_rejects_dbname_override_in_query() -> None:
+    """Usuário e banco corretos na URI principal não bastam se a querystring puder
+    redirecionar a conexão para outro banco via `dbname=`."""
+    url = (
+        f"postgresql://{_EXPECTED_BANCADA_USER}:senha@127.0.0.1:5432/"
+        f"{_EXPECTED_BANCADA_DBNAME}?dbname=cartorio_fase_b_outro"
+    )
+    with pytest.raises(RuntimeError, match="sobrepor"):
+        _require_postgres_url(url)
+
+
+def test_require_postgres_url_rejects_user_override_in_query() -> None:
+    """O mesmo ataque, via `user=` -- a URI principal diz um usuário, a query
+    poderia autenticar como outro."""
+    url = (
+        f"postgresql://{_EXPECTED_BANCADA_USER}:senha@127.0.0.1:5432/"
+        f"{_EXPECTED_BANCADA_DBNAME}?user=outro_usuario"
+    )
+    with pytest.raises(RuntimeError, match="sobrepor"):
+        _require_postgres_url(url)
 
 
 @_requires_real_postgres
