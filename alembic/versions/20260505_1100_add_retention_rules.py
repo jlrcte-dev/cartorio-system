@@ -48,25 +48,28 @@ def upgrade() -> None:
             "eliminacao",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("0"),
+            # "false" (não "0"): Postgres exige literal booleano no DEFAULT de
+            # uma coluna BOOLEAN; SQLite aceita "false"/"true" como alias de 0/1
+            # desde a 3.23, então o mesmo literal serve nos dois dialetos.
+            server_default=sa.text("false"),
         ),
         sa.Column(
             "guarda_permanente",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("0"),
+            server_default=sa.text("false"),
         ),
         sa.Column(
             "requer_microfilmagem",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("0"),
+            server_default=sa.text("false"),
         ),
         sa.Column(
             "requer_digitalizacao",
             sa.Boolean(),
             nullable=False,
-            server_default=sa.text("0"),
+            server_default=sa.text("false"),
         ),
         sa.Column("observacao", sa.Text(), nullable=True),
         sa.Column("base_legal", sa.Text(), nullable=True),

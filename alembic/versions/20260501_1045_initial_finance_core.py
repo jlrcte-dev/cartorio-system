@@ -104,9 +104,18 @@ def upgrade() -> None:
             server_default=sa.text("(CURRENT_TIMESTAMP)"),
             nullable=False,
         ),
-        sa.CheckConstraint(
-            "competence_month GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]'",
-            name="ck_financial_entries_competence_month_format",
+        # GLOB é sintaxe específica do SQLite — Postgres não tem o operador.
+        # A revisão 455f4efec848 remove essa constraint para SQLite também;
+        # aqui ela nunca chega a existir fora do SQLite.
+        *(
+            [
+                sa.CheckConstraint(
+                    "competence_month GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]'",
+                    name="ck_financial_entries_competence_month_format",
+                )
+            ]
+            if op.get_bind().dialect.name == "sqlite"
+            else []
         ),
         sa.CheckConstraint("amount > 0", name="ck_financial_entries_amount_positive"),
         sa.PrimaryKeyConstraint("id"),
