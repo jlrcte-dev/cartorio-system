@@ -53,6 +53,14 @@ _EXPECTED_BANCADA_DBNAME = "cartorio_fase_b_test"
 # validado ali. Recusar a presença de qualquer uma, não tentar adivinhar qual vale.
 _IDENTITY_OVERRIDE_QUERY_KEYS = {"host", "hostaddr", "port", "dbname", "user", "service"}
 
+# PGHOSTADDR e PGSERVICE são perigosos sempre que preenchidas: PGHOSTADDR substitui
+# a resolução de host por um IP direto, e PGSERVICE carrega um perfil inteiro de
+# ~/.pg_service.conf (host/porta/banco/usuário juntos) -- nenhuma das duas depende
+# de a URL ter ou não esse campo. PGHOST e PGPORT só são perigosas quando a URL não
+# define host/porta explicitamente; se a URL já tem os dois, eles vencem e a
+# variável de ambiente fica inerte.
+_ALWAYS_FORBIDDEN_PG_ENV_VARS = ("PGHOSTADDR", "PGSERVICE")
+
 _requires_real_postgres = pytest.mark.skipif(
     POSTGRES_URL is None,
     reason=("requer CARTORIO_TEST_POSTGRES_URL (bancada descartável conhecida desta Fase B)"),
@@ -104,6 +112,21 @@ def _require_postgres_url(url: str | None) -> str:
             "querystring puder redirecionar a conexão de verdade -- recusado."
         )
     return url
+
+
+def _require_clean_pg_env(url: str) -> None:
+    """O ambiente do processo não pode preencher nem redirecionar nada que a URL
+    já define ou deveria definir. Roda antes de qualquer conexão da fixture."""
+    offending = [name for name in _ALWAYS_FORBIDDEN_PG_ENV_VARS if os.environ.get(name)]
+
+    parsed = urlsplit(url)
+    if not parsed.hostname and os.environ.get("PGHOST"):
+        offending.append("PGHOST")
+    if not parsed.port and os.environ.get("PGPORT"):
+        offending.append("PGPORT")
+
+    if offending:
+        raise RuntimeError(", ".join(sorted(offending)))
 
 
 def _psycopg_conninfo(url: str) -> str:
@@ -177,12 +200,15 @@ def postgres_db() -> Iterator[str]:
     descartável conhecida.
 
     Recusa prosseguir se a URL não apontar, por identidade, para a bancada
-    conhecida (nunca por "estar vazio"). Cria um schema com nome único, migra só
-    nele, e sempre o descarta no `finally` -- inclusive se o setup ou qualquer
-    teste (incluindo o smoke HTTP) falhar. Nunca toca em `public` ou em qualquer
-    outro schema que porventura já exista na bancada.
+    conhecida (nunca por "estar vazio"), ou se o ambiente tiver `PG*` que possam
+    preencher ou sobrepor o que a URL já define -- tudo antes da primeira conexão.
+    Cria um schema com nome único, migra só nele, e sempre o descarta no `finally`
+    -- inclusive se o setup ou qualquer teste (incluindo o smoke HTTP) falhar.
+    Nunca toca em `public` ou em qualquer outro schema que porventura já exista
+    na bancada.
     """
     base_url = _require_postgres_url(POSTGRES_URL)
+    _require_clean_pg_env(base_url)
     schema = f"fase_b_test_{uuid.uuid4().hex[:12]}"
     scoped_url = _scoped_url(base_url, schema)
 
@@ -240,6 +266,57 @@ def test_require_postgres_url_rejects_user_override_in_query() -> None:
     )
     with pytest.raises(RuntimeError, match="sobrepor"):
         _require_postgres_url(url)
+
+
+_BANCADA_URL_WITH_HOST_AND_PORT = (
+    f"postgresql://{_EXPECTED_BANCADA_USER}:senha@127.0.0.1:5432/{_EXPECTED_BANCADA_DBNAME}"
+)
+
+
+def test_require_clean_pg_env_rejects_pghostaddr(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PGHOSTADDR", "10.0.0.1")
+    with pytest.raises(RuntimeError, match="PGHOSTADDR"):
+        _require_clean_pg_env(_BANCADA_URL_WITH_HOST_AND_PORT)
+
+
+def test_require_clean_pg_env_rejects_pgservice(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PGSERVICE", "algum-perfil")
+    with pytest.raises(RuntimeError, match="PGSERVICE"):
+        _require_clean_pg_env(_BANCADA_URL_WITH_HOST_AND_PORT)
+
+
+def test_require_clean_pg_env_rejects_pghost_when_url_has_no_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PGHOST", "10.0.0.1")
+    url = f"postgresql://{_EXPECTED_BANCADA_USER}:senha@/{_EXPECTED_BANCADA_DBNAME}"
+    with pytest.raises(RuntimeError, match="PGHOST"):
+        _require_clean_pg_env(url)
+
+
+def test_require_clean_pg_env_accepts_pghost_when_url_has_host(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A URL já tem host explícito -- PGHOST fica inerte, não precisa ser recusada."""
+    monkeypatch.setenv("PGHOST", "10.0.0.1")
+    _require_clean_pg_env(_BANCADA_URL_WITH_HOST_AND_PORT)
+
+
+def test_require_clean_pg_env_rejects_pgport_when_url_has_no_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("PGPORT", "6543")
+    url = f"postgresql://{_EXPECTED_BANCADA_USER}:senha@127.0.0.1/{_EXPECTED_BANCADA_DBNAME}"
+    with pytest.raises(RuntimeError, match="PGPORT"):
+        _require_clean_pg_env(url)
+
+
+def test_require_clean_pg_env_accepts_pgport_when_url_has_port(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A URL já tem porta explícita -- PGPORT fica inerte, não precisa ser recusada."""
+    monkeypatch.setenv("PGPORT", "6543")
+    _require_clean_pg_env(_BANCADA_URL_WITH_HOST_AND_PORT)
 
 
 @_requires_real_postgres
