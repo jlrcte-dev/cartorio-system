@@ -34,10 +34,11 @@ import time
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
-from urllib.parse import parse_qsl, quote, urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 import httpx
 import pytest
+from sqlalchemy.engine import make_url
 
 POSTGRES_URL = os.environ.get("CARTORIO_TEST_POSTGRES_URL")
 
@@ -91,8 +92,8 @@ def _require_postgres_url(url: str | None) -> str:
             f"CARTORIO_TEST_POSTGRES_URL com esquema não suportado: {_sanitize(url)}"
         )
 
-    parsed = urlsplit(url)
-    dbname = parsed.path.lstrip("/")
+    parsed = make_url(url)
+    dbname = parsed.database
     if parsed.username != _EXPECTED_BANCADA_USER or dbname != _EXPECTED_BANCADA_DBNAME:
         raise RuntimeError(
             "CARTORIO_TEST_POSTGRES_URL não aponta para a bancada descartável "
@@ -102,7 +103,11 @@ def _require_postgres_url(url: str | None) -> str:
             "-- precisa ser exatamente esta bancada."
         )
 
-    query_keys = {key.lower() for key, _ in parse_qsl(parsed.query)}
+    # A URL devolvida é renderizada pelo mesmo parser que o SQLAlchemy usa.
+    # Examine também a query original para recusar chaves com valor vazio.
+    original_query = urlsplit(url, allow_fragments=False).query
+    query_keys = {key.lower() for key in parsed.query}
+    query_keys.update(key.lower() for key, _ in parse_qsl(original_query, keep_blank_values=True))
     overrides = query_keys & _IDENTITY_OVERRIDE_QUERY_KEYS
     if overrides:
         raise RuntimeError(
@@ -111,7 +116,7 @@ def _require_postgres_url(url: str | None) -> str:
             "autoridade (usuário/banco) validada acima não é garantia nenhuma se a "
             "querystring puder redirecionar a conexão de verdade -- recusado."
         )
-    return url
+    return parsed.set(drivername="postgresql+psycopg").render_as_string(hide_password=False)
 
 
 def _require_clean_pg_env(url: str) -> None:
@@ -119,8 +124,8 @@ def _require_clean_pg_env(url: str) -> None:
     já define ou deveria definir. Roda antes de qualquer conexão da fixture."""
     offending = [name for name in _ALWAYS_FORBIDDEN_PG_ENV_VARS if os.environ.get(name)]
 
-    parsed = urlsplit(url)
-    if not parsed.hostname and os.environ.get("PGHOST"):
+    parsed = make_url(url)
+    if not parsed.host and os.environ.get("PGHOST"):
         offending.append("PGHOST")
     if not parsed.port and os.environ.get("PGPORT"):
         offending.append("PGPORT")
@@ -130,8 +135,13 @@ def _require_clean_pg_env(url: str) -> None:
 
 
 def _psycopg_conninfo(url: str) -> str:
-    """psycopg.connect() só entende o esquema libpq puro, sem o `+psycopg` do SQLAlchemy."""
-    return url.replace("postgresql+psycopg://", "postgresql://", 1)
+    """Reaproveita os parâmetros decodificados da URL, inclusive os espaços de `options`."""
+    from psycopg.conninfo import make_conninfo
+
+    parsed = make_url(url)
+    params = parsed.translate_connect_args(username="user", database="dbname")
+    params.update(parsed.query)
+    return make_conninfo(**params)
 
 
 def _scoped_url(base_url: str, schema: str) -> str:
@@ -139,9 +149,12 @@ def _scoped_url(base_url: str, schema: str) -> str:
     execução -- Alembic, o app e os INSERTs diretos passam a resolver tabelas sem
     qualificação (`financial_entries`, não `esquema.financial_entries`) contra esse
     schema, nunca contra `public`."""
-    separator = "&" if "?" in base_url else "?"
-    options = quote(f"-c search_path={schema}", safe="")
-    return f"{base_url}{separator}options={options}"
+    parsed = make_url(base_url)
+    existing_options = parsed.normalized_query.get("options", ("",))[-1]
+    scoped_options = f"{existing_options} -c search_path={schema}".lstrip()
+    return parsed.update_query_dict({"options": scoped_options}).render_as_string(
+        hide_password=False
+    )
 
 
 def _create_schema(base_url: str, schema: str) -> None:
@@ -215,10 +228,6 @@ def postgres_db() -> Iterator[str]:
     _create_schema(base_url, schema)
     try:
         _run_alembic("upgrade", "head", database_url=scoped_url)
-    except Exception:
-        _drop_schema(base_url, schema)
-        raise
-    try:
         yield scoped_url
     finally:
         _drop_schema(base_url, schema)
@@ -246,23 +255,38 @@ def test_require_postgres_url_rejects_wrong_identity() -> None:
         _require_postgres_url("postgresql://outro_usuario:senha@127.0.0.1:5432/outro_banco")
 
 
-def test_require_postgres_url_rejects_dbname_override_in_query() -> None:
+def test_require_postgres_url_rejects_extra_slash_in_database() -> None:
+    url = f"postgresql://{_EXPECTED_BANCADA_USER}:senha@127.0.0.1:5432//{_EXPECTED_BANCADA_DBNAME}"
+    with pytest.raises(RuntimeError, match="bancada descartável conhecida"):
+        _require_postgres_url(url)
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "dbname=cartorio_fase_b_outro",
+        "application_name=lab#tag&dbname=cartorio_fase_b_outro",
+        "dbname=",
+    ],
+)
+def test_require_postgres_url_rejects_dbname_override_in_query(query: str) -> None:
     """Usuário e banco corretos na URI principal não bastam se a querystring puder
     redirecionar a conexão para outro banco via `dbname=`."""
     url = (
         f"postgresql://{_EXPECTED_BANCADA_USER}:senha@127.0.0.1:5432/"
-        f"{_EXPECTED_BANCADA_DBNAME}?dbname=cartorio_fase_b_outro"
+        f"{_EXPECTED_BANCADA_DBNAME}?{query}"
     )
     with pytest.raises(RuntimeError, match="sobrepor"):
         _require_postgres_url(url)
 
 
-def test_require_postgres_url_rejects_user_override_in_query() -> None:
+@pytest.mark.parametrize("user", ["outro_usuario", ""])
+def test_require_postgres_url_rejects_user_override_in_query(user: str) -> None:
     """O mesmo ataque, via `user=` -- a URI principal diz um usuário, a query
     poderia autenticar como outro."""
     url = (
         f"postgresql://{_EXPECTED_BANCADA_USER}:senha@127.0.0.1:5432/"
-        f"{_EXPECTED_BANCADA_DBNAME}?user=outro_usuario"
+        f"{_EXPECTED_BANCADA_DBNAME}?user={user}"
     )
     with pytest.raises(RuntimeError, match="sobrepor"):
         _require_postgres_url(url)
@@ -271,6 +295,19 @@ def test_require_postgres_url_rejects_user_override_in_query() -> None:
 _BANCADA_URL_WITH_HOST_AND_PORT = (
     f"postgresql://{_EXPECTED_BANCADA_USER}:senha@127.0.0.1:5432/{_EXPECTED_BANCADA_DBNAME}"
 )
+
+
+def test_scoped_url_adds_search_path_to_existing_options() -> None:
+    base_url = _require_postgres_url(
+        f"{_BANCADA_URL_WITH_HOST_AND_PORT}?options=-c%20statement_timeout%3D5000"
+        "&application_name=fase-b%25literal"
+    )
+    scoped = make_url(_scoped_url(base_url, "fase_b_test_sintetico"))
+    assert scoped.drivername == "postgresql+psycopg"
+    assert (
+        scoped.query["options"] == "-c statement_timeout=5000 -c search_path=fase_b_test_sintetico"
+    )
+    assert scoped.query["application_name"] == "fase-b%literal"
 
 
 def test_require_clean_pg_env_rejects_pghostaddr(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -298,6 +335,8 @@ def test_require_clean_pg_env_accepts_pghost_when_url_has_host(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A URL já tem host explícito -- PGHOST fica inerte, não precisa ser recusada."""
+    for name in _ALWAYS_FORBIDDEN_PG_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("PGHOST", "10.0.0.1")
     _require_clean_pg_env(_BANCADA_URL_WITH_HOST_AND_PORT)
 
@@ -315,6 +354,8 @@ def test_require_clean_pg_env_accepts_pgport_when_url_has_port(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A URL já tem porta explícita -- PGPORT fica inerte, não precisa ser recusada."""
+    for name in _ALWAYS_FORBIDDEN_PG_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("PGPORT", "6543")
     _require_clean_pg_env(_BANCADA_URL_WITH_HOST_AND_PORT)
 
@@ -343,8 +384,11 @@ def test_alembic_tolerates_percent_in_url(postgres_db: str) -> None:
     desta Fase B. O valor abaixo decodifica para um "%" literal na querystring: uma
     URL sintética, no sentido do diagnóstico original, não uma credencial real.
     """
-    separator = "&" if "?" in postgres_db else "?"
-    synthetic_url = f"{postgres_db}{separator}application_name=fase-b%25literal"
+    synthetic_url = (
+        make_url(postgres_db)
+        .update_query_dict({"application_name": "fase-b%literal"})
+        .render_as_string(hide_password=False)
+    )
     result = _run_alembic("current", database_url=synthetic_url)
     assert "f4a5b6c7d8e9" in result.stdout + result.stderr
 
