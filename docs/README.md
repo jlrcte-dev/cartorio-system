@@ -79,6 +79,8 @@
 |-----------|-----------|
 | [`operations/how_to_run.md`](operations/how_to_run.md) | Instalação, banco, servidor, testes |
 | [`operations/local_data_policy.md`](operations/local_data_policy.md) | Política de dados locais e dados sensíveis |
+| [`operations/ops_verifier_runbook.md`](operations/ops_verifier_runbook.md) | Verificador operacional, alerta local, gate PostgreSQL e prova de recuperação (CARTORIO-OPS-1) |
+| [`operations/ops_window_checklist.md`](operations/ops_window_checklist.md) | Checklist da janela de operação de continuidade: itens, evidência por fonte, RPO/RTO |
 
 ---
 
@@ -114,6 +116,7 @@
 | [`decisions/ADR-004..008`](decisions/) | Governança de IA e Knowledge Base — estado *Proposto* |
 | [`decisions/ADR-009-inventory-cent-rounding-policy.md`](decisions/ADR-009-inventory-cent-rounding-policy.md) | Política de centavos em inventários — o sistema alerta, não corrige |
 | [`decisions/ADR-011-drive-readonly-capture.md`](decisions/ADR-011-drive-readonly-capture.md) | Captura somente leitura do Drive do cartório — *Proposto* |
+| [`decisions/ADR-014-verificacao-operacional-e-prova-de-recuperacao.md`](decisions/ADR-014-verificacao-operacional-e-prova-de-recuperacao.md) | Verificação operacional somente leitura e prova de recuperação em bancada — *Proposto* |
 
 ---
 
@@ -131,6 +134,7 @@
 |-----------|-----------|
 | [`reports/RELATORIO_CARTORIO_SYSTEM_STRATEGIC_REBASELINE_2026_1.md`](reports/RELATORIO_CARTORIO_SYSTEM_STRATEGIC_REBASELINE_2026_1.md) | **Rebaseline estratégico (2026-09-02) — diagnóstico autoritativo do estado atual** |
 | [`reports/RELATORIO_CARTORIO_SYSTEM_ENGINEERING_STABILIZATION_1.md`](reports/RELATORIO_CARTORIO_SYSTEM_ENGINEERING_STABILIZATION_1.md) | Estabilização de engenharia (2026-09-03): CI, dependências, formatação, migrations |
+| [`reports/RELATORIO_CARTORIO_OPS_1.md`](reports/RELATORIO_CARTORIO_OPS_1.md) | Continuidade operacional automatizada (2026-11-07): verificador, alerta, gate PostgreSQL, prova de recuperação |
 | [`reports/RELATORIO_EXECUTIVO_CARTORIO_SYSTEM_DIRETORIA.md`](reports/RELATORIO_EXECUTIVO_CARTORIO_SYSTEM_DIRETORIA.md) | Relatório executivo para a diretoria (maio/2026 — histórico) |
 | [`reports/generated/`](reports/generated/) | Artefatos gerados (CSS, templates) |
 | [`audits/repository_rebaseline_2026_07/`](audits/repository_rebaseline_2026_07/) | Auditoria de repositório de julho/2026 (8 documentos + 2 CSV) |

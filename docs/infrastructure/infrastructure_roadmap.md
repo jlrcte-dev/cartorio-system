@@ -3,7 +3,8 @@
 > Documento de planejamento técnico. Nenhuma configuração descrita aqui está
 > implementada salvo indicação explícita.
 
-Última atualização: 2026-05-04
+Última atualização: 2026-05-04 · atualização parcial em 2026-11-07 (§3.4, §3.5 e §6,
+sprint `CARTORIO-OPS-1`)
 
 ---
 
@@ -167,6 +168,14 @@ REDE FÍSICA
 - Dashboard ou relatório semanal revisado pelo gestor
 - Registro de cada alerta recebido e ação tomada
 
+> **Estado em 2026-11-07 (VM-CartorioSystem, só o Cartório System):** existe em código
+> (branch `sprint/cartorio-ops-1`, ainda sem merge) um verificador somente leitura que
+> separa processo/API, PostgreSQL, revisão Alembic e backup — idade pelo ponto de
+> recuperação, integridade pelo digest do manifesto, última tentativa e timer —, com saída
+> JSON versionada e alerta num spool local por `OnFailure=`. Canal definitivo (e-mail,
+> mensageria), observador externo (VM ou host fora do ar) e instalação na VM continuam
+> pendentes. Ver [`../operations/ops_verifier_runbook.md`](../operations/ops_verifier_runbook.md).
+
 ### 3.5 Teste de restauração
 
 **Frequência:** mínimo trimestral (idealmente mensal)
@@ -180,6 +189,14 @@ REDE FÍSICA
 - Tempo total de restauração (para validar RTO)
 - Hash dos arquivos restaurados (quando aplicável)
 - Assinatura do responsável técnico
+
+> **Formato de ensaio disponível (2026-11-07):** `python -m app.ops.drill` restaura em
+> PostgreSQL descartável — origem e destino criados pelo próprio ensaio, identidade
+> comprovada — e grava um relatório com integridade, release, ponto de recuperação, início,
+> fim e duração até a primeira consulta bem-sucedida. O mesmo formato serve à recuperação
+> de uma cópia guardada fora da VM (`--from-manifest`). Tempos de bancada não valem como
+> RTO de produção. Itens da primeira janela real:
+> [`../operations/ops_window_checklist.md`](../operations/ops_window_checklist.md).
 
 ---
 
@@ -256,6 +273,19 @@ Prioridade: serviços que mais se beneficiam do isolamento e que são mais fáce
 1. `VM-TestRestore` — criar primeiro; sem dados de produção; base para testes
 2. `VM-CartorioSystem` — novo sistema, não há migração de dados legados complexa
 3. `VM-Backup-Monitor` — agente de backup centralizado
+
+**Estado de execução da Fase 1 (2026-11-07).** Separado por fonte — Git, relato
+operacional (runbook privado, fora do Git) e bancada:
+
+| Item | Situação | Fonte |
+|---|---|---|
+| Host Proxmox + `VM-CartorioSystem` em homologação, dados sintéticos | Em operação desde 05–06/11 | Relato |
+| Banco ativo em PostgreSQL 18 | Desde 07/11; decisão ADR-013 ainda fora do Git | Relato |
+| Compatibilidade PostgreSQL do código | `main` = `c49c6579` (PR #5), CI verde | Git |
+| Backup local diário (`pg_dump` + manifesto SHA-256) | 1º disparo automático observado; 2º pendente | Relato |
+| Verificador operacional, alerta local, gate PostgreSQL, prova de recuperação | Código e bancada (`CARTORIO-OPS-1`); instalação pendente | Git (branch) + bancada |
+| Partida após reboot (convidado e host), cópia no PC dedicado, restauração dela | Pendentes de janela | — |
+| `VM-TestRestore`, `VM-Backup-Monitor`, cópia fora do host | Não iniciados | — |
 
 ### Fase 2 — FileServer e identidade (120 a 180 dias)
 

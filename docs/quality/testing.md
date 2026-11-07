@@ -168,6 +168,23 @@ rm -f _tmp_check.db
 O round-trip completo (`upgrade head` → `downgrade base` → `upgrade head`)
 continua sendo validação manual, executada apenas em banco descartável.
 
+## Verificador operacional e gate PostgreSQL (CARTORIO-OPS-1)
+
+Os testes `tests/test_ops_*.py` ficam em dois grupos:
+
+- **Gate padrão (SQLite):** contrato JSON, códigos de saída e precedência; configuração;
+  systemd com saídas sintéticas de `systemctl show`; backup com relógio controlado
+  (`tests/ops_support.py`, `NOW` fixo) e cópias sintéticas no formato da rotina; cenários
+  de aceite com a **API real** (uvicorn) sobre SQLite migrado pelo Alembic; recusa de
+  alvos indevidos do ensaio de restauração; renderização das unidades. `systemd-analyze
+  verify` roda onde existir (Linux) e é pulado no Windows; no job `postgres-gate` ele é
+  obrigatório (`CARTORIO_OPS_REQUIRE_SYSTEMD_ANALYZE=1` transforma o pulo em falha).
+- **Gate PostgreSQL** (`scripts/ops/pg_gate.py`, job `postgres-gate`):
+  `tests/test_postgres_compat.py` (PR #5, inalterado) e `tests/test_ops_postgres.py`, que
+  reaproveita a fixture e as proteções do PR #5, mais o ensaio `python -m app.ops.drill`.
+  Ali, **teste pulado reprova o gate** — prova obrigatória não passa por configuração
+  ausente. Procedimento em [`../operations/how_to_run.md`](../operations/how_to_run.md) § 9.
+
 ## Lacunas conhecidas
 
 - **Sem cobertura objetiva.** `pytest-cov` não está instalado; adotar cobertura

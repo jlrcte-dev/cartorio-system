@@ -163,3 +163,21 @@ campo `date` sombreia o tipo. A solução é `import datetime as _dt` e usar
 ### `pip install -e ".[dev]"` falha com Python 3.13
 O projeto está pinado em `>=3.12,<3.13`. Use Python 3.12 (o `.python-version`
 direciona pyenv/mise para a versão correta).
+
+## 9. Gate PostgreSQL de bancada e verificador operacional
+
+O gate da seção 6 continua em SQLite. A prova em PostgreSQL é um gate separado — o
+mesmo comando do job `postgres-gate` do CI —, que cria seus próprios clusters
+descartáveis (loopback, senha gerada) e **reprova se qualquer prova obrigatória for
+pulada**:
+
+```bash
+pip install -e ".[dev,postgres]"
+python scripts/ops/pg_gate.py --pg-bin /usr/lib/postgresql/18/bin \
+    --work-root /tmp --report /tmp/pg-gate-report.json
+```
+
+Ele roda a suíte do PR #5 (`tests/test_postgres_compat.py`), os cenários do verificador
+em PostgreSQL real (`tests/test_ops_postgres.py`) e a prova de recuperação
+(`python -m app.ops.drill`). Verificador, alerta, unidades systemd e interpretação dos
+estados: [`ops_verifier_runbook.md`](ops_verifier_runbook.md).
