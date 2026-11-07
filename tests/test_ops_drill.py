@@ -15,6 +15,7 @@ import pytest
 from app.ops import drill, pgcluster
 from app.ops.pgcluster import (
     WORK_MARKER,
+    DrillFailed,
     DrillRefused,
     ansi_safe,
     create_work_dir,
@@ -192,7 +193,7 @@ def test_drill_refuses_override_env_before_creating_anything(tmp_path, monkeypat
     assert drill.main(_drill_args(tmp_path)) == 2
     report = json.loads((tmp_path / "drill.json").read_text(encoding="utf-8"))
     assert (report["verdict"], report["reason"]) == ("refused", "libpq_env_override")
-    assert report["cleanup"] == {"work_dir_created": False}
+    assert report["cleanup"] == {"confirmed": True, "work_dir_created": False}
     assert list((tmp_path / "work").iterdir()) == []
     capsys.readouterr()
 
@@ -431,3 +432,245 @@ def test_expect_database_is_only_for_copy_mode(tmp_path, capsys) -> None:
     with pytest.raises(SystemExit) as info:
         drill.main(_drill_args(tmp_path, "--expect-database", "cartorio_lab"))
     assert info.value.code == 2
+
+
+# ---------------------------------------------------------------------------
+# Achado 3 do PR #6: parada confirmada antes da limpeza (falhas induzidas)
+# ---------------------------------------------------------------------------
+
+
+class FakeTools:
+    """Substitui ``pgcluster.run_tool``: simula initdb e pg_ctl e registra as chamadas.
+
+    ``status`` dá o código do ``pg_ctl status`` por rótulo do cluster (0 rodando,
+    3 parado); ``stop`` dá o retorno do ``pg_ctl stop`` ou uma exceção a lançar.
+    """
+
+    def __init__(self, *, start="ok", stop=None, status=None) -> None:
+        self.start = start
+        self.stop = stop or {}
+        self.status = status or {}
+        self.calls: list[tuple[str, str]] = []
+
+    def __call__(self, cmd, *, env, log, timeout=120):
+        import subprocess
+
+        tool = Path(cmd[0]).name
+        action = cmd[1] if tool == "pg_ctl" else tool
+        data = Path(cmd[cmd.index("-D") + 1])
+        label = data.parent.name
+        self.calls.append((action, label))
+        if action == "initdb":
+            data.mkdir(parents=True)
+            (data / "postgresql.conf").write_text("", encoding="utf-8")
+            (data / "pg_hba.conf").write_text("", encoding="utf-8")
+            return subprocess.CompletedProcess(cmd, 0)
+        if action == "start":
+            if self.start == "timeout":
+                raise subprocess.TimeoutExpired(cmd, timeout)
+            return subprocess.CompletedProcess(cmd, 0 if self.start == "ok" else 1)
+        if action == "stop":
+            outcome = self.stop.get(label, 0)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            return subprocess.CompletedProcess(cmd, outcome)
+        if action == "status":
+            return subprocess.CompletedProcess(cmd, self.status.get(label, 3))
+        raise AssertionError(f"ação inesperada: {cmd}")
+
+
+@pytest.fixture
+def fake_pg(monkeypatch):
+    def install(tools: FakeTools) -> FakeTools:
+        monkeypatch.setattr(pgcluster, "run_tool", tools)
+        monkeypatch.setattr(pgcluster, "pg_binary", lambda pg_bin, name: Path(name))
+        return tools
+
+    return install
+
+
+def _running_cluster(work: Path, label: str) -> pgcluster.Cluster:
+    cluster = pgcluster.Cluster(label=label, run_id="r1", pg_bin=work, root=work / label)
+    cluster.state = "running"
+    return cluster
+
+
+def test_start_timeout_leaves_the_cluster_uncertain_and_the_area_preserved(
+    tmp_path: Path, any_work_root, fake_pg
+) -> None:
+    tools = fake_pg(FakeTools(start="timeout", stop={"destino": 1}, status={"destino": 0}))
+    ctx = _ctx(tmp_path, "r-timeout")
+    cluster = pgcluster.Cluster(
+        label="destino", run_id="r-timeout", pg_bin=tmp_path, root=ctx.work / "destino"
+    )
+    ctx.clusters.append(cluster)
+    cluster.initialize({})
+    with pytest.raises(DrillFailed) as info:
+        cluster.start({})
+    assert info.value.reason == "cluster_start_timeout"
+    assert cluster.state == "start_attempted"  # o postmaster pode seguir subindo
+
+    cleanup = drill._cleanup(ctx, keep=False)
+    assert cleanup["clusters"] == {"destino": "uncertain"}
+    assert (cleanup["confirmed"], cleanup["work_dir_removed"]) == (False, False)
+    assert ctx.work.exists() and (ctx.work / WORK_MARKER).exists()
+    assert ("status", "destino") in tools.calls
+    assert drill.final_verdict("passed", "ok", cleanup) == ("failed", "cleanup_unconfirmed")
+
+
+def test_every_cluster_gets_the_stop_order_even_when_one_raises(
+    tmp_path: Path, any_work_root, fake_pg
+) -> None:
+    tools = fake_pg(
+        FakeTools(stop={"origem": RuntimeError("pg_ctl quebrou"), "destino": 1}, status={})
+    )
+    ctx = _ctx(tmp_path, "r-varios")
+    ctx.clusters.extend(
+        _running_cluster(ctx.work, label) for label in ("origem", "destino", "gate")
+    )
+    cleanup = drill._cleanup(ctx, keep=False)
+    assert [label for action, label in tools.calls if action == "stop"] == [
+        "origem",
+        "destino",
+        "gate",
+    ]
+    # destino: o stop falhou, mas o status confirmou a parada (saída 3).
+    assert cleanup["clusters"] == {"origem": "uncertain", "destino": "stopped", "gate": "stopped"}
+    assert cleanup["confirmed"] is False and ctx.work.exists()
+
+
+def test_failed_stop_return_is_settled_by_the_status_check(
+    tmp_path: Path, any_work_root, fake_pg
+) -> None:
+    fake_pg(FakeTools(stop={"destino": 1}, status={"destino": 3}))
+    ctx = _ctx(tmp_path, "r-confirma")
+    ctx.clusters.append(_running_cluster(ctx.work, "destino"))
+    cleanup = drill._cleanup(ctx, keep=False)
+    assert (cleanup["confirmed"], cleanup["work_dir_removed"]) == (True, True)
+    assert not ctx.work.exists()
+
+
+def test_cluster_never_started_needs_no_stop(tmp_path: Path, any_work_root, fake_pg) -> None:
+    tools = fake_pg(FakeTools())
+    ctx = _ctx(tmp_path, "r-nunca")
+    ctx.clusters.append(
+        pgcluster.Cluster(label="destino", run_id="r-nunca", pg_bin=tmp_path, root=ctx.work / "d")
+    )
+    cleanup = drill._cleanup(ctx, keep=False)
+    assert cleanup["clusters"] == {"destino": "not_started"} and cleanup["confirmed"] is True
+    assert tools.calls == []
+
+
+def test_removal_failure_fails_an_otherwise_passed_drill(
+    tmp_path: Path, any_work_root, fake_pg, monkeypatch
+) -> None:
+    fake_pg(FakeTools())
+    monkeypatch.setattr(drill, "remove_work_dir", lambda path, run_id: False)
+    ctx = _ctx(tmp_path, "r-remocao")
+    ctx.clusters.append(_running_cluster(ctx.work, "destino"))
+    cleanup = drill._cleanup(ctx, keep=False)
+    assert (cleanup["clusters_stopped"], cleanup["confirmed"]) == (True, False)
+    assert drill.final_verdict("passed", "ok", cleanup) == ("failed", "cleanup_unconfirmed")
+
+
+def test_original_failure_is_preserved_and_cleanup_recorded_apart() -> None:
+    cleanup = {"confirmed": False}
+    assert drill.final_verdict("failed", "pg_restore_failed", cleanup) == (
+        "failed",
+        "pg_restore_failed",
+    )
+    assert drill.final_verdict("refused", "database_mismatch", cleanup) == (
+        "refused",
+        "database_mismatch",
+    )
+
+
+def test_drill_with_a_possibly_active_cluster_is_never_passed(
+    tmp_path: Path, any_work_root, fake_pg, monkeypatch, capsys
+) -> None:
+    """Caminho completo do ensaio: partida estoura o prazo, o servidor continua de pé
+    (status 0) mesmo depois do stop — diretório preservado, veredito reprovado, saída 1."""
+    fake_pg(FakeTools(start="timeout", stop={"origem": 1}, status={"origem": 0}))
+    monkeypatch.setattr(drill, "pg_binary", lambda pg_bin, name: Path(name))
+    monkeypatch.setattr(drill, "tool_version", lambda binary: ("18.0", 18))
+    for name in ("PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE", "PGOPTIONS"):
+        monkeypatch.delenv(name, raising=False)
+    assert drill.main(_drill_args(tmp_path)) == 1
+    capsys.readouterr()
+    report = json.loads((tmp_path / "drill.json").read_text(encoding="utf-8"))
+    assert (report["verdict"], report["reason"]) == ("failed", "cluster_start_timeout")
+    cleanup = report["cleanup"]
+    assert cleanup["clusters"] == {"origem": "uncertain"}
+    assert (cleanup["confirmed"], cleanup["work_dir_removed"]) == (False, False)
+    assert cleanup["kept"] == "cluster_stop_unconfirmed"
+    [kept] = list((tmp_path / "work").iterdir())
+    assert (kept / WORK_MARKER).exists()
+
+
+def _gate_args(tmp_path: Path) -> list[str]:
+    (tmp_path / "work").mkdir(exist_ok=True)
+    return [
+        "--pg-bin",
+        str(tmp_path / "bin"),
+        "--work-root",
+        str(tmp_path / "work"),
+        "--report",
+        str(tmp_path / "gate.json"),
+    ]
+
+
+@pytest.fixture
+def fake_gate(monkeypatch, fake_pg):
+    """Gate com ferramentas falsas: suíte "aprovada" e prova de restauração espiã."""
+    drill_runs: list[str] = []
+
+    def install(tools: FakeTools) -> list[str]:
+        fake_pg(tools)
+        monkeypatch.setattr(pg_gate, "pg_binary", lambda pg_bin, name: Path(name))
+        monkeypatch.setattr(pg_gate, "tool_version", lambda binary: ("18.0", 18))
+
+        def prove(self) -> None:
+            self.server_version, self.server_major = "18.0", 18
+
+        monkeypatch.setattr(pgcluster.Cluster, "prove_identity", prove)
+        monkeypatch.setattr(pg_gate, "_run_suite", lambda *args: [])
+
+        def fake_drill(args):
+            drill_runs.append("synthetic")
+            return {"verdict": "passed"}, True
+
+        monkeypatch.setattr(pg_gate, "_run_drill", fake_drill)
+        for name in ("PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE", "PGOPTIONS"):
+            monkeypatch.delenv(name, raising=False)
+        return drill_runs
+
+    return install
+
+
+def test_gate_starts_no_restore_proof_while_the_test_cluster_may_be_active(
+    tmp_path: Path, any_work_root, fake_gate, capsys
+) -> None:
+    drill_runs = fake_gate(FakeTools(stop={"gate": 1}, status={"gate": 0}))
+    assert pg_gate.main(_gate_args(tmp_path)) == 1
+    capsys.readouterr()
+    report = json.loads((tmp_path / "gate.json").read_text(encoding="utf-8"))
+    assert report["gate_cleanup"] == {
+        "cluster": "uncertain",
+        "work_dir_removed": False,
+        "confirmed": False,
+    }
+    assert "gate_cleanup_unconfirmed" in report["reasons"]
+    assert drill_runs == []  # a prova de restauração nem começou
+    assert len(list((tmp_path / "work").iterdir())) == 1  # área preservada
+
+
+def test_gate_runs_the_restore_proof_only_after_confirmed_cleanup(
+    tmp_path: Path, any_work_root, fake_gate, capsys
+) -> None:
+    drill_runs = fake_gate(FakeTools(status={"gate": 3}))
+    assert pg_gate.main(_gate_args(tmp_path)) == 0
+    capsys.readouterr()
+    report = json.loads((tmp_path / "gate.json").read_text(encoding="utf-8"))
+    assert report["gate_cleanup"]["confirmed"] is True
+    assert drill_runs == ["synthetic"]
+    assert list((tmp_path / "work").iterdir()) == []

@@ -28,6 +28,7 @@ from typing import Any
 from defusedxml import ElementTree
 
 from app.ops.pgcluster import (
+    STOPPED_STATES,
     Cluster,
     DrillFailed,
     DrillRefused,
@@ -36,6 +37,7 @@ from app.ops.pgcluster import (
     remove_work_dir,
     require_clean_libpq_env,
     run_tool,
+    stop_all,
     subprocess_env,
     tool_version,
 )
@@ -153,13 +155,37 @@ def _run_drill(args: argparse.Namespace) -> tuple[dict[str, Any], bool]:
     return summary, proc.returncode == 0 and drill.get("verdict") == "passed"
 
 
-def main() -> int:
+def gate_cleanup(cluster: Cluster | None, work: Path | None, run_id: str) -> dict[str, Any]:
+    """Para e confirma o cluster dos testes; só então remove o diretório. Parada
+    incerta preserva a área para diagnóstico e reprova o gate."""
+    clusters = [cluster] if cluster is not None else []
+    state = stop_all(clusters, subprocess_env(os.environ)).get("gate", "not_started")
+    stopped = state in STOPPED_STATES
+    removed = True
+    if work is not None:
+        if stopped:
+            removed = remove_work_dir(work, run_id)
+        else:
+            removed = False
+            print(
+                f"[gate] cluster possivelmente ativo: diretório preservado em {work}; "
+                "diagnóstico: pg_ctl status -D <diretório>/gate/data",
+                file=sys.stderr,
+            )
+    return {
+        "cluster": state,
+        "work_dir_removed": removed,
+        "confirmed": stopped and removed,
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python scripts/ops/pg_gate.py")
     parser.add_argument("--pg-bin", type=Path, required=True)
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--require-major", type=int, default=18)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     started = utc_now()
     run_id = f"{started.strftime('%Y%m%dT%H%M%SZ')}-{secrets.token_hex(3)}"
@@ -197,11 +223,12 @@ def main() -> int:
     except Exception as exc:  # relatório e limpeza em qualquer desfecho
         reasons.append(f"unexpected_error:{type(exc).__name__}")
     finally:
-        if cluster is not None:
-            report["cluster_stopped"] = cluster.stop(subprocess_env(os.environ))
-        if work is not None:
-            report["work_dir_removed"] = remove_work_dir(work, run_id)
+        report["gate_cleanup"] = gate_cleanup(cluster, work, run_id)
+    if not report["gate_cleanup"]["confirmed"]:
+        reasons.append("gate_cleanup_unconfirmed")
 
+    # A prova de restauração só começa com o cluster dos testes confirmado parado e
+    # o diretório dele removido.
     if not reasons:
         report["drill"], drill_passed = _run_drill(args)
         if not drill_passed:

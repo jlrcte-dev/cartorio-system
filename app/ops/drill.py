@@ -52,6 +52,7 @@ from app.ops.checks import direct_opener, release_heads
 from app.ops.config import DATABASE_NAME
 from app.ops.pgcluster import (
     LOOPBACK,
+    STOPPED_STATES,
     Cluster,
     DrillFailed,
     DrillRefused,
@@ -61,6 +62,7 @@ from app.ops.pgcluster import (
     remove_work_dir,
     require_clean_libpq_env,
     run_tool,
+    stop_all,
     subprocess_env,
     tool_version,
     verify_restore_target,
@@ -430,8 +432,8 @@ def _origin_phase(ctx: Ctx, tools: dict[str, Any], heads: list[str]) -> dict[str
         "title": record["title"],
     }
     # Origem desligada antes da restauração: daí em diante o registro só vem do destino.
-    if not origin.stop(subprocess_env(ctx.base_env)):
-        raise DrillFailed("origin_stop_failed")
+    if origin.stop(subprocess_env(ctx.base_env)) != "stopped":
+        raise DrillFailed("origin_stop_unconfirmed")
     ctx.report["origin"]["stopped_before_restore"] = True
     # A identidade esperada da cópia é a da origem que o próprio ensaio criou.
     return {"dir": artifact_dir, "stamp": stamp, "database": ORIGIN_DB, **record}
@@ -634,7 +636,12 @@ def run_drill(args: argparse.Namespace, *, clock: Clock = utc_now) -> int:
         try:
             report["cleanup"] = _cleanup(ctx, keep=args.keep_on_failure and verdict != "passed")
         except Exception as exc:
-            report["cleanup"] = {"error_class": type(exc).__name__, "work_dir_removed": False}
+            report["cleanup"] = {
+                "confirmed": False,
+                "error_class": type(exc).__name__,
+                "work_dir_removed": False,
+            }
+    verdict, reason = final_verdict(verdict, reason, report["cleanup"])
     report.update(verdict=verdict, reason=reason, finished_at=utc_iso(clock()))
     if facts:
         report["failure"] = dict(facts)
@@ -643,16 +650,40 @@ def run_drill(args: argparse.Namespace, *, clock: Clock = utc_now) -> int:
     return _EXIT[verdict]
 
 
+def final_verdict(verdict: str, reason: str, cleanup: dict[str, Any]) -> tuple[str, str]:
+    """Aprovação exige limpeza confirmada. Uma falha anterior é preservada como está —
+    o resultado da limpeza fica registrado à parte."""
+    if verdict == "passed" and not cleanup.get("confirmed"):
+        return "failed", "cleanup_unconfirmed"
+    return verdict, reason
+
+
 def _cleanup(ctx: Ctx | None, *, keep: bool) -> dict[str, Any]:
+    """Para e confirma a parada de TODOS os clusters da execução; só então remove o
+    diretório. Cluster possivelmente ativo preserva a área privada para diagnóstico."""
     if ctx is None:
-        return {"work_dir_created": False}
-    env = subprocess_env(ctx.base_env)
-    # Lista, não gerador: todo cluster recebe a ordem de parada, mesmo se um falhar.
-    stopped = all([cluster.stop(env) for cluster in ctx.clusters])
+        return {"confirmed": True, "work_dir_created": False}
+    states = stop_all(ctx.clusters, subprocess_env(ctx.base_env))
+    stopped = all(state in STOPPED_STATES for state in states.values())
+    result: dict[str, Any] = {"clusters": states, "clusters_stopped": stopped}
+    if not stopped:
+        print(
+            f"[drill] cluster possivelmente ativo: diretório preservado em {ctx.work}; "
+            "diagnóstico: pg_ctl status -D <diretório>/<rótulo>/data, depois pg_ctl stop",
+            file=sys.stderr,
+        )
+        return {
+            **result,
+            "confirmed": False,
+            "work_dir_removed": False,
+            "kept": "cluster_stop_unconfirmed",
+            "diagnostic": "pg_ctl status -D <diretório de trabalho>/<rótulo>/data",
+        }
     if keep:
         print(f"[drill] diretório preservado para diagnóstico: {ctx.work}", file=sys.stderr)
-        return {"clusters_stopped": stopped, "work_dir_removed": False, "kept_on_failure": True}
-    return {"clusters_stopped": stopped, "work_dir_removed": remove_work_dir(ctx.work, ctx.run_id)}
+        return {**result, "confirmed": True, "work_dir_removed": False, "kept": "keep_on_failure"}
+    removed = remove_work_dir(ctx.work, ctx.run_id)
+    return {**result, "confirmed": removed, "work_dir_removed": removed}
 
 
 def _parser() -> argparse.ArgumentParser:

@@ -13,6 +13,7 @@ Limpeza com escopo: só se remove diretório que carrega o marcador desta execu�
 
 from __future__ import annotations
 
+import contextlib
 import re
 import secrets
 import shutil
@@ -200,7 +201,11 @@ class Cluster:
     port: int = 0
     password: str = ""
     token: str = ""
-    started: bool = False
+    # not_started | start_attempted | running | stopped | uncertain. A partir da
+    # tentativa de partida o servidor PODE existir (o pg_ctl pode ter estourado o prazo
+    # com o postmaster ainda subindo): só a confirmação por `pg_ctl status` volta a
+    # garantir que não há processo usando o diretório.
+    state: str = "not_started"
     # Ponto único de endereço: toda conexão, URL e ferramenta usa ``address()``.
     host: str = LOOPBACK
     system_identifier: str | None = None
@@ -268,47 +273,73 @@ class Cluster:
         )
 
     def start(self, env: Mapping[str, str]) -> None:
-        result = run_tool(
-            [
-                str(pg_binary(self.pg_bin, "pg_ctl")),
-                "start",
-                "-D",
-                str(self.data_dir),
-                "-l",
-                str(self.root / "server.log"),
-                "-w",
-                "-t",
-                "90",
-            ],
-            env=env,
-            log=self.log,
-            timeout=150,
-        )
+        self.state = "start_attempted"
+        try:
+            result = run_tool(
+                [
+                    str(pg_binary(self.pg_bin, "pg_ctl")),
+                    "start",
+                    "-D",
+                    str(self.data_dir),
+                    "-l",
+                    str(self.root / "server.log"),
+                    "-w",
+                    "-t",
+                    "90",
+                ],
+                env=env,
+                log=self.log,
+                timeout=150,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise DrillFailed("cluster_start_timeout", cluster=self.label) from exc
         if result.returncode != 0:
             raise DrillFailed("cluster_start_failed", cluster=self.label)
-        self.started = True
+        self.state = "running"
 
-    def stop(self, env: Mapping[str, str]) -> bool:
-        if not self.started:
+    def server_running(self, env: Mapping[str, str]) -> bool | None:
+        """``pg_ctl status`` no diretório desta execução: True rodando, False parado
+        (saída 3), None incerto (diretório inacessível, erro ou prazo estourado)."""
+        try:
+            result = run_tool(
+                [str(pg_binary(self.pg_bin, "pg_ctl")), "status", "-D", str(self.data_dir)],
+                env=env,
+                log=self.log,
+                timeout=60,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        if result.returncode == 0:
             return True
-        result = run_tool(
-            [
-                str(pg_binary(self.pg_bin, "pg_ctl")),
-                "stop",
-                "-D",
-                str(self.data_dir),
-                "-m",
-                "fast",
-                "-w",
-                "-t",
-                "90",
-            ],
-            env=env,
-            log=self.log,
-            timeout=150,
-        )
-        self.started = result.returncode != 0
-        return not self.started
+        if result.returncode == 3:
+            return False
+        return None
+
+    def stop(self, env: Mapping[str, str]) -> str:
+        """Para e CONFIRMA a parada. Retorna not_started, stopped ou uncertain; só os dois
+        primeiros autorizam remover o diretório."""
+        if self.state in ("not_started", "stopped"):
+            return self.state
+        # Quem decide é a confirmação por `pg_ctl status`, não o retorno do stop.
+        with contextlib.suppress(OSError, subprocess.TimeoutExpired):
+            run_tool(
+                [
+                    str(pg_binary(self.pg_bin, "pg_ctl")),
+                    "stop",
+                    "-D",
+                    str(self.data_dir),
+                    "-m",
+                    "fast",
+                    "-w",
+                    "-t",
+                    "90",
+                ],
+                env=env,
+                log=self.log,
+                timeout=150,
+            )
+        self.state = "stopped" if self.server_running(env) is False else "uncertain"
+        return self.state
 
     def connect(
         self, dbname: str = "postgres", user: str = SUPERUSER, password: str | None = None
@@ -356,3 +387,19 @@ class Cluster:
             "listen": LOOPBACK,
             "identity_proof": "token_in_data_dir+cluster_name+port+listen_addresses",
         }
+
+
+# Estados que autorizam remover o diretório de um cluster.
+STOPPED_STATES = ("not_started", "stopped")
+
+
+def stop_all(clusters: list[Cluster], env: Mapping[str, str]) -> dict[str, str]:
+    """Dá a ordem de parada a TODOS os clusters; um que quebra vira ``uncertain`` sem
+    impedir a parada dos demais."""
+    states: dict[str, str] = {}
+    for cluster in clusters:
+        try:
+            states[cluster.label] = cluster.stop(env)
+        except Exception:
+            states[cluster.label] = "uncertain"
+    return states
