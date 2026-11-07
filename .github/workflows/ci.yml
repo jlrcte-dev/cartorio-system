@@ -10,6 +10,9 @@ name: CI
 # formatação, lint, testes e migrations. Ferramentas de segurança
 # (bandit, pip-audit, gitleaks) e tipagem (mypy) NÃO entram aqui — elas exigem
 # decisão e sprint próprias, conforme TD-10.
+#
+# O job `postgres-gate` (CARTORIO-OPS-1) é focado e separado: o gate SQLite acima
+# continua exatamente como estava.
 
 on:
   push:
@@ -71,3 +74,65 @@ jobs:
           python -m alembic heads
           python -m alembic check
           rm -f ci_alembic_check.db
+
+  # Gate PostgreSQL de bancada (CARTORIO-OPS-1). O mesmo comando roda localmente —
+  # ver docs/operations/ops_verifier_runbook.md. Reprova se qualquer prova obrigatória
+  # for pulada; nenhum segredo sai do job (senhas geradas morrem com o runner).
+  postgres-gate:
+    name: "PostgreSQL 18 — suíte do PR #5, verificador e prova de recuperação"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # Repositório oficial PGDG (pacotes assinados), sem cluster padrão: o gate cria
+      # os seus em diretórios próprios, só em loopback e com credencial gerada.
+      - name: Instalar PostgreSQL 18 (PGDG, sem cluster padrão)
+        run: |
+          sudo install -d /etc/postgresql-common/createcluster.d
+          echo "create_main_cluster = false" | sudo tee /etc/postgresql-common/createcluster.d/99-cartorio-ops.conf
+          sudo apt-get update -q
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-18
+          /usr/lib/postgresql/18/bin/postgres --version
+
+      - name: Instalar o projeto (runtime + dev + postgres)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,postgres]"
+
+      # Prova obrigatória: com a variável abaixo o teste falha (não pula) se a
+      # ferramenta faltar, e -rA deixa o PASSED nominal no log.
+      - name: Unidades do verificador (systemd-analyze verify)
+        env:
+          CARTORIO_OPS_REQUIRE_SYSTEMD_ANALYZE: "1"
+        run: |
+          systemd-analyze --version | head -n 1
+          python -m pytest -p no:cacheprovider -rA tests/test_ops_units.py
+
+      - name: "Gate PostgreSQL de bancada (PR #5 + verificador + prova de recuperação)"
+        run: |
+          python scripts/ops/pg_gate.py \
+            --pg-bin /usr/lib/postgresql/18/bin \
+            --work-root "$RUNNER_TEMP" \
+            --report "$RUNNER_TEMP/pg-gate-report.json"
+
+      - name: Publicar relatórios do gate (sem segredos)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pg-gate-reports
+          path: |
+            ${{ runner.temp }}/pg-gate-report.json
+            ${{ runner.temp }}/pg-gate-report-drill.json
+          if-no-files-found: warn

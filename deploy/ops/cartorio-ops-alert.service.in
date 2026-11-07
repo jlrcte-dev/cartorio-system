@@ -1,0 +1,24 @@
+# Modelo: deploy/ops/cartorio-ops-alert.service.in (CARTORIO-OPS-1).
+# Acionado pelo OnFailure= do verificador. Grava o alerta no spool local de teste;
+# o canal definitivo e decisao de implantacao (ver docs/operations/ops_verifier_runbook.md).
+# --expect-failure: esta unidade so roda porque a verificacao falhou, entao um
+# relatorio saudavel em disco (de uma execucao anterior) nunca silencia o alerta.
+[Unit]
+Description=Cartorio System - alerta do verificador operacional (spool local)
+
+[Service]
+Type=oneshot
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
+WorkingDirectory=@RELEASE_DIR@
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+StateDirectory=@STATE_DIR_NAME@
+StateDirectoryMode=0750
+UMask=0027
+ExecStart=@PYTHON@ -m app.ops.cli alert --expect-failure --report /var/lib/@STATE_DIR_NAME@/last-check.json --spool /var/lib/@STATE_DIR_NAME@/alerts
+TimeoutStartSec=60
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
