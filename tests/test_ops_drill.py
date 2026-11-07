@@ -809,6 +809,153 @@ def test_report_with_a_generated_credential_is_never_written() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Revisão final do PR #6: a exportação nunca altera um destino que já existe
+# ---------------------------------------------------------------------------
+
+STAMP = "20260101T000000Z"
+EXPORTED = {f"backup-{STAMP}.dump": b"PGDMP-sintetico", f"backup-{STAMP}.json": b"{}"}
+
+
+def _export_source(tmp_path: Path) -> Path:
+    source = tmp_path / "artefato"
+    source.mkdir()
+    for name, data in EXPORTED.items():
+        (source / name).write_bytes(data)
+    return source
+
+
+def _export(source: Path, destination: Path) -> str:
+    import os
+
+    previous = os.umask(0o022)  # o umask permissivo do operador
+    try:
+        return drill.export_copy(source, STAMP, destination)
+    finally:
+        os.umask(previous)
+
+
+def _exported(destination: Path) -> dict[str, tuple[int, bytes]]:
+    return {
+        name: (_mode(destination / name), (destination / name).read_bytes()) for name in EXPORTED
+    }
+
+
+def _sentinel(directory: Path) -> tuple[int, int, bytes]:
+    sentinel = directory / "sentinela.txt"
+    return _mode(sentinel), sentinel.stat().st_mtime_ns, sentinel.read_bytes()
+
+
+def _existing_dir(tmp_path: Path, name: str, mode: int) -> Path:
+    directory = tmp_path / name
+    directory.mkdir()
+    (directory / "sentinela.txt").write_text("conteúdo de outra pessoa", encoding="utf-8")
+    directory.chmod(mode)
+    return directory
+
+
+@posix_only
+def test_export_destination_new_is_created_private_under_umask_022(tmp_path: Path) -> None:
+    source = _export_source(tmp_path)
+    destination = tmp_path / "pai-novo" / "copia"
+    assert _export(source, destination) == "created"
+    assert _mode(destination) == 0o700 and _mode(destination.parent) == 0o700
+    assert _exported(destination) == {name: (0o600, data) for name, data in EXPORTED.items()}
+    assert {p.name: p.read_bytes() for p in source.iterdir()} == EXPORTED  # origem intocada
+
+
+def _octal(mode: int) -> str:
+    return f"{mode:04o}"
+
+
+@posix_only
+@pytest.mark.parametrize("mode", [0o700, 0o750, 0o755], ids=_octal)
+def test_export_destination_existing_keeps_its_mode_owner_and_content(
+    tmp_path: Path, mode: int
+) -> None:
+    source = _export_source(tmp_path)
+    existing = _existing_dir(tmp_path, "existente", mode)
+    owner, sentinel = existing.stat().st_uid, _sentinel(existing)
+    assert _export(source, existing) == "existing"
+    assert (_mode(existing), existing.stat().st_uid) == (mode, owner)
+    assert _sentinel(existing) == sentinel
+    assert _exported(existing) == {name: (0o600, data) for name, data in EXPORTED.items()}
+
+
+@posix_only
+@pytest.mark.parametrize("mode", [0o775, 0o770, 0o777, 0o1777], ids=_octal)
+def test_export_destination_shared_and_writable_by_others_is_refused_untouched(
+    tmp_path: Path, mode: int
+) -> None:
+    source = _export_source(tmp_path)
+    shared = _existing_dir(tmp_path, "compartilhado", mode)
+    sentinel = _sentinel(shared)
+    with pytest.raises(DrillRefused) as info:
+        _export(source, shared)
+    assert info.value.reason == "export_dir_writable_by_others"
+    assert info.value.facts["mode"] == f"{mode:04o}"
+    assert _mode(shared) == mode and _sentinel(shared) == sentinel
+    assert sorted(p.name for p in shared.iterdir()) == ["sentinela.txt"]
+
+
+@posix_only
+def test_export_destination_symlink_is_refused_without_touching_its_target(
+    tmp_path: Path,
+) -> None:
+    source = _export_source(tmp_path)
+    target = _existing_dir(tmp_path, "alvo", 0o755)
+    sentinel = _sentinel(target)
+    link = tmp_path / "atalho"
+    link.symlink_to(target, target_is_directory=True)
+    with pytest.raises(DrillRefused) as info:
+        _export(source, link)
+    assert info.value.reason == "export_dir_symlink"
+    assert _mode(target) == 0o755 and _sentinel(target) == sentinel
+    assert sorted(p.name for p in target.iterdir()) == ["sentinela.txt"]
+
+
+@posix_only
+def test_export_destination_never_overwrites(tmp_path: Path) -> None:
+    source = _export_source(tmp_path)
+    existing = _existing_dir(tmp_path, "existente", 0o700)
+    (existing / f"backup-{STAMP}.json").write_text("anterior", encoding="utf-8")
+    with pytest.raises(DrillRefused) as info:
+        _export(source, existing)
+    assert info.value.reason == "export_file_exists"
+    assert (existing / f"backup-{STAMP}.json").read_text(encoding="utf-8") == "anterior"
+    assert not (existing / f"backup-{STAMP}.dump").exists()  # nada pela metade
+
+
+@posix_only
+def test_export_destination_unfit_refuses_the_drill_before_any_cluster(
+    tmp_path: Path, monkeypatch, capsys, any_work_root
+) -> None:
+    for name in ("PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE", "PGOPTIONS"):
+        monkeypatch.delenv(name, raising=False)
+    shared = _existing_dir(tmp_path, "compartilhado", 0o777)
+    assert drill.main(_drill_args(tmp_path, "--export-artifact", str(shared))) == 2
+    capsys.readouterr()
+    report = json.loads((tmp_path / "drill.json").read_text(encoding="utf-8"))
+    assert (report["verdict"], report["reason"]) == ("refused", "export_dir_writable_by_others")
+    assert report["cleanup"] == {"confirmed": True, "work_dir_created": False}
+    assert list((tmp_path / "work").iterdir()) == []
+    assert _mode(shared) == 0o777
+
+
+def test_export_is_refused_where_isolation_is_unprovable(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(drill, "copy_mode_supported", lambda: False)
+    for name in ("PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE", "PGOPTIONS"):
+        monkeypatch.delenv(name, raising=False)
+    destination = tmp_path / "copia"
+    assert drill.main(_drill_args(tmp_path, "--export-artifact", str(destination))) == 2
+    capsys.readouterr()
+    report = json.loads((tmp_path / "drill.json").read_text(encoding="utf-8"))
+    assert (report["verdict"], report["reason"]) == ("refused", "export_unsupported_platform")
+    assert not destination.exists() and list((tmp_path / "work").iterdir()) == []
+
+
+# ---------------------------------------------------------------------------
 # Gate: modo cópia ponta a ponta a partir da cópia sintética exportada
 # ---------------------------------------------------------------------------
 

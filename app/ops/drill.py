@@ -36,6 +36,7 @@ import json
 import os
 import re
 import secrets
+import stat
 import subprocess
 import sys
 import time
@@ -614,6 +615,11 @@ def run_drill(args: argparse.Namespace, *, clock: Clock = utc_now) -> int:
         require_clean_libpq_env(os.environ)
         if args.from_manifest and not copy_mode_supported():
             raise DrillRefused("copy_mode_unsupported_platform")
+        if args.export_artifact:
+            # A exportação alimenta o modo cópia e tem a mesma exigência de isolamento.
+            if not copy_mode_supported():
+                raise DrillRefused("export_unsupported_platform")
+            check_export_destination(args.export_artifact)  # recusa antes de qualquer cluster
         if not (REPO_ROOT / "alembic" / "versions").is_dir():
             raise DrillRefused("repo_root_not_checkout")
         report["release"] = _git_release()
@@ -641,10 +647,8 @@ def run_drill(args: argparse.Namespace, *, clock: Clock = utc_now) -> int:
             source = _origin_phase(ctx, tools, heads)
         artifact = _verify_artifact(ctx, source)
         if args.export_artifact:  # o parser só aceita no modo sintético
-            private_mkdir(args.export_artifact, parents=True, exist_ok=True)
-            for item in source["dir"].glob(f"backup-{source['stamp']}.*"):
-                private_copy(item, args.export_artifact / item.name)
-            report["artifact"]["exported"] = True
+            destination = export_copy(source["dir"], source["stamp"], args.export_artifact)
+            report["artifact"].update(exported=True, export_destination=destination)
         _restore_phase(ctx, tools, heads, artifact, source)
         report["postgres"]["server_version"] = ctx.clusters[-1].server_version
         report["postgres"]["server_major"] = ctx.clusters[-1].server_major
@@ -674,9 +678,56 @@ def run_drill(args: argparse.Namespace, *, clock: Clock = utc_now) -> int:
 
 
 def copy_mode_supported(platform: str = sys.platform) -> bool:
-    """O modo cópia exige isolamento comprovável da cópia privada: modos POSIX. No
-    Windows a ACL é herdada da raiz escolhida e não é verificada aqui — recusa."""
+    """O modo cópia (e a exportação que o alimenta) exige isolamento comprovável da cópia
+    privada: modos POSIX. No Windows a ACL é herdada da raiz escolhida e não é verificada
+    aqui — recusa."""
     return platform != "win32"
+
+
+def check_export_destination(path: Path) -> bool:
+    """``False`` se o destino ainda não existe (será criado privado); ``True`` se existe e
+    pode receber a cópia como está — modo, dono e conteúdo preservados. Recusa, sem
+    alterar nada, o destino que não pode: link simbólico (o alvo nunca é tocado), algo que
+    não é diretório, de outro dono, sem escrita para quem exporta, ou gravável por grupo ou
+    outros — nesse caso a cópia poderia ser trocada antes de o modo cópia lê-la."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return False
+    mode = f"{stat.S_IMODE(info.st_mode):04o}"
+    if stat.S_ISLNK(info.st_mode):
+        raise DrillRefused("export_dir_symlink")
+    if not stat.S_ISDIR(info.st_mode):
+        raise DrillRefused("export_dir_not_directory")
+    if info.st_uid != os.geteuid():
+        raise DrillRefused("export_dir_not_owned", mode=mode)
+    if info.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        raise DrillRefused("export_dir_writable_by_others", mode=mode)
+    if not os.access(path, os.W_OK | os.X_OK):
+        raise DrillRefused("export_dir_not_writable", mode=mode)
+    return True
+
+
+def export_copy(source_dir: Path, stamp: str, destination: Path) -> str:
+    """Exporta dump + manifesto: diretório novo nasce 0700 (também os pais que faltarem);
+    diretório existente é usado como está, depois da mesma validação do início. Os
+    arquivos nascem 0600 e nunca sobrescrevem. Devolve ``created`` ou ``existing``."""
+    existing = check_export_destination(destination)
+    items = sorted(source_dir.glob(f"backup-{stamp}.*"))
+    if existing:
+        if any(os.path.lexists(destination / item.name) for item in items):
+            raise DrillRefused("export_file_exists")  # nada pela metade
+    else:
+        try:
+            private_mkdir(destination, parents=True)
+        except OSError as exc:
+            raise DrillRefused("export_dir_unusable", error_class=type(exc).__name__) from exc
+    for item in items:
+        try:
+            private_copy(item, destination / item.name)
+        except FileExistsError as exc:  # criado por outro entre a checagem e a cópia
+            raise DrillRefused("export_file_exists") from exc
+    return "existing" if existing else "created"
 
 
 def without_secrets(report: dict[str, Any], generated: Sequence[str]) -> dict[str, Any]:

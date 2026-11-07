@@ -143,10 +143,14 @@ PRIVATE_FILE_MODE = 0o600
 _PRIVATE_OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
 
 
-def private_mkdir(path: Path, *, parents: bool = False, exist_ok: bool = False) -> None:
-    path.mkdir(mode=PRIVATE_DIR_MODE, parents=parents, exist_ok=exist_ok)
+def private_mkdir(path: Path, *, parents: bool = False) -> None:
+    """Cria um diretório NOVO já em 0700 — com ``parents``, também os pais que faltam, do
+    mesmo jeito. Nunca reaproveita nem altera o que já existe (``FileExistsError``)."""
+    if parents and not os.path.lexists(path.parent):
+        private_mkdir(path.parent, parents=True)
+    path.mkdir(mode=PRIVATE_DIR_MODE)
     if os.name == "posix":
-        os.chmod(path, PRIVATE_DIR_MODE)  # 0700 mesmo sob umask exótico; grupo/outros fora
+        os.chmod(path, PRIVATE_DIR_MODE)  # recém-criado aqui: 0700 mesmo sob umask exótico
 
 
 def private_write(path: Path, data: bytes) -> None:

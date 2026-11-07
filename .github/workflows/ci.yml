@@ -120,12 +120,12 @@ jobs:
           systemd-analyze --version | head -n 1
           python -m pytest -p no:cacheprovider -rA tests/test_ops_units.py
 
-      # Área privada do ensaio sob umask 022. Num runner Linux estes testes não têm
-      # como ser pulados; -rA deixa o PASSED nominal no log.
-      - name: Área privada do ensaio (umask 022)
+      # Área privada do ensaio e destino da exportação sob umask 022. Num runner Linux
+      # estes testes não têm como ser pulados; -rA deixa o PASSED nominal no log.
+      - name: Área privada do ensaio e destino da exportação (umask 022)
         run: |
           python -m pytest -p no:cacheprovider -rA tests/test_ops_drill.py \
-            -k "umask_022 or private_from_creation or stays_private"
+            -k "umask_022 or private_from_creation or stays_private or export_destination"
 
       - name: "Gate PostgreSQL de bancada (PR #5 + verificador + prova de recuperação)"
         run: |
