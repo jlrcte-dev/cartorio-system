@@ -1,7 +1,8 @@
 """Gate PostgreSQL de bancada (CARTORIO-OPS-1) — o mesmo comando no CI e localmente.
 
-    python scripts/ops/pg_gate.py --pg-bin DIR --work-root DIR --report ARQUIVO \\
+    python scripts/ops/pg_gate.py --pg-bin DIR --work-root DIR --publish-dir DIR \\
         [--require-major 18]
+    python scripts/ops/pg_gate.py --list-released DIR [--github-output ARQUIVO]
 
 1. Recusa ambiente com override de conexão libpq (mesma proteção da suíte do PR #5).
 2. Confere e registra a versão das ferramentas e do servidor (padrão: 18).
@@ -15,8 +16,15 @@
 6. A partir da cópia exportada pela prova sintética, roda o modo cópia: o banco
    esperado restaura numa área privada mesmo sob umask 022; um banco divergente é
    recusado antes de qualquer cluster; a cópia de origem sai intocada.
-7. Grava um relatório JSON sem segredos e confere que nada do que publica carrega
-   URL com senha. Saída 0 só com tudo aprovado.
+7. Publica só no fim. A saída bruta dos subprocessos (logs e relatórios) fica numa área
+   privada e nada dela é impresso antes de conferido: log limpo é impresso; com
+   credencial, fica retido e só a categoria sai. Relatório limpo vai para a área
+   liberada (``--publish-dir``, que não pode existir antes) e entra no manifesto de
+   liberação, gravado por último; com credencial, fica retido e o gate reprova.
+   Saída 0 só com tudo aprovado.
+
+``--list-released`` é o que o workflow publica: os arquivos do manifesto, conferidos de
+novo (nome, SHA-256, varredura). Divergência recusa a liberação inteira.
 """
 
 from __future__ import annotations
@@ -26,8 +34,10 @@ import json
 import os
 import re
 import secrets
+import stat
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +52,8 @@ from app.ops.pgcluster import (
     DrillRefused,
     create_work_dir,
     pg_binary,
+    private_mkdir,
+    private_write,
     remove_work_dir,
     require_clean_libpq_env,
     run_tool,
@@ -53,6 +65,7 @@ from app.ops.report import utc_iso, utc_now, write_json_atomic
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = "cartorio_system.ops.pg_gate"
+RELEASE_SCHEMA = "cartorio_system.ops.pg_gate_release"
 PR5_USER = "cartorio_fase_b"
 PR5_DATABASE = "cartorio_fase_b_test"
 # Dois bancos reais da mesma bancada, para provar o vínculo do backup ao banco que a
@@ -63,8 +76,24 @@ TEST_FILES = ("tests/test_postgres_compat.py", "tests/test_ops_postgres.py")
 FOREIGN_DATABASE = "outro_banco_ficticio"
 # Área do modo cópia que o relatório do ensaio precisa mostrar, seja qual for o umask.
 PRIVATE_AREA = {"work_dir": "0700", "artifact_dir": "0700", "artifact_files": ["0600"]}
-# usuário:senha@ numa URL. Senha mascarada (***) não conta.
-CREDENTIAL_IN_URL = re.compile(r"://[^\s/@:]+:(?!\*+@)[^\s/@]+@")
+
+GATE_REPORT = "pg-gate-report.json"
+DRILLS = ("drill", "copy", "copy-foreign")
+RELEASE_MANIFEST = "pg-gate-liberados.json"
+_RELEASABLE = re.compile(r"^pg-gate-report(?:-(?:drill|copy|copy-foreign))?\.json$")
+_MAX_RELEASE_BYTES = 1024 * 1024
+
+# Categorias de credencial procuradas em tudo o que o gate imprime ou publica, além das
+# credenciais que o próprio gate gerou ("generated_secret"). Só a categoria sai.
+CREDENTIAL_PATTERNS: dict[str, re.Pattern[str]] = {
+    # usuário:senha@ numa URL; senha mascarada (***) ou marcador de modelo ({senha}) não conta
+    "credential_in_url": re.compile(r"://[^\s/@:]+:(?!\*+@|\{[^\s}]*\}@)[^\s/@]+@"),
+    # campo de senha, segredo ou token com valor, num JSON
+    "secret_field": re.compile(
+        r"(?i)\"(?:password|senha|secret|token)\"\s*:\s*\"(?!\*+\")[^\"]+\""
+    ),
+    "private_key": re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
+}
 
 
 def junit_totals(path: Path) -> dict[str, int]:
@@ -91,7 +120,15 @@ def gate_verdict(exit_code: int, totals: dict[str, int]) -> list[str]:
     return reasons
 
 
-def _run_suite(work: Path, cluster: Cluster, password: str, report: dict[str, Any]) -> list[str]:
+def credential_categories(text: str, known: Sequence[str] = ()) -> list[str]:
+    """Categorias de credencial presentes no texto (vazio = limpo). Nunca o valor."""
+    found = [name for name, pattern in CREDENTIAL_PATTERNS.items() if pattern.search(text)]
+    if any(secret and secret in text for secret in known):
+        found.append("generated_secret")
+    return found
+
+
+def _run_suite(raw: Path, cluster: Cluster, password: str, report: dict[str, Any]) -> list[str]:
     from psycopg import sql
 
     with cluster.connect() as conn:
@@ -108,8 +145,8 @@ def _run_suite(work: Path, cluster: Cluster, password: str, report: dict[str, An
             )
     host = cluster.address()
     url = f"postgresql+psycopg://{PR5_USER}:{password}@{host}:{cluster.port}/{PR5_DATABASE}"
-    junit = work / "pytest-junit.xml"
-    log = work / "pytest.log"
+    junit = raw / "pytest-junit.xml"
+    log = raw / "pytest.log"
     env = subprocess_env(os.environ, CARTORIO_TEST_POSTGRES_URL=url, PYTHONDONTWRITEBYTECODE="1")
     with log.open("w", encoding="utf-8") as handle:
         proc = subprocess.run(
@@ -132,8 +169,7 @@ def _run_suite(work: Path, cluster: Cluster, password: str, report: dict[str, An
             timeout=900,
             check=False,
         )
-    output = log.read_text(encoding="utf-8", errors="replace").replace(password, "***")
-    print(output)
+    # O log fica na área bruta: só sai depois de conferido (ver _publish).
     empty = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
     totals = junit_totals(junit) if junit.exists() else empty
     report["pytest"] = {"files": list(TEST_FILES), "exit_code": proc.returncode, **totals}
@@ -143,10 +179,10 @@ def _run_suite(work: Path, cluster: Cluster, password: str, report: dict[str, An
 def _drill(
     args: argparse.Namespace, name: str, *extra: str, umask: int = 0o077
 ) -> tuple[int, dict[str, Any], str]:
-    """Um ensaio em processo próprio, sob o umask dado; relatório e log ficam ao lado do
-    relatório do gate."""
-    report = args.report.with_name(f"{args.report.stem}-{name}.json")
-    log = args.report.with_name(f"{args.report.stem}-{name}.log")
+    """Um ensaio em processo próprio, sob o umask dado; relatório e log ficam na área
+    bruta e só saem dela depois de conferidos."""
+    report = args.raw_dir / f"pg-gate-report-{name}.json"
+    log = args.raw_dir / f"pg-gate-{name}.log"
     cmd = [
         sys.executable,
         "-m",
@@ -164,7 +200,6 @@ def _drill(
         proc = run_tool(cmd, env=subprocess_env(os.environ), log=log, timeout=1200)
     finally:
         os.umask(previous)
-    print(log.read_text(encoding="utf-8", errors="replace"))
     data = json.loads(report.read_text(encoding="utf-8")) if report.exists() else {}
     return proc.returncode, data, report.name
 
@@ -248,14 +283,119 @@ def _run_drills(args: argparse.Namespace, run_id: str) -> tuple[dict[str, Any], 
     return results, reasons
 
 
-def published_credentials(report: Path) -> list[str]:
-    """Relatórios e logs de ensaio publicados ao lado do relatório do gate que tragam
-    URL com senha embutida."""
-    return sorted(
-        p.name
-        for p in report.parent.glob(f"{report.stem}-*")
-        if p.is_file() and CREDENTIAL_IN_URL.search(p.read_text(encoding="utf-8", errors="replace"))
+def _publish(raw: Path, publish: Path, known: Sequence[str], report: dict[str, Any]) -> list[str]:
+    """Único ponto em que algo vindo dos subprocessos sai do processo, e só conferido: log
+    limpo é impresso, relatório limpo vai para a área liberada; com credencial, os dois
+    ficam retidos e só a categoria aparece. Devolve os motivos de reprovação."""
+    logs = {"pytest": raw / "pytest.log", **{name: raw / f"pg-gate-{name}.log" for name in DRILLS}}
+    reports = [raw / f"pg-gate-report-{name}.json" for name in DRILLS]
+    printed: list[str] = []
+    released: list[str] = []
+    withheld: list[dict[str, Any]] = []
+    checked = 0
+    for label, path in logs.items():
+        if not path.exists():
+            continue
+        checked += 1
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if found := credential_categories(text, known):
+            withheld.append({"file": path.name, "categories": found})
+            print(
+                f"[gate] saída de {label} retida: credencial ({', '.join(found)})", file=sys.stderr
+            )
+        else:
+            print(f"----- {label} -----\n{text}")
+            printed.append(label)
+    for path in reports:
+        if not path.exists():
+            continue
+        checked += 1
+        data = path.read_bytes()
+        if found := credential_categories(data.decode("utf-8", errors="replace"), known):
+            withheld.append({"file": path.name, "categories": found})
+            print(f"[gate] {path.name} retido: credencial ({', '.join(found)})", file=sys.stderr)
+        else:
+            private_write(publish / path.name, data)
+            released.append(path.name)
+    report["publication"] = {"logs_printed": printed, "released": released, "withheld": withheld}
+    report["secret_scan"] = {
+        "method": "patterns_and_generated_secrets",
+        "categories": [*CREDENTIAL_PATTERNS, "generated_secret"],
+        "files_checked": checked,
+    }
+    return ["credential_in_output"] if withheld else []
+
+
+def _write_release(publish: Path, run_id: str, names: list[str]) -> None:
+    """Manifesto de liberação, gravado por último: sem ele, nada é publicado."""
+    files = [{"name": name, "sha256": sha256_file(publish / name)} for name in names]
+    write_json_atomic(
+        publish / RELEASE_MANIFEST, {"schema": RELEASE_SCHEMA, "run_id": run_id, "files": files}
     )
+
+
+def released_files(publish: Path) -> tuple[list[Path], list[str]]:
+    """O que pode virar artefato: SÓ os arquivos do manifesto de liberação, conferidos de
+    novo — nome esperado, arquivo regular no próprio diretório, SHA-256 e varredura.
+    Qualquer divergência recusa a liberação inteira; arquivo fora do manifesto nunca é
+    selecionado."""
+    manifest = publish / RELEASE_MANIFEST
+    try:
+        info = manifest.lstat()
+        if not stat.S_ISREG(info.st_mode) or info.st_size > _MAX_RELEASE_BYTES:
+            return [], ["release_manifest_invalid"]
+        data = json.loads(manifest.read_bytes())
+    except FileNotFoundError:
+        return [], ["release_manifest_missing"]
+    except (OSError, ValueError):
+        return [], ["release_manifest_invalid"]
+    if not isinstance(data, dict) or data.get("schema") != RELEASE_SCHEMA:
+        return [], ["release_manifest_invalid"]
+    entries = data.get("files")
+    if not isinstance(entries, list) or not entries:
+        return [], ["release_manifest_invalid"]
+    selected: list[Path] = []
+    problems: set[str] = set()
+    for entry in entries:
+        name = entry.get("name") if isinstance(entry, dict) else None
+        digest = entry.get("sha256") if isinstance(entry, dict) else None
+        if not isinstance(name, str) or not _RELEASABLE.match(name) or not isinstance(digest, str):
+            problems.add("release_entry_invalid")
+            continue
+        path = publish / name
+        try:
+            info = path.lstat()
+        except OSError:
+            problems.add("released_file_missing")
+            continue
+        if path in selected or not stat.S_ISREG(info.st_mode):
+            problems.add("released_file_invalid")
+        elif info.st_size > _MAX_RELEASE_BYTES or sha256_file(path) != digest:
+            problems.add("released_file_modified")
+        elif credential_categories(path.read_text(encoding="utf-8", errors="replace")):
+            problems.add("credential_in_released_file")
+        else:
+            selected.append(path)
+    if problems:
+        return [], sorted(problems)
+    return selected, []
+
+
+def list_released(publish: Path, github_output: Path | None) -> int:
+    paths, problems = released_files(publish)
+    for problem in problems:
+        print(f"[gate] liberação recusada: {problem}", file=sys.stderr)
+    if problems:
+        return 1
+    lines = "\n".join(str(path) for path in paths)
+    if github_output is None:
+        print(lines)
+    else:
+        delimiter = f"LIBERADOS_{secrets.token_hex(8)}"
+        with github_output.open("a", encoding="utf-8") as handle:
+            handle.write(f"paths<<{delimiter}\n{lines}\n{delimiter}\n")
+    print(f"[gate] liberados: {', '.join(path.name for path in paths)}", file=sys.stderr)
+    return 0
 
 
 def gate_cleanup(cluster: Cluster | None, work: Path | None, run_id: str) -> dict[str, Any]:
@@ -284,11 +424,26 @@ def gate_cleanup(cluster: Cluster | None, work: Path | None, run_id: str) -> dic
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python scripts/ops/pg_gate.py")
-    parser.add_argument("--pg-bin", type=Path, required=True)
-    parser.add_argument("--work-root", type=Path, required=True)
-    parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--pg-bin", type=Path)
+    parser.add_argument("--work-root", type=Path)
+    parser.add_argument(
+        "--publish-dir", type=Path, help="área liberada (não pode existir): só o conferido"
+    )
     parser.add_argument("--require-major", type=int, default=18)
+    parser.add_argument(
+        "--list-released", type=Path, metavar="DIR", help="lista, conferido, o que o gate liberou"
+    )
+    parser.add_argument("--github-output", type=Path, help="com --list-released: saída do passo")
     args = parser.parse_args(argv)
+    if args.list_released is not None:
+        return list_released(args.list_released, args.github_output)
+    required = {
+        "--pg-bin": args.pg_bin,
+        "--work-root": args.work_root,
+        "--publish-dir": args.publish_dir,
+    }
+    if missing := [flag for flag, value in required.items() if value is None]:
+        parser.error(f"obrigatório: {' '.join(missing)}")
     # O que o gate e seus processos filhos criarem nasce privado.
     previous = os.umask(0o077)
     try:
@@ -307,11 +462,24 @@ def _gate(args: argparse.Namespace) -> int:
         "started_at": utc_iso(started),
         "classification": "bench",
     }
+    try:
+        # Área liberada nova: nada de outra execução pode ser misturado ou selecionado.
+        private_mkdir(args.publish_dir, parents=True)
+    except OSError as exc:
+        reason = (
+            "publish_dir_exists" if isinstance(exc, FileExistsError) else "publish_dir_unusable"
+        )
+        print(json.dumps({"run_id": run_id, "verdict": "failed", "reasons": [reason]}))
+        return 1
     reasons: list[str] = []
+    known: list[str] = []  # credenciais geradas por este gate
+    raw_id = f"{run_id}-bruto"
+    raw: Path | None = None
     work: Path | None = None
     cluster: Cluster | None = None
     try:
         require_clean_libpq_env(os.environ)
+        raw = args.raw_dir = create_work_dir(args.work_root, raw_id)
         versions = {
             name: tool_version(pg_binary(args.pg_bin, name))
             for name in ("postgres", "initdb", "pg_ctl", "pg_dump", "pg_restore")
@@ -323,12 +491,15 @@ def _gate(args: argparse.Namespace) -> int:
         cluster = Cluster(label="gate", run_id=run_id, pg_bin=args.pg_bin, root=work / "gate")
         env = subprocess_env(os.environ)
         cluster.initialize(env)
+        known.append(cluster.password)
         cluster.start(env)
         cluster.prove_identity()
         report["postgres"]["server_version"] = cluster.server_version
         if cluster.server_major != args.require_major:
             raise DrillRefused("pg_major_not_required", required=args.require_major)
-        reasons += _run_suite(work, cluster, secrets.token_urlsafe(24), report)
+        password = secrets.token_urlsafe(24)
+        known.append(password)
+        reasons += _run_suite(raw, cluster, password, report)
     except (DrillRefused, DrillFailed) as exc:
         reasons.append(exc.reason)
     except Exception as exc:  # relatório e limpeza em qualquer desfecho
@@ -347,15 +518,26 @@ def _gate(args: argparse.Namespace) -> int:
             drill_reasons = [f"unexpected_error:{type(exc).__name__}"]
         reasons += drill_reasons
 
-    leaks = published_credentials(args.report)
-    report["published_scan"] = {"credential_in_url": leaks}
-    if leaks:
-        reasons.append("credential_in_published_output")
+    released: list[str] = []
+    if raw is not None:
+        reasons += _publish(raw, args.publish_dir, known, report)
+        released = list(report["publication"]["released"])
+        report["publication"]["raw_area_removed"] = remove_work_dir(raw, raw_id)
+        if not report["publication"]["raw_area_removed"]:
+            reasons.append("raw_area_not_removed")
+    report["gitleaks"] = {"executed": False, "reason": "not_available_td10"}
 
     report.update(verdict="passed" if not reasons else "failed", reasons=reasons)
     report["finished_at"] = utc_iso(utc_now())
-    write_json_atomic(args.report, report)
-    print(json.dumps({k: report.get(k) for k in ("run_id", "verdict", "reasons")}))
+    text = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
+    if credential_categories(text, known):  # o próprio relatório também passa pela conferência
+        reasons.append("credential_in_output")
+    else:
+        private_write(args.publish_dir / GATE_REPORT, text.encode("utf-8"))
+        released.append(GATE_REPORT)
+    _write_release(args.publish_dir, run_id, released)
+    verdict = "passed" if not reasons else "failed"
+    print(json.dumps({"run_id": run_id, "verdict": verdict, "reasons": reasons}))
     return 0 if not reasons else 1
 
 

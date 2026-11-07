@@ -127,18 +127,31 @@ jobs:
           python -m pytest -p no:cacheprovider -rA tests/test_ops_drill.py \
             -k "umask_022 or private_from_creation or stays_private or export_destination"
 
+      # O gate só imprime o que conferiu e só grava em --publish-dir (nova a cada run) o
+      # que pode sair: relatórios sem credencial, listados num manifesto de liberação.
       - name: "Gate PostgreSQL de bancada (PR #5 + verificador + prova de recuperação)"
         run: |
           python scripts/ops/pg_gate.py \
             --pg-bin /usr/lib/postgresql/18/bin \
             --work-root "$RUNNER_TEMP" \
-            --report "$RUNNER_TEMP/pg-gate-report.json"
+            --publish-dir "$RUNNER_TEMP/pg-gate-liberados"
 
-      - name: Publicar relatórios do gate (sem segredos)
+      # O artefato é SÓ o que o gate liberou: os arquivos do manifesto, conferidos de novo
+      # (nome, SHA-256 e varredura). Nada do diretório temporário entra por glob; sem
+      # manifesto, ou com divergência, nada é publicado.
+      - name: Selecionar os relatórios liberados pelo gate
+        id: liberados
         if: always()
+        run: |
+          python scripts/ops/pg_gate.py \
+            --list-released "$RUNNER_TEMP/pg-gate-liberados" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Publicar relatórios liberados (sem segredos)
+        if: always() && steps.liberados.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: pg-gate-reports
           # Gate, prova sintética, modo cópia e recusa do banco divergente.
-          path: ${{ runner.temp }}/pg-gate-report*.json
-          if-no-files-found: warn
+          path: ${{ steps.liberados.outputs.paths }}
+          if-no-files-found: error

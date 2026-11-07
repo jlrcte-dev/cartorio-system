@@ -614,17 +614,23 @@ def _gate_args(tmp_path: Path) -> list[str]:
         str(tmp_path / "bin"),
         "--work-root",
         str(tmp_path / "work"),
-        "--report",
-        str(tmp_path / "gate.json"),
+        "--publish-dir",
+        str(tmp_path / "liberados"),
     ]
+
+
+def _gate_report(tmp_path: Path) -> dict:
+    return json.loads((tmp_path / "liberados" / pg_gate.GATE_REPORT).read_text(encoding="utf-8"))
 
 
 @pytest.fixture
 def fake_gate(monkeypatch, fake_pg):
-    """Gate com ferramentas falsas: suíte "aprovada" e prova de restauração espiã."""
+    """Gate com ferramentas falsas: suíte "aprovada" e prova de restauração espiã, que
+    deixa na área bruta os relatórios e logs que os ensaios reais deixariam — limpos,
+    salvo o conteúdo dado em ``raw`` (nome do arquivo -> texto)."""
     drill_runs: list[str] = []
 
-    def install(tools: FakeTools) -> list[str]:
+    def install(tools: FakeTools, raw: dict[str, str] | None = None) -> list[str]:
         fake_pg(tools)
         monkeypatch.setattr(pg_gate, "pg_binary", lambda pg_bin, name: Path(name))
         monkeypatch.setattr(pg_gate, "tool_version", lambda binary: ("18.0", 18))
@@ -637,6 +643,13 @@ def fake_gate(monkeypatch, fake_pg):
 
         def fake_drills(args, run_id):
             drill_runs.append("synthetic")
+            for name in pg_gate.DRILLS:
+                for file, clean in (
+                    (f"pg-gate-report-{name}.json", json.dumps({"verdict": "passed"})),
+                    (f"pg-gate-{name}.log", f"[drill] {name}: ok\n"),
+                ):
+                    text = (raw or {}).get(file, clean)
+                    (args.raw_dir / file).write_text(text, encoding="utf-8")
             return {"synthetic": {"verdict": "passed"}}, []
 
         monkeypatch.setattr(pg_gate, "_run_drills", fake_drills)
@@ -653,7 +666,7 @@ def test_gate_starts_no_restore_proof_while_the_test_cluster_may_be_active(
     drill_runs = fake_gate(FakeTools(stop={"gate": 1}, status={"gate": 0}))
     assert pg_gate.main(_gate_args(tmp_path)) == 1
     capsys.readouterr()
-    report = json.loads((tmp_path / "gate.json").read_text(encoding="utf-8"))
+    report = _gate_report(tmp_path)
     assert report["gate_cleanup"] == {
         "cluster": "uncertain",
         "work_dir_removed": False,
@@ -670,10 +683,10 @@ def test_gate_runs_the_restore_proof_only_after_confirmed_cleanup(
     drill_runs = fake_gate(FakeTools(status={"gate": 3}))
     assert pg_gate.main(_gate_args(tmp_path)) == 0
     capsys.readouterr()
-    report = json.loads((tmp_path / "gate.json").read_text(encoding="utf-8"))
+    report = _gate_report(tmp_path)
     assert report["gate_cleanup"]["confirmed"] is True
     assert drill_runs == ["synthetic"]
-    assert list((tmp_path / "work").iterdir()) == []
+    assert list((tmp_path / "work").iterdir()) == []  # cluster, cópia e área bruta
 
 
 # ---------------------------------------------------------------------------
@@ -1062,12 +1075,139 @@ def test_gate_removes_the_exported_copy(tmp_path: Path, any_work_root, monkeypat
     assert list((tmp_path / "work").iterdir()) == []
 
 
-def test_published_files_with_a_password_in_a_url_are_flagged(tmp_path: Path) -> None:
-    report = tmp_path / "gate.json"
-    (tmp_path / "gate-copy.log").write_text(
-        "conectando em postgresql+psycopg://app:segredo-ficticio@127.0.0.1:5432/db", "utf-8"
-    )
-    (tmp_path / "gate-drill.log").write_text("postgresql+psycopg://app:***@127.0.0.1/db", "utf-8")
-    (tmp_path / "gate-drill.json").write_text('{"verdict": "passed"}', "utf-8")
-    (tmp_path / "outro.log").write_text("postgresql://app:segredo@127.0.0.1/db", "utf-8")
-    assert pg_gate.published_credentials(report) == ["gate-copy.log"]
+# ---------------------------------------------------------------------------
+# Revisão final do PR #6: o CI público só imprime e publica o que foi conferido
+# ---------------------------------------------------------------------------
+
+# Credencial fictícia: o valor nunca pode aparecer em stdout, stderr ou no que sobe.
+LEAK = "segredo-ficticio-0b5e"
+LEAK_URL = f"postgresql+psycopg://app:{LEAK}@127.0.0.1:5432/banco_ficticio"
+FOUR_REPORTS = sorted(
+    [pg_gate.GATE_REPORT, *(f"pg-gate-report-{name}.json" for name in pg_gate.DRILLS)]
+)
+
+
+@pytest.mark.parametrize(
+    ("text", "known", "expected"),
+    [
+        (f"conectando em {LEAK_URL}", (), ["credential_in_url"]),
+        ("postgresql+psycopg://app:***@127.0.0.1/db", (), []),
+        ('url = f"postgresql+psycopg://app:{secret}@127.0.0.1/db"', (), []),
+        ('{"detalhe": "x", "password": "' + LEAK + '"}', (), ["secret_field"]),
+        ('{"password": "***"}', (), []),
+        # Só o cabeçalho, montado em partes: nenhum material de chave no repositório.
+        ("-----BEGIN OPENSSH " + "PRIVATE KEY-----", (), ["private_key"]),
+        (f"senha impressa: {LEAK}", (LEAK,), ["generated_secret"]),
+        ('{"verdict": "passed", "reason": "ok", "--no-password": 1}', (), []),
+    ],
+)
+def test_credential_categories_name_the_category_never_the_value(text, known, expected) -> None:
+    assert pg_gate.credential_categories(text, known) == expected
+
+
+def test_clean_gate_prints_its_logs_and_releases_the_four_reports(
+    tmp_path: Path, any_work_root, fake_gate, capsys
+) -> None:
+    fake_gate(FakeTools(status={"gate": 3}))
+    assert pg_gate.main(_gate_args(tmp_path)) == 0
+    out = capsys.readouterr().out
+    assert all(f"----- {name} -----" in out for name in pg_gate.DRILLS)  # depois de conferidos
+    paths, problems = pg_gate.released_files(tmp_path / "liberados")
+    assert (problems, sorted(p.name for p in paths)) == ([], FOUR_REPORTS)
+    publication = _gate_report(tmp_path)["publication"]
+    assert (publication["withheld"], publication["raw_area_removed"]) == ([], True)
+    assert list((tmp_path / "work").iterdir()) == []  # área bruta removida
+
+
+@pytest.mark.parametrize(
+    ("raw_file", "content", "printed"),
+    [
+        ("pg-gate-copy.log", f"[drill] conectando em {LEAK_URL}\n", False),
+        ("pg-gate-report-copy.json", json.dumps({"verdict": "passed", "url": LEAK_URL}), True),
+    ],
+)
+def test_credential_in_raw_output_fails_the_gate_and_never_leaves_it(
+    tmp_path: Path, any_work_root, fake_gate, capsys, raw_file, content, printed
+) -> None:
+    fake_gate(FakeTools(status={"gate": 3}), {raw_file: content})
+    code = pg_gate.main(_gate_args(tmp_path))
+    captured = capsys.readouterr()
+    assert code == 1
+    assert LEAK not in captured.out + captured.err
+    assert "credential_in_url" in captured.err  # diagnóstico mínimo: só a categoria
+    assert ("----- copy -----" in captured.out) is printed  # log com credencial não sai
+
+    report = _gate_report(tmp_path)
+    assert (report["verdict"], report["reasons"]) == ("failed", ["credential_in_output"])
+    assert report["publication"]["withheld"] == [
+        {"file": raw_file, "categories": ["credential_in_url"]}
+    ]
+    publish = tmp_path / "liberados"
+    paths, problems = pg_gate.released_files(publish)
+    assert problems == [] and raw_file not in {p.name for p in paths}
+    assert all(LEAK not in p.read_text(encoding="utf-8") for p in publish.iterdir())
+    assert list((tmp_path / "work").iterdir()) == []  # o bruto não sobrevive ao gate
+
+
+def test_selection_takes_only_files_listed_in_the_release_manifest(tmp_path: Path) -> None:
+    publish = tmp_path / "liberados"
+    publish.mkdir()
+    (publish / pg_gate.GATE_REPORT).write_text('{"verdict": "passed"}', encoding="utf-8")
+    pg_gate._write_release(publish, "r-1", [pg_gate.GATE_REPORT])
+    # Fora da lista: arquivo bruto ou antigo dentro da área liberada e no diretório temporário.
+    (publish / "pg-gate-report-copy.json").write_text(LEAK_URL, encoding="utf-8")
+    (tmp_path / "pg-gate-report-velho.json").write_text(LEAK_URL, encoding="utf-8")
+
+    paths, problems = pg_gate.released_files(publish)
+    assert (problems, paths) == ([], [publish / pg_gate.GATE_REPORT])
+    output = tmp_path / "github_output"
+    assert pg_gate.main(["--list-released", str(publish), "--github-output", str(output)]) == 0
+    block = output.read_text(encoding="utf-8").splitlines()
+    assert block[0].startswith("paths<<") and block[-1] == block[0].removeprefix("paths<<")
+    assert block[1:-1] == [str(publish / pg_gate.GATE_REPORT)]
+
+
+@pytest.mark.parametrize(
+    ("tamper", "problem"),
+    [
+        ("modify", "released_file_modified"),
+        ("remove", "released_file_missing"),
+        ("leak", "credential_in_released_file"),
+        ("no_manifest", "release_manifest_missing"),
+    ],
+)
+def test_selection_publishes_nothing_when_the_release_does_not_hold(
+    tmp_path: Path, tamper: str, problem: str, capsys
+) -> None:
+    publish = tmp_path / "liberados"
+    publish.mkdir()
+    report = publish / pg_gate.GATE_REPORT
+    report.write_text('{"verdict": "passed"}', encoding="utf-8")
+    pg_gate._write_release(publish, "r-1", [pg_gate.GATE_REPORT])
+    if tamper == "modify":
+        report.write_text('{"verdict": "failed"}', encoding="utf-8")
+    elif tamper == "remove":
+        report.unlink()
+    elif tamper == "leak":
+        report.write_text(LEAK_URL, encoding="utf-8")
+        pg_gate._write_release(publish, "r-1", [pg_gate.GATE_REPORT])  # hash "coerente"
+    else:
+        (publish / pg_gate.RELEASE_MANIFEST).unlink()
+    assert pg_gate.released_files(publish) == ([], [problem])
+    output = tmp_path / "github_output"
+    assert pg_gate.main(["--list-released", str(publish), "--github-output", str(output)]) == 1
+    assert not output.exists()
+    assert LEAK not in capsys.readouterr().err
+
+
+def test_publish_dir_of_another_run_is_never_reused(
+    tmp_path: Path, any_work_root, fake_gate, capsys
+) -> None:
+    drill_runs = fake_gate(FakeTools(status={"gate": 3}))
+    publish = tmp_path / "liberados"
+    publish.mkdir()
+    (publish / "pg-gate-report.json").write_text('{"verdict": "antigo"}', encoding="utf-8")
+    assert pg_gate.main(_gate_args(tmp_path)) == 1
+    assert json.loads(capsys.readouterr().out)["reasons"] == ["publish_dir_exists"]
+    assert drill_runs == [] and list((tmp_path / "work").iterdir()) == []
+    assert sorted(p.name for p in publish.iterdir()) == ["pg-gate-report.json"]
