@@ -49,6 +49,7 @@ from typing import Any
 
 from app.ops.backup import RESTORE_DRILL_SCHEMA, evaluate_publication, parse_stamp, sha256_file
 from app.ops.checks import direct_opener, release_heads
+from app.ops.config import DATABASE_NAME
 from app.ops.pgcluster import (
     LOOPBACK,
     Cluster,
@@ -432,10 +433,13 @@ def _origin_phase(ctx: Ctx, tools: dict[str, Any], heads: list[str]) -> dict[str
     if not origin.stop(subprocess_env(ctx.base_env)):
         raise DrillFailed("origin_stop_failed")
     ctx.report["origin"]["stopped_before_restore"] = True
-    return {"dir": artifact_dir, "stamp": stamp, **record}
+    # A identidade esperada da cópia é a da origem que o próprio ensaio criou.
+    return {"dir": artifact_dir, "stamp": stamp, "database": ORIGIN_DB, **record}
 
 
-def _copy_phase(ctx: Ctx, manifest: Path, finding_id: int, code: str) -> dict[str, Any]:
+def _copy_phase(
+    ctx: Ctx, manifest: Path, finding_id: int, code: str, database: str
+) -> dict[str, Any]:
     stamp = manifest.name.removeprefix("backup-").removesuffix(".json")
     if parse_stamp(stamp) is None:
         raise DrillRefused("manifest_name_invalid")
@@ -447,11 +451,22 @@ def _copy_phase(ctx: Ctx, manifest: Path, finding_id: int, code: str) -> dict[st
             raise DrillFailed("copy_incomplete", missing=name)
         shutil.copyfile(source, artifact_dir / name)
     ctx.report["record"] = {"finding_id": finding_id, "code_informed_by_operator": True}
-    return {"dir": artifact_dir, "stamp": stamp, "finding_id": finding_id, "code": code}
+    return {
+        "dir": artifact_dir,
+        "stamp": stamp,
+        "finding_id": finding_id,
+        "code": code,
+        "database": database,
+    }
 
 
 def _verify_artifact(ctx: Ctx, source: dict[str, Any]) -> Path:
-    evaluation = evaluate_publication(source["dir"], source["stamp"], ctx.clock())
+    """Mesma validação do verificador, inclusive o banco esperado — antes de restaurar."""
+    evaluation = evaluate_publication(
+        source["dir"], source["stamp"], ctx.clock(), source["database"]
+    )
+    if evaluation.reason == "database_mismatch":
+        raise DrillRefused("database_mismatch")
     if evaluation.state != "valid":
         raise DrillFailed("artifact_not_verified", evaluation=evaluation.reason)
     artifact = source["dir"] / f"backup-{source['stamp']}.dump"
@@ -465,6 +480,7 @@ def _verify_artifact(ctx: Ctx, source: dict[str, Any]) -> Path:
         "recovery_point_utc": evaluation.facts.get("recovery_point_utc"),
         "manifest_format": "rotina_backup_homologacao",
         "verifier_evaluation": evaluation.reason,
+        "database_matched": True,
     }
     return artifact
 
@@ -591,12 +607,16 @@ def run_drill(args: argparse.Namespace, *, clock: Clock = utc_now) -> int:
         report["postgres"] = {"tools": tools}
         if args.from_manifest:
             source = _copy_phase(
-                ctx, args.from_manifest, args.expect_finding_id, args.expect_finding_code
+                ctx,
+                args.from_manifest,
+                args.expect_finding_id,
+                args.expect_finding_code,
+                args.expect_database,
             )
         else:
             source = _origin_phase(ctx, tools, heads)
         artifact = _verify_artifact(ctx, source)
-        if args.export_artifact and not args.from_manifest:
+        if args.export_artifact:  # o parser só aceita no modo sintético
             args.export_artifact.mkdir(parents=True, exist_ok=True)
             for item in source["dir"].glob(f"backup-{source['stamp']}.*"):
                 shutil.copyfile(item, args.export_artifact / item.name)
@@ -650,6 +670,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--expect-finding-id", type=int, help="id do achado conhecido na cópia")
     parser.add_argument("--expect-finding-code", help="código do achado conhecido na cópia")
     parser.add_argument(
+        "--expect-database",
+        help="banco de que a cópia precisa ser (informado à parte; nunca lido da cópia)",
+    )
+    parser.add_argument(
         "--keep-on-failure", action="store_true", help="preserva o diretório se reprovar"
     )
     return parser
@@ -658,8 +682,15 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None, *, clock: Clock = utc_now) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
-    if args.from_manifest and (args.expect_finding_id is None or not args.expect_finding_code):
-        parser.error("--from-manifest exige --expect-finding-id e --expect-finding-code")
+    if args.from_manifest:
+        if args.expect_finding_id is None or not args.expect_finding_code:
+            parser.error("--from-manifest exige --expect-finding-id e --expect-finding-code")
+        if not args.expect_database or not DATABASE_NAME.match(args.expect_database):
+            parser.error("--from-manifest exige --expect-database com um nome de banco válido")
+        if args.export_artifact:
+            parser.error("--export-artifact só existe no modo sintético")
+    elif args.expect_database:
+        parser.error("--expect-database só existe no modo cópia (--from-manifest)")
     return run_drill(args, clock=clock)
 
 

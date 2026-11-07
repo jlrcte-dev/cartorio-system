@@ -54,6 +54,7 @@ def _full_env(bench: dict, backup_dir: Path, **extra: str) -> dict[str, str]:
         "CARTORIO_OPS_RELEASE_DIR": str(REPO_ROOT),
         "CARTORIO_OPS_BACKUP_DIR": str(backup_dir),
         "CARTORIO_OPS_BACKUP_MAX_AGE_HOURS": "26",
+        "CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": "cartorio_lab",
         "CARTORIO_OPS_BACKUP_SERVICE_UNIT": "cartorio-lab-backup.service",
         "CARTORIO_OPS_BACKUP_TIMER_UNIT": "cartorio-lab-backup.timer",
     }

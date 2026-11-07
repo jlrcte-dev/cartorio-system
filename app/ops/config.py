@@ -28,6 +28,8 @@ MAX_TIMEOUT_SECONDS = 60.0
 
 _UNIT_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9:_.@-]*\.(service|timer)$")
 _RELEASE_ID = re.compile(r"^[0-9a-f]{7,40}$")
+# Nome de banco PostgreSQL: até 63 bytes, sem espaço nem caractere de controle.
+DATABASE_NAME = re.compile(r"^[^\x00-\x20\x7f]{1,63}$")
 
 
 @dataclass(frozen=True)
@@ -50,6 +52,7 @@ class OpsConfig:
     release_id: str | None = None
     backup_dir: Path | None = None
     backup_max_age_hours: float | None = None
+    backup_expected_database: str | None = None
     backup_service_unit: str | None = None
     backup_timer_unit: str | None = None
     restore_evidence: Path | None = None
@@ -84,6 +87,14 @@ def _absolute_path(raw: str | None) -> Path | None:
     if not path.is_absolute():
         raise ValueError("relative path")
     return path
+
+
+def database_name(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    if not DATABASE_NAME.match(raw):
+        raise ValueError("invalid database name")
+    return raw
 
 
 def _unit_name(raw: str | None, suffix: str | None = None) -> str | None:
@@ -177,6 +188,7 @@ def load_config(environ: Mapping[str, str]) -> OpsConfig:
     backup = ("backup",)
     parse(backup, "backup_dir", f"{PREFIX}BACKUP_DIR", _absolute_path)
     parse(backup, "backup_max_age_hours", f"{PREFIX}BACKUP_MAX_AGE_HOURS", _positive_float)
+    parse(backup, "backup_expected_database", f"{PREFIX}BACKUP_EXPECTED_DATABASE", database_name)
     parse(backup, "backup_service_unit", f"{PREFIX}BACKUP_SERVICE_UNIT", _unit_name, ".service")
     parse(backup, "backup_timer_unit", f"{PREFIX}BACKUP_TIMER_UNIT", _unit_name, ".timer")
     parse(backup, "restore_evidence", f"{PREFIX}RESTORE_EVIDENCE", _absolute_path)

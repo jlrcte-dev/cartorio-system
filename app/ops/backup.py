@@ -28,6 +28,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qsl, urlsplit
+
+from sqlalchemy import exc as sa_exc
+from sqlalchemy.engine import make_url
 
 from app.ops.config import OpsConfig, UnitSpec
 from app.ops.report import (
@@ -56,6 +60,9 @@ _HASH_CHUNK = 1024 * 1024
 _LISTED_LIMIT = 10
 
 RESTORE_DRILL_SCHEMA = "cartorio_system.ops.restore_drill"
+
+# Chaves libpq que, na querystring da DSN, trocam ou escondem o banco efetivo.
+_DATABASE_OVERRIDES = {"dbname", "service", "servicefile"}
 
 
 def parse_stamp(text: object) -> datetime | None:
@@ -103,8 +110,47 @@ def _regular_file_inside(directory: Path, name: str) -> tuple[Path | None, str |
     return path, None
 
 
-def evaluate_publication(directory: Path, stamp: str, now: datetime) -> Evaluation:
-    """Avalia ``backup-<stamp>.json`` e o artefato que ele referencia."""
+def database_from_dsn(url_text: str | None) -> tuple[str | None, str | None]:
+    """Banco que a DSN PostgreSQL nomeia sem ambiguidade: ``(nome, None)`` ou
+    ``(None, motivo)``. Banco ausente na DSN (libpq cairia no usuário ou em
+    ``PGDATABASE``) e override na querystring (``dbname``, ``service``) são ambíguos."""
+    if url_text is None:
+        return None, "expected_database_missing"
+    try:
+        url = make_url(url_text)
+    except (sa_exc.ArgumentError, ValueError):
+        return None, "expected_database_ambiguous"
+    if url.get_backend_name() != "postgresql" or not url.database:
+        return None, "expected_database_ambiguous"
+    # keep_blank_values: `?dbname=` vazio também é override.
+    query = urlsplit(url_text, allow_fragments=False).query
+    keys = {key.lower() for key, _ in parse_qsl(query, keep_blank_values=True)}
+    if keys & _DATABASE_OVERRIDES:
+        return None, "expected_database_ambiguous"
+    return url.database, None
+
+
+def expected_database(cfg: OpsConfig) -> tuple[str | None, str | None]:
+    """Banco de que as publicações precisam ser: o explícito e/ou o da DSN.
+
+    Se os dois existem, precisam coincidir. Com a DSN ambígua, só o explícito vale.
+    """
+    from_dsn, dsn_problem = database_from_dsn(cfg.database_url)
+    explicit = cfg.backup_expected_database
+    if explicit and from_dsn and explicit != from_dsn:
+        return None, "expected_database_conflict"
+    if explicit:
+        return explicit, None
+    if from_dsn:
+        return from_dsn, None
+    return None, dsn_problem
+
+
+def evaluate_publication(
+    directory: Path, stamp: str, now: datetime, expected_database: str
+) -> Evaluation:
+    """Avalia ``backup-<stamp>.json`` e o artefato que ele referencia. O manifesto é a
+    evidência: o campo ``database`` precisa ser o banco esperado."""
     manifest_path = directory / f"backup-{stamp}.json"
     try:
         info = manifest_path.lstat()
@@ -148,6 +194,9 @@ def evaluate_publication(directory: Path, stamp: str, now: datetime) -> Evaluati
     facts: dict[str, Any] = {"file": name, "recovery_point_utc": utc_iso(recovery_point)}
     if recovery_point > now + FUTURE_TOLERANCE:
         return Evaluation(stamp, "invalid", "recovery_point_in_future", facts)
+    if database != expected_database:
+        # Sem os nomes na saída: o motivo basta, e o nome real é inventário interno.
+        return Evaluation(stamp, "invalid", "database_mismatch", facts)
     if problem is not None or artifact is None:
         return Evaluation(stamp, "invalid", problem or "artifact_missing", facts)
 
@@ -345,6 +394,15 @@ def check_backup(
         if max_age is None:
             missing.append("CARTORIO_OPS_BACKUP_MAX_AGE_HOURS")
         return config_missing("backup", missing)
+    expected, problem = expected_database(cfg)
+    if expected is None:
+        return single(
+            "backup",
+            "expected_database",
+            Status.INCONCLUSIVE,
+            problem or "expected_database_missing",
+            variables=["CARTORIO_OPS_BACKUP_EXPECTED_DATABASE", "DATABASE_URL"],
+        )
     try:
         scan = scan_directory(directory)
     except (FileNotFoundError, NotADirectoryError):
@@ -361,7 +419,7 @@ def check_backup(
     last_valid: Evaluation | None = None
     invalid_between: list[dict[str, str]] = []
     for stamp in sorted(scan.manifests, reverse=True):
-        evaluation = evaluate_publication(directory, stamp, now)
+        evaluation = evaluate_publication(directory, stamp, now, expected)
         if evaluation.state == "unavailable":
             partial.append(_partial(scan.manifests[stamp], evaluation.reason, now))
             continue

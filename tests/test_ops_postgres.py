@@ -18,6 +18,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
+from sqlalchemy.engine import make_url
 
 from app.ops import cli
 from app.ops.checks import ProbeError, read_only_connection
@@ -114,7 +115,11 @@ def test_wrong_password_is_a_failure_without_credentials_in_output(postgres_db: 
 def test_healthy_and_complete_configuration_on_postgres_returns_zero(
     postgres_db: str, tmp_path: Path, capsys
 ) -> None:
-    write_publication(tmp_path / "b", utc_now() - timedelta(hours=2))
+    # O banco esperado vem da DSN da bancada: o manifesto precisa ser dele.
+    database = make_url(postgres_db).database or ""
+    write_publication(
+        tmp_path / "b", utc_now() - timedelta(hours=2), overrides={"database": database}
+    )
     with running_app(postgres_db, APP_NAME, tmp_path) as health_url:
         env = {
             "CARTORIO_OPS_CHECKS": "api,database,alembic,backup",

@@ -34,6 +34,7 @@ def _cfg(directory: Path, **extra: str):
     env = {
         "CARTORIO_OPS_BACKUP_DIR": str(directory),
         "CARTORIO_OPS_BACKUP_MAX_AGE_HOURS": str(MAX_AGE),
+        "CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": "cartorio_lab",
         **extra,
     }
     return load_config(env)
@@ -338,5 +339,95 @@ def test_missing_threshold_is_config_missing_not_a_default(tmp_path: Path) -> No
 def test_evaluate_publication_reads_the_real_routine_format(tmp_path: Path) -> None:
     # Mesmo formato publicado pela rotina de homologação (valores sintéticos).
     write_publication(tmp_path, NOW - timedelta(hours=1))
-    evaluation = evaluate_publication(tmp_path, stamp_of(NOW - timedelta(hours=1)), NOW)
+    evaluation = evaluate_publication(
+        tmp_path, stamp_of(NOW - timedelta(hours=1)), NOW, "cartorio_lab"
+    )
     assert (evaluation.state, evaluation.reason) == ("valid", "digest_verified")
+
+
+# ---------------------------------------------------------------------------
+# Achado 2 do PR #6: o manifesto precisa ser do banco esperado
+# ---------------------------------------------------------------------------
+
+FOREIGN = "outro_banco_ficticio"
+LAB_DSN = "postgresql+psycopg://lab:senha@127.0.0.1:5432/cartorio_lab"
+
+
+def _check_with(directory: Path, env: dict[str, str]):
+    base = {
+        "CARTORIO_OPS_BACKUP_DIR": str(directory),
+        "CARTORIO_OPS_BACKUP_MAX_AGE_HOURS": str(MAX_AGE),
+    }
+    return check_backup(load_config({**base, **env}), now=NOW, runner=FakeSystemd())
+
+
+def test_fresh_intact_copy_of_another_database_is_rejected_without_names(
+    tmp_path: Path,
+) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1), overrides={"database": FOREIGN})
+    result = _run(tmp_path)
+    assert (result.status.value, result.reason) == ("fail", "database_mismatch")
+    assert _sig(result, "last_valid_copy") == ("fail", "no_valid_copy")
+    serialized = json.dumps(result.as_dict())
+    assert FOREIGN not in serialized and "cartorio_lab" not in serialized
+
+
+def test_older_correct_copy_stays_the_last_valid_point(tmp_path: Path) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=5))
+    write_publication(tmp_path, NOW - timedelta(hours=1), overrides={"database": FOREIGN})
+    result = _run(tmp_path)
+    assert (result.status.value, result.reason) == ("fail", "database_mismatch")
+    assert _sig(result, "last_copy") == ("fail", "database_mismatch")
+    assert _sig(result, "last_valid_copy") == ("ok", "available")
+    assert result.signals["last_valid_copy"]["age_hours"] == 5.0
+    assert _sig(result, "age") == ("ok", "within_max_age")
+
+
+def test_expected_database_comes_from_an_unambiguous_dsn(tmp_path: Path) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    assert _check_with(tmp_path, {"DATABASE_URL": LAB_DSN}).status.value == "ok"
+
+
+@pytest.mark.parametrize(
+    "dsn",
+    [
+        LAB_DSN + "?dbname=outro",
+        LAB_DSN + "?service=perfil",
+        LAB_DSN + "?dbname=",
+        "postgresql+psycopg://lab:senha@127.0.0.1:5432/",
+        "sqlite:////srv/bancada.db",
+    ],
+)
+def test_ambiguous_dsn_without_explicit_name_is_inconclusive(tmp_path: Path, dsn: str) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    result = _check_with(tmp_path, {"DATABASE_URL": dsn})
+    assert (result.status.value, result.reason) == ("inconclusive", "expected_database_ambiguous")
+
+
+def test_explicit_name_decides_when_the_dsn_is_ambiguous(tmp_path: Path) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    env = {
+        "DATABASE_URL": LAB_DSN + "?dbname=outro",
+        "CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": "cartorio_lab",
+    }
+    assert _check_with(tmp_path, env).status.value == "ok"
+
+
+def test_explicit_name_and_dsn_must_agree(tmp_path: Path) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    env = {"DATABASE_URL": LAB_DSN, "CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": FOREIGN}
+    result = _check_with(tmp_path, env)
+    assert (result.status.value, result.reason) == ("inconclusive", "expected_database_conflict")
+    assert FOREIGN not in json.dumps(result.as_dict())
+
+
+def test_missing_expected_database_is_inconclusive(tmp_path: Path) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    result = _check_with(tmp_path, {})
+    assert (result.status.value, result.reason) == ("inconclusive", "expected_database_missing")
+
+
+@pytest.mark.parametrize("value", ["com espaco", "x" * 64])
+def test_invalid_expected_database_is_config_invalid(tmp_path: Path, value: str) -> None:
+    result = _check_with(tmp_path, {"CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": value})
+    assert (result.status.value, result.reason) == ("inconclusive", "config_invalid")

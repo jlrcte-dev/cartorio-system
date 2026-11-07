@@ -339,3 +339,95 @@ def test_drill_api_process_round_trips_a_record_on_the_real_app(
         process = api.process
     assert fetched["finding_code"] == "DRILL-API-CHECK"
     assert process is not None and process.poll() is not None  # encerrado no __exit__
+
+
+# ---------------------------------------------------------------------------
+# Achado 2 do PR #6: cópia de origem divergente não é restaurada
+# ---------------------------------------------------------------------------
+
+
+def _copy_source(tmp_path: Path, database: str) -> Path:
+    from datetime import UTC, datetime, timedelta
+
+    from tests.ops_support import write_publication
+
+    _, manifest = write_publication(
+        tmp_path / "copia",
+        datetime.now(UTC) - timedelta(hours=1),
+        overrides={"database": database},
+    )
+    return manifest
+
+
+def _ctx(tmp_path: Path, run_id: str) -> drill.Ctx:
+    import os
+    from datetime import UTC, datetime
+
+    return drill.Ctx(
+        run_id=run_id,
+        pg_bin=tmp_path / "sem-binarios",
+        work=create_work_dir(tmp_path, run_id),
+        clock=lambda: datetime.now(UTC),
+        base_env=pgcluster.subprocess_env(os.environ),
+    )
+
+
+def test_copy_of_another_database_is_refused_before_restoring(
+    tmp_path: Path, any_work_root
+) -> None:
+    manifest = _copy_source(tmp_path, "outro_banco_ficticio")
+    ctx = _ctx(tmp_path, "r-copia")
+    source = drill._copy_phase(ctx, manifest, 1, "COD-SINTETICO", "cartorio_lab")
+    with pytest.raises(DrillRefused) as info:
+        drill._verify_artifact(ctx, source)
+    # Recusado na validação do manifesto: nem chegou ao pg_restore (sem binários aqui).
+    assert info.value.reason == "database_mismatch"
+    assert "artifact" not in ctx.report
+
+
+def test_copy_of_the_expected_database_passes_the_manifest_check(
+    tmp_path: Path, any_work_root
+) -> None:
+    manifest = _copy_source(tmp_path, "cartorio_lab")
+    ctx = _ctx(tmp_path, "r-copia-ok")
+    source = drill._copy_phase(ctx, manifest, 1, "COD-SINTETICO", "cartorio_lab")
+    with pytest.raises(DrillRefused) as info:
+        drill._verify_artifact(ctx, source)
+    # Passou pelo manifesto e pelo banco; parou só por falta do pg_restore desta bancada.
+    assert info.value.reason == "pg_binary_missing"
+
+
+@pytest.mark.parametrize(
+    ("extra", "message"),
+    [
+        (["--expect-finding-id", "1", "--expect-finding-code", "C"], "expect-database"),
+        (
+            ["--expect-finding-id", "1", "--expect-finding-code", "C", "--expect-database", "a b"],
+            "expect-database",
+        ),
+        (
+            [
+                "--expect-finding-id",
+                "1",
+                "--expect-finding-code",
+                "C",
+                "--expect-database",
+                "cartorio_lab",
+                "--export-artifact",
+                "x",
+            ],
+            "export-artifact",
+        ),
+    ],
+)
+def test_copy_mode_arguments_are_validated(tmp_path, capsys, extra, message) -> None:
+    with pytest.raises(SystemExit) as info:
+        drill.main(_drill_args(tmp_path, "--from-manifest", str(tmp_path / "b.json"), *extra))
+    assert info.value.code == 2
+    assert message in capsys.readouterr().err
+
+
+def test_expect_database_is_only_for_copy_mode(tmp_path, capsys) -> None:
+    with pytest.raises(SystemExit) as info:
+        drill.main(_drill_args(tmp_path, "--expect-database", "cartorio_lab"))
+    assert info.value.code == 2
