@@ -66,6 +66,9 @@ class CheckResult:
     reason: str
     signals: dict[str, dict[str, Any]] = field(default_factory=dict)
     duration_ms: int | None = None
+    # Banco que a conexão da checagem "database" abriu (current_database()). Só circula na
+    # memória do processo, até a checagem de backup: nunca entra no relatório.
+    observed_database: str | None = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_signals(

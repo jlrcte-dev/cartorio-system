@@ -28,19 +28,17 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qsl, urlsplit
 
 from sqlalchemy import exc as sa_exc
 from sqlalchemy.engine import make_url
 
-from app.ops.config import OpsConfig, UnitSpec
+from app.ops.config import DATABASE_NAME, OpsConfig, UnitSpec
 from app.ops.report import (
     CheckResult,
     Status,
     config_invalid,
     config_missing,
     signal,
-    single,
     utc_iso,
 )
 from app.ops.systemd import ShowRunner, probe_unit, run_systemctl_show
@@ -61,8 +59,9 @@ _LISTED_LIMIT = 10
 
 RESTORE_DRILL_SCHEMA = "cartorio_system.ops.restore_drill"
 
-# Chaves libpq que, na querystring da DSN, trocam ou escondem o banco efetivo.
-_DATABASE_OVERRIDES = {"dbname", "service", "servicefile"}
+# Perfil de serviço da libpq: completa a conexão com parâmetros de fora da DSN.
+_SERVICE_KEYS = {"service", "servicefile"}
+_NOT_POSTGRESQL = "dsn_not_postgresql"
 
 
 def parse_stamp(text: object) -> datetime | None:
@@ -111,46 +110,74 @@ def _regular_file_inside(directory: Path, name: str) -> tuple[Path | None, str |
 
 
 def database_from_dsn(url_text: str | None) -> tuple[str | None, str | None]:
-    """Banco que a DSN PostgreSQL nomeia sem ambiguidade: ``(nome, None)`` ou
-    ``(None, motivo)``. Banco ausente na DSN (libpq cairia no usuário ou em
-    ``PGDATABASE``) e override na querystring (``dbname``, ``service``) são ambíguos."""
+    """Banco que a DSN PostgreSQL abriria, lido como o dialeto psycopg do SQLAlchemy entrega
+    os parâmetros à libpq: ``make_url`` (valor vazio na querystring é descartado), o banco
+    do caminho e, por cima, ``dbname`` da querystring. ``(nome, None)`` ou
+    ``(None, motivo)``.
+
+    Ambíguo — sem identidade verificável enquanto a conexão não é observada: DSN ilegível,
+    perfil de serviço, nenhum ``dbname`` efetivo (a libpq cairia em ``PGDATABASE``, no
+    perfil ou no usuário) ou ``dbname`` repetido ou inválido.
+    """
     if url_text is None:
         return None, "expected_database_missing"
     try:
         url = make_url(url_text)
     except (sa_exc.ArgumentError, ValueError):
         return None, "expected_database_ambiguous"
-    if url.get_backend_name() != "postgresql" or not url.database:
+    if url.get_backend_name() != "postgresql":
+        return None, _NOT_POSTGRESQL
+    if {key.lower() for key in url.query} & _SERVICE_KEYS:
         return None, "expected_database_ambiguous"
-    # keep_blank_values: `?dbname=` vazio também é override.
-    query = urlsplit(url_text, allow_fragments=False).query
-    keys = {key.lower() for key, _ in parse_qsl(query, keep_blank_values=True)}
-    if keys & _DATABASE_OVERRIDES:
+    name = {**url.translate_connect_args(database="dbname"), **url.query}.get("dbname")
+    if not isinstance(name, str) or not DATABASE_NAME.match(name):
         return None, "expected_database_ambiguous"
-    return url.database, None
+    return name, None
 
 
-def expected_database(cfg: OpsConfig) -> tuple[str | None, str | None]:
-    """Banco de que as publicações precisam ser: o explícito e/ou o da DSN.
+@dataclass(frozen=True)
+class ConnectionIdentity:
+    """Modo combinado (database e backup juntos, em PostgreSQL): o banco que a conexão
+    somente leitura da checagem database abriu, ou ``None`` se ela não o observou."""
 
-    Se os dois existem, precisam coincidir. Com a DSN ambígua, só o explícito vale.
+    database: str | None
+
+
+def expected_database(
+    cfg: OpsConfig, connection: ConnectionIdentity | None = None
+) -> tuple[str | None, str]:
+    """Banco de que as publicações precisam ser: ``(nome, origem)`` ou ``(None, motivo)``.
+
+    Modo combinado: vale o banco que a conexão abriu; o nome explícito e o da DSN, quando
+    existem, precisam coincidir com ele. Isolado: o da DSN e/ou o explícito, coincidentes;
+    o explícito sozinho só vale sem DSN PostgreSQL (backup isolado, bancada SQLite).
     """
-    from_dsn, dsn_problem = database_from_dsn(cfg.database_url)
     explicit = cfg.backup_expected_database
-    if explicit and from_dsn and explicit != from_dsn:
-        return None, "expected_database_conflict"
-    if explicit:
-        return explicit, None
-    if from_dsn:
-        return from_dsn, None
-    return None, dsn_problem
+    from_dsn, dsn_problem = database_from_dsn(cfg.database_url)
+    if connection is not None:
+        observed = connection.database
+        if observed is None:
+            return None, "expected_database_unproven"
+        if any(name not in (None, observed) for name in (explicit, from_dsn)):
+            return None, "expected_database_conflict"
+        return observed, "expected_database_from_connection"
+    if from_dsn is not None:
+        if explicit is not None and explicit != from_dsn:
+            return None, "expected_database_conflict"
+        return from_dsn, "expected_database_from_dsn"
+    if explicit is not None and dsn_problem in ("expected_database_missing", _NOT_POSTGRESQL):
+        return explicit, "expected_database_explicit"
+    if dsn_problem == "expected_database_missing":
+        return None, dsn_problem
+    return None, "expected_database_ambiguous"
 
 
 def evaluate_publication(
-    directory: Path, stamp: str, now: datetime, expected_database: str
+    directory: Path, stamp: str, now: datetime, expected_database: str | None
 ) -> Evaluation:
     """Avalia ``backup-<stamp>.json`` e o artefato que ele referencia. O manifesto é a
-    evidência: o campo ``database`` precisa ser o banco esperado."""
+    evidência: o campo ``database`` precisa ser o banco esperado. Sem banco esperado
+    comprovado (``None``) só a identidade fica sem avaliar."""
     manifest_path = directory / f"backup-{stamp}.json"
     try:
         info = manifest_path.lstat()
@@ -194,7 +221,7 @@ def evaluate_publication(
     facts: dict[str, Any] = {"file": name, "recovery_point_utc": utc_iso(recovery_point)}
     if recovery_point > now + FUTURE_TOLERANCE:
         return Evaluation(stamp, "invalid", "recovery_point_in_future", facts)
-    if database != expected_database:
+    if expected_database is not None and database != expected_database:
         # Sem os nomes na saída: o motivo basta, e o nome real é inventário interno.
         return Evaluation(stamp, "invalid", "database_mismatch", facts)
     if problem is not None or artifact is None:
@@ -358,9 +385,14 @@ def _copy_signals(latest: Evaluation | None, anything: bool) -> dict[str, dict[s
 
 
 def _age_signals(
-    last_valid: Evaluation | None, now: datetime, max_age: float
+    last_valid: Evaluation | None, now: datetime, max_age: float, *, identity_proven: bool
 ) -> dict[str, dict[str, Any]]:
-    """``last_valid_copy`` e ``age``, medida pelo ponto de recuperação, nunca pelo mtime."""
+    """``last_valid_copy`` e ``age``, medida pelo ponto de recuperação, nunca pelo mtime.
+
+    Sem o banco esperado comprovado, a cópia íntegra mais nova pode ser de outro banco: só
+    o que vale para qualquer uma delas continua conclusivo — nenhuma cópia íntegra, ou
+    todas vencidas.
+    """
     if last_valid is None or last_valid.recovery_point is None:
         return {
             "last_valid_copy": signal(Status.FAIL, "no_valid_copy"),
@@ -369,20 +401,23 @@ def _age_signals(
     point = last_valid.recovery_point
     age = round((now - point).total_seconds() / 3600, 3)
     fresh = age <= max_age
+    facts = {"age_hours": age, "max_age_hours": max_age, "recovery_point_utc": utc_iso(point)}
+    stale = signal(Status.FAIL, "backup_stale", **facts)
+    if not identity_proven:
+        unproven = signal(Status.NOT_EVALUATED, "expected_database_unresolved")
+        return {"last_valid_copy": unproven, "age": unproven if fresh else stale}
     return {
         "last_valid_copy": signal(Status.OK, "available", age_hours=age, **last_valid.facts),
-        "age": signal(
-            Status.OK if fresh else Status.FAIL,
-            "within_max_age" if fresh else "backup_stale",
-            age_hours=age,
-            max_age_hours=max_age,
-            recovery_point_utc=utc_iso(point),
-        ),
+        "age": signal(Status.OK, "within_max_age", **facts) if fresh else stale,
     }
 
 
 def check_backup(
-    cfg: OpsConfig, *, now: datetime, runner: ShowRunner = run_systemctl_show
+    cfg: OpsConfig,
+    *,
+    now: datetime,
+    runner: ShowRunner = run_systemctl_show,
+    connection: ConnectionIdentity | None = None,
 ) -> CheckResult:
     if problems := cfg.problems_for("backup"):
         return config_invalid("backup", problems)
@@ -394,21 +429,31 @@ def check_backup(
         if max_age is None:
             missing.append("CARTORIO_OPS_BACKUP_MAX_AGE_HOURS")
         return config_missing("backup", missing)
-    expected, problem = expected_database(cfg)
-    if expected is None:
-        return single(
-            "backup",
-            "expected_database",
+    expected, resolution = expected_database(cfg, connection)
+    # Sem banco comprovado a checagem nunca é saudável, mas as falhas que independem dele
+    # (cópia ausente, vencida, corrompida) continuam aparecendo.
+    proven = expected is not None
+    identity = (
+        signal(Status.OK, resolution)
+        if proven
+        else signal(
             Status.INCONCLUSIVE,
-            problem or "expected_database_missing",
+            resolution,
             variables=["CARTORIO_OPS_BACKUP_EXPECTED_DATABASE", "DATABASE_URL"],
         )
+    )
     try:
         scan = scan_directory(directory)
-    except (FileNotFoundError, NotADirectoryError):
-        return single("backup", "directory", Status.INCONCLUSIVE, "backup_dir_unavailable")
-    except PermissionError:
-        return single("backup", "directory", Status.INCONCLUSIVE, "backup_dir_unreadable")
+    except (FileNotFoundError, NotADirectoryError, PermissionError) as exc:
+        reason = (
+            "backup_dir_unreadable"
+            if isinstance(exc, PermissionError)
+            else "backup_dir_unavailable"
+        )
+        directory_signal = {"directory": signal(Status.INCONCLUSIVE, reason)}
+        return CheckResult.from_signals(
+            "backup", _with_identity(identity, directory_signal), empty_reason="no_signal"
+        )
 
     partial = [
         _partial(path, "manifest_missing", now)
@@ -436,7 +481,7 @@ def check_backup(
     # deixou uma cópia sem evidência verificável no lugar da cópia mais recente.
     newest_complete = latest.stamp if latest else ""
     unverifiable = [p for p in partial if p["stamp"] > newest_complete and not p["pending"]]
-    last_sha = latest.facts.get("sha256") if latest and latest.state == "valid" else None
+    last_sha = latest.facts.get("sha256") if proven and latest and latest.state == "valid" else None
     # A ordem dos sinais é a prioridade do motivo exibido (ver CheckResult.from_signals).
     signals = {
         **_copy_signals(latest, bool(scan.manifests or scan.artifacts)),
@@ -448,11 +493,23 @@ def check_backup(
             staging_files=scan.staging_files,
             staging_oldest_utc=utc_iso(scan.staging_oldest) if scan.staging_oldest else None,
         ),
-        **_age_signals(last_valid, now, max_age),
+        **_age_signals(last_valid, now, max_age, identity_proven=proven),
         "last_attempt": _unit_signal(cfg, cfg.backup_service_unit, "oneshot", runner),
         "timer": _unit_signal(cfg, cfg.backup_timer_unit, "timer", runner),
         "restore_test": restore_signal(
             cfg.restore_evidence, cfg.restore_max_age_days, last_sha, now
         ),
     }
-    return CheckResult.from_signals("backup", signals, empty_reason="no_signal")
+    return CheckResult.from_signals(
+        "backup", _with_identity(identity, signals), empty_reason="no_signal"
+    )
+
+
+def _with_identity(
+    identity: dict[str, Any], signals: dict[str, dict[str, Any]]
+) -> dict[str, dict[str, Any]]:
+    """Identidade sem prova abre a lista (é o motivo do inconclusivo quando nada falha);
+    comprovada vai ao fim e nunca vira o motivo de uma checagem saudável."""
+    if identity["status"] == Status.OK.value:
+        return {**signals, "expected_database": identity}
+    return {"expected_database": identity, **signals}

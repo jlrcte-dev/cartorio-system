@@ -6,7 +6,8 @@
 1. Recusa ambiente com override de conexão libpq (mesma proteção da suíte do PR #5).
 2. Confere e registra a versão das ferramentas e do servidor (padrão: 18).
 3. Cria um cluster descartável com a identidade que a suíte do PR #5 exige
-   (``cartorio_fase_b``/``cartorio_fase_b_test``), em loopback, senha gerada.
+   (``cartorio_fase_b``/``cartorio_fase_b_test``), em loopback, senha gerada — e nele os
+   dois bancos da prova de vínculo ao banco efetivo (``BINDING_DATABASES``).
 4. Roda ``tests/test_postgres_compat.py`` e ``tests/test_ops_postgres.py`` apontados
    para ele. Qualquer teste PULADO reprova o gate: prova obrigatória não passa por
    skip de configuração ausente.
@@ -54,6 +55,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = "cartorio_system.ops.pg_gate"
 PR5_USER = "cartorio_fase_b"
 PR5_DATABASE = "cartorio_fase_b_test"
+# Dois bancos reais da mesma bancada, para provar o vínculo do backup ao banco que a
+# conexão abriu (tests/test_ops_postgres.py). Nomes fixos, como a identidade do PR #5.
+BINDING_DATABASES = ("cartorio_ops_vinculo_a", "cartorio_ops_vinculo_b")
 TEST_FILES = ("tests/test_postgres_compat.py", "tests/test_ops_postgres.py")
 # Banco que a cópia NÃO é: o modo cópia precisa recusá-la antes de restaurar.
 FOREIGN_DATABASE = "outro_banco_ficticio"
@@ -96,11 +100,12 @@ def _run_suite(work: Path, cluster: Cluster, password: str, report: dict[str, An
                 sql.Identifier(PR5_USER), sql.Literal(password)
             )
         )
-        conn.execute(
-            sql.SQL("CREATE DATABASE {} OWNER {} TEMPLATE template0").format(
-                sql.Identifier(PR5_DATABASE), sql.Identifier(PR5_USER)
+        for database in (PR5_DATABASE, *BINDING_DATABASES):
+            conn.execute(
+                sql.SQL("CREATE DATABASE {} OWNER {} TEMPLATE template0").format(
+                    sql.Identifier(database), sql.Identifier(PR5_USER)
+                )
             )
-        )
     host = cluster.address()
     url = f"postgresql+psycopg://{PR5_USER}:{password}@{host}:{cluster.port}/{PR5_DATABASE}"
     junit = work / "pytest-junit.xml"
@@ -115,7 +120,7 @@ def _run_suite(work: Path, cluster: Cluster, password: str, report: dict[str, An
                 "-p",
                 "no:cacheprovider",
                 "-q",
-                "-rs",
+                "-rps",
                 f"--junitxml={junit}",
                 *TEST_FILES,
             ],

@@ -239,15 +239,21 @@ def check_database(cfg: OpsConfig) -> CheckResult:
     if early := _db_preflight("database", cfg):
         return early
     start = time.monotonic()
+    observed: str | None = None
     try:
         with read_only_connection(
             cfg.database_url or "", cfg.expected_dialect, cfg.timeout_seconds
         ) as conn:
-            conn.exec_driver_sql("SELECT 1").scalar_one()
+            if conn.dialect.name == "postgresql":
+                # Banco que a DSN abriu de fato, overrides da libpq incluídos: é a ele que a
+                # checagem de backup se vincula. O nome fica em memória, fora do relatório.
+                observed = str(conn.exec_driver_sql("SELECT current_database()").scalar_one())
+            else:
+                conn.exec_driver_sql("SELECT 1").scalar_one()
             info = conn.dialect.server_version_info or ()
     except ProbeError as exc:
         return single("database", "connection", exc.status, exc.reason, **exc.facts)
-    return single(
+    result = single(
         "database",
         "connection",
         Status.OK,
@@ -256,7 +262,10 @@ def check_database(cfg: OpsConfig) -> CheckResult:
         read_only=True,
         latency_ms=round((time.monotonic() - start) * 1000),
         server_major=info[0] if info else None,
+        identity_observed=observed is not None,
     )
+    result.observed_database = observed
+    return result
 
 
 # ---------------------------------------------------------------------------

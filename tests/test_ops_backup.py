@@ -10,17 +10,27 @@ from __future__ import annotations
 import json
 import os
 import sys
+from contextlib import contextmanager
 from datetime import timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from app.ops.backup import PARTIAL_GRACE, check_backup, evaluate_publication
+from app.ops import cli
+from app.ops.backup import (
+    PARTIAL_GRACE,
+    ConnectionIdentity,
+    check_backup,
+    database_from_dsn,
+    evaluate_publication,
+)
 from app.ops.config import load_config
 from tests.ops_support import (
     NOW,
     REMOVE,
     FakeSystemd,
+    fixed_clock,
     oneshot_props,
     stamp_of,
     timer_props,
@@ -385,16 +395,20 @@ def test_older_correct_copy_stays_the_last_valid_point(tmp_path: Path) -> None:
 
 def test_expected_database_comes_from_an_unambiguous_dsn(tmp_path: Path) -> None:
     write_publication(tmp_path, NOW - timedelta(hours=1))
-    assert _check_with(tmp_path, {"DATABASE_URL": LAB_DSN}).status.value == "ok"
+    result = _check_with(tmp_path, {"DATABASE_URL": LAB_DSN})
+    assert (result.status.value, result.reason) == ("ok", "complete")
+    assert _sig(result, "expected_database") == ("ok", "expected_database_from_dsn")
 
 
 @pytest.mark.parametrize(
     "dsn",
     [
-        LAB_DSN + "?dbname=outro",
         LAB_DSN + "?service=perfil",
-        LAB_DSN + "?dbname=",
+        LAB_DSN + "?Service=perfil",
+        LAB_DSN + "?dbname=a&dbname=b",
+        LAB_DSN + "?dbname=%20",
         "postgresql+psycopg://lab:senha@127.0.0.1:5432/",
+        "postgresql+psycopg://lab:senha@127.0.0.1:5432/?service=perfil",
         "sqlite:////srv/bancada.db",
     ],
 )
@@ -404,13 +418,86 @@ def test_ambiguous_dsn_without_explicit_name_is_inconclusive(tmp_path: Path, dsn
     assert (result.status.value, result.reason) == ("inconclusive", "expected_database_ambiguous")
 
 
-def test_explicit_name_decides_when_the_dsn_is_ambiguous(tmp_path: Path) -> None:
+# Revisão final do PR #6: a DSN é lida como a conexão a abriria. `dbname` na querystring
+# vence o caminho; valor vazio é descartado pelo SQLAlchemy antes de chegar à libpq.
+@pytest.mark.parametrize(
+    ("dsn", "effective"),
+    [
+        (LAB_DSN, "cartorio_lab"),
+        (LAB_DSN + "?dbname=outro", "outro"),
+        (LAB_DSN + "?dbname=", "cartorio_lab"),
+        (LAB_DSN + "?service=", "cartorio_lab"),
+        ("postgresql+psycopg://lab:senha@127.0.0.1:5432/?dbname=outro", "outro"),
+        (LAB_DSN + "?options=-c%20search_path%3Dx&dbname=outro", "outro"),
+        # Credenciais fictícias com caracteres especiais, crus ou codificados: nenhum
+        # deles pode esconder o override nem inventar outro banco.
+        ("postgresql+psycopg://lab:se?nha@127.0.0.1:5432/cartorio_lab?dbname=outro", "outro"),
+        ("postgresql+psycopg://lab:se#nha@127.0.0.1:5432/cartorio_lab?dbname=outro", "outro"),
+        ("postgresql+psycopg://lab:p@ss@127.0.0.1:5432/cartorio_lab", "cartorio_lab"),
+        ("postgresql+psycopg://lab:a/b?c@127.0.0.1:5432/cartorio_lab?dbname=outro", "outro"),
+        (
+            "postgresql+psycopg://us%3Aer:p%40ss%2Fw%3F%23@127.0.0.1:5432/cartorio_lab",
+            "cartorio_lab",
+        ),
+    ],
+)
+def test_dsn_is_read_the_way_the_connection_opens_it(dsn: str, effective: str) -> None:
+    assert database_from_dsn(dsn) == (effective, None)
+
+
+def test_dsn_override_decides_the_expected_database_not_the_path(tmp_path: Path) -> None:
+    write_publication(tmp_path / "lab", NOW - timedelta(hours=1))
+    result = _check_with(tmp_path / "lab", {"DATABASE_URL": LAB_DSN + "?dbname=outro"})
+    assert (result.status.value, result.reason) == ("fail", "database_mismatch")
+    write_publication(tmp_path / "outro", NOW - timedelta(hours=1), overrides={"database": "outro"})
+    result = _check_with(tmp_path / "outro", {"DATABASE_URL": LAB_DSN + "?dbname=outro"})
+    assert (result.status.value, result.reason) == ("ok", "complete")
+
+
+@pytest.mark.parametrize(
+    "dsn",
+    [
+        LAB_DSN + "?dbname=outro",
+        "postgresql+psycopg://lab:se?nha@127.0.0.1:5432/cartorio_lab?dbname=outro",
+    ],
+)
+def test_explicit_name_divergent_from_the_dsn_override_is_never_accepted(
+    tmp_path: Path, dsn: str
+) -> None:
+    """A configuração que a revisão apontou: nome explícito do banco do manifesto e DSN
+    que, pelo override, conecta em outro. Antes aprovava; agora é conflito."""
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    env = {"DATABASE_URL": dsn, "CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": "cartorio_lab"}
+    result = _check_with(tmp_path, env)
+    assert (result.status.value, result.reason) == ("inconclusive", "expected_database_conflict")
+    assert _sig(result, "last_valid_copy") == ("not_evaluated", "expected_database_unresolved")
+    serialized = json.dumps(result.as_dict())
+    assert "outro" not in serialized and "cartorio_lab" not in serialized
+
+
+def test_service_profile_is_ambiguous_even_with_an_explicit_name(tmp_path: Path) -> None:
+    """Sem observar a conexão, o perfil de serviço pode completá-la fora da DSN: o nome
+    explícito não tem com o que ser conferido."""
     write_publication(tmp_path, NOW - timedelta(hours=1))
     env = {
-        "DATABASE_URL": LAB_DSN + "?dbname=outro",
+        "DATABASE_URL": LAB_DSN + "?service=perfil",
         "CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": "cartorio_lab",
     }
-    assert _check_with(tmp_path, env).status.value == "ok"
+    result = _check_with(tmp_path, env)
+    assert (result.status.value, result.reason) == ("inconclusive", "expected_database_ambiguous")
+
+
+@pytest.mark.parametrize("dsn", [None, "sqlite:////srv/bancada.db"])
+def test_explicit_name_alone_serves_isolated_backup_and_the_sqlite_bench(
+    tmp_path: Path, dsn: str | None
+) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    env = {"CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": "cartorio_lab"}
+    if dsn is not None:
+        env["DATABASE_URL"] = dsn
+    result = _check_with(tmp_path, env)
+    assert (result.status.value, result.reason) == ("ok", "complete")
+    assert _sig(result, "expected_database") == ("ok", "expected_database_explicit")
 
 
 def test_explicit_name_and_dsn_must_agree(tmp_path: Path) -> None:
@@ -431,3 +518,198 @@ def test_missing_expected_database_is_inconclusive(tmp_path: Path) -> None:
 def test_invalid_expected_database_is_config_invalid(tmp_path: Path, value: str) -> None:
     result = _check_with(tmp_path, {"CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": value})
     assert (result.status.value, result.reason) == ("inconclusive", "config_invalid")
+
+
+# ---------------------------------------------------------------------------
+# Revisão final do PR #6: com database e backup juntos em PostgreSQL, o manifesto se
+# vincula ao banco que a conexão abriu (current_database()), não ao que a configuração supõe
+# ---------------------------------------------------------------------------
+
+
+def _combined(directory: Path, observed: str | None, **env: str):
+    base = {
+        "CARTORIO_OPS_BACKUP_DIR": str(directory),
+        "CARTORIO_OPS_BACKUP_MAX_AGE_HOURS": str(MAX_AGE),
+    }
+    return check_backup(
+        load_config({**base, **env}),
+        now=NOW,
+        runner=FakeSystemd(),
+        connection=ConnectionIdentity(observed),
+    )
+
+
+def test_combined_mode_refuses_the_manifest_of_a_database_the_connection_did_not_open(
+    tmp_path: Path,
+) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))  # manifesto de cartorio_lab
+    override = LAB_DSN + "?dbname=outro"
+    result = _combined(tmp_path, "outro", DATABASE_URL=override)
+    assert (result.status.value, result.reason) == ("fail", "database_mismatch")
+    assert _sig(result, "expected_database") == ("ok", "expected_database_from_connection")
+    assert _sig(result, "last_valid_copy") == ("fail", "no_valid_copy")
+    # A configuração apontada na revisão: nome explícito do banco do manifesto.
+    result = _combined(
+        tmp_path,
+        "outro",
+        DATABASE_URL=override,
+        CARTORIO_OPS_BACKUP_EXPECTED_DATABASE="cartorio_lab",
+    )
+    assert (result.status.value, result.reason) == ("inconclusive", "expected_database_conflict")
+
+
+def test_combined_mode_is_healthy_only_when_identity_and_manifest_agree(tmp_path: Path) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    result = _combined(
+        tmp_path,
+        "cartorio_lab",
+        DATABASE_URL=LAB_DSN,
+        CARTORIO_OPS_BACKUP_EXPECTED_DATABASE="cartorio_lab",
+    )
+    assert (result.status.value, result.reason) == ("ok", "complete")
+    assert _sig(result, "expected_database") == ("ok", "expected_database_from_connection")
+
+
+def test_combined_mode_settles_a_service_profile_by_observation(tmp_path: Path) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    result = _combined(tmp_path, "cartorio_lab", DATABASE_URL=LAB_DSN + "?service=perfil")
+    assert (result.status.value, result.reason) == ("ok", "complete")
+
+
+def test_combined_mode_observation_must_agree_with_an_unambiguous_dsn(tmp_path: Path) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    result = _combined(tmp_path, "outro", DATABASE_URL=LAB_DSN)
+    assert (result.status.value, result.reason) == ("inconclusive", "expected_database_conflict")
+
+
+@pytest.mark.parametrize(
+    ("hours", "expected"),
+    [
+        (None, ("fail", "backup_missing")),
+        (40, ("fail", "backup_stale")),
+        (1, ("inconclusive", "expected_database_unproven")),
+    ],
+)
+def test_without_observed_identity_identity_free_failures_stay_visible(
+    tmp_path: Path, hours: int | None, expected: tuple[str, str]
+) -> None:
+    if hours is not None:
+        write_publication(tmp_path, NOW - timedelta(hours=hours))
+    result = _combined(
+        tmp_path, None, DATABASE_URL=LAB_DSN, CARTORIO_OPS_BACKUP_EXPECTED_DATABASE="cartorio_lab"
+    )
+    assert (result.status.value, result.reason) == expected
+    assert _sig(result, "expected_database") == ("inconclusive", "expected_database_unproven")
+    if hours is not None:
+        # Sem a identidade, nenhuma cópia é dada como "a válida" do banco.
+        assert _sig(result, "last_valid_copy") == ("not_evaluated", "expected_database_unresolved")
+
+
+def test_older_copy_of_the_observed_database_stays_the_last_valid_point(tmp_path: Path) -> None:
+    write_publication(tmp_path, NOW - timedelta(hours=5))
+    write_publication(tmp_path, NOW - timedelta(hours=1), overrides={"database": FOREIGN})
+    result = _combined(tmp_path, "cartorio_lab", DATABASE_URL=LAB_DSN)
+    assert _sig(result, "last_copy") == ("fail", "database_mismatch")
+    assert _sig(result, "last_valid_copy") == ("ok", "available")
+    assert result.signals["last_valid_copy"]["age_hours"] == 5.0
+
+
+class _SimulatedPostgres:
+    """Driver simulado: a conexão responde ``current_database()`` com o banco que a libpq
+    teria aberto — fixado pelo teste. A prova com servidor real é do gate PostgreSQL."""
+
+    def __init__(self, database: str) -> None:
+        self.database = database
+        self.dialect = SimpleNamespace(name="postgresql", server_version_info=(18, 6))
+        self.sql: list[str] = []
+
+    def exec_driver_sql(self, sql: str) -> SimpleNamespace:
+        self.sql.append(sql)
+        value = self.database if "current_database" in sql else 1
+        return SimpleNamespace(scalar_one=lambda: value)
+
+
+@pytest.fixture
+def simulated_driver(monkeypatch):
+    from app.ops import checks
+
+    opened: list[_SimulatedPostgres] = []
+
+    def install(database: str) -> list[_SimulatedPostgres]:
+        @contextmanager
+        def connect(url_text: str, dialect: str, timeout: float):
+            connection = _SimulatedPostgres(database)
+            opened.append(connection)
+            yield connection
+
+        monkeypatch.setattr(checks, "read_only_connection", connect)
+        return opened
+
+    return install
+
+
+def _verifier_env(directory: Path, checks: str, dsn: str, **extra: str) -> dict[str, str]:
+    return {
+        "CARTORIO_OPS_CHECKS": checks,
+        "DATABASE_URL": dsn,
+        "CARTORIO_OPS_BACKUP_DIR": str(directory),
+        "CARTORIO_OPS_BACKUP_MAX_AGE_HOURS": str(MAX_AGE),
+        **extra,
+    }
+
+
+def _verify(capsys, env: dict[str, str]) -> tuple[int, dict, str]:
+    code = cli.main(["check"], environ=env, clock=fixed_clock(), runner=FakeSystemd())
+    captured = capsys.readouterr()
+    return code, json.loads(captured.out), captured.out + captured.err
+
+
+def test_verifier_binds_the_backup_to_the_database_the_driver_opened(
+    tmp_path: Path, simulated_driver, capsys
+) -> None:
+    opened = simulated_driver("outro")
+    write_publication(tmp_path, NOW - timedelta(hours=1))  # manifesto de cartorio_lab
+    override = LAB_DSN + "?dbname=outro"
+    explicit = {"CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": "cartorio_lab"}
+
+    code, report, output = _verify(
+        capsys, _verifier_env(tmp_path, "database,backup", override, **explicit)
+    )
+    assert (code, report["checks"]["backup"]["reason"]) == (2, "expected_database_conflict")
+    assert report["checks"]["database"]["signals"]["connection"]["identity_observed"] is True
+    assert opened[-1].sql == ["SELECT current_database()"]
+    for hidden in ("outro", "cartorio_lab", "senha"):
+        assert hidden not in output
+
+    code, report, _ = _verify(capsys, _verifier_env(tmp_path, "database,backup", override))
+    assert (code, report["checks"]["backup"]["reason"]) == (1, "database_mismatch")
+
+
+def test_verifier_healthy_path_with_identity_and_manifest_coherent(
+    tmp_path: Path, simulated_driver, capsys
+) -> None:
+    simulated_driver("cartorio_lab")
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    env = _verifier_env(
+        tmp_path, "database,backup", LAB_DSN, CARTORIO_OPS_BACKUP_EXPECTED_DATABASE="cartorio_lab"
+    )
+    code, report, _ = _verify(capsys, env)
+    assert (code, report["overall"]) == (0, "ok")
+    backup = report["checks"]["backup"]["signals"]["expected_database"]
+    assert backup["reason"] == "expected_database_from_connection"
+
+
+def test_isolated_backup_never_opens_a_connection_and_reads_the_dsn_like_one(
+    tmp_path: Path, simulated_driver, capsys
+) -> None:
+    opened = simulated_driver("outro")
+    write_publication(tmp_path, NOW - timedelta(hours=1))
+    env = _verifier_env(
+        tmp_path,
+        "backup",
+        LAB_DSN + "?dbname=outro",
+        CARTORIO_OPS_BACKUP_EXPECTED_DATABASE="cartorio_lab",
+    )
+    code, report, _ = _verify(capsys, env)
+    assert (code, report["checks"]["backup"]["reason"]) == (2, "expected_database_conflict")
+    assert opened == []

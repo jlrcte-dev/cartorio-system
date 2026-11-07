@@ -13,7 +13,9 @@ No gate (``scripts/ops/pg_gate.py``) nenhum destes pode ser pulado.
 from __future__ import annotations
 
 import json
+import sys
 import uuid
+from collections.abc import Iterator
 from datetime import timedelta
 from pathlib import Path
 
@@ -21,7 +23,8 @@ import pytest
 from sqlalchemy.engine import make_url
 
 from app.ops import cli
-from app.ops.checks import ProbeError, read_only_connection
+from app.ops.backup import database_from_dsn
+from app.ops.checks import ProbeError, read_only_connection, release_heads
 from app.ops.report import utc_now
 from tests import test_postgres_compat as pr5
 from tests.ops_support import (
@@ -38,6 +41,9 @@ postgres_db = pr5.postgres_db
 
 APP_NAME = "Cartorio System - bancada ops PG"
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "scripts" / "ops"))
+
+import pg_gate  # noqa: E402
 
 
 def _driver_available() -> bool:
@@ -168,3 +174,169 @@ def test_alembic_divergence_on_postgres_is_reported_without_migrating(postgres_d
 def _check(env: dict[str, str]) -> dict:
     result = run_cli("check", env=clean_env(**env))
     return json.loads(result.stdout)
+
+
+# ---------------------------------------------------------------------------
+# Revisão final do PR #6: vínculo do backup ao banco que a conexão abriu, com dois
+# bancos reais na mesma revisão Alembic (criados pelo gate: pg_gate.BINDING_DATABASES)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def binding_databases() -> Iterator[dict[str, str]]:
+    """URL de cada banco do vínculo, com um schema exclusivo desta execução — o mesmo
+    nome nos dois —, migrado até a head e sempre descartado. As travas do PR #5 valem
+    antes de tudo: a URL base é a da bancada conhecida, e o ambiente não tem override."""
+    base = pr5._require_postgres_url(pr5.POSTGRES_URL)
+    pr5._require_clean_pg_env(base)
+    schema = f"ops_vinculo_{uuid.uuid4().hex[:12]}"
+    urls = {
+        name: make_url(base).set(database=name).render_as_string(hide_password=False)
+        for name in pg_gate.BINDING_DATABASES
+    }
+    created: list[str] = []
+    try:
+        for url in urls.values():
+            pr5._create_schema(url, schema)
+            created.append(url)
+            pr5._run_alembic("upgrade", "head", database_url=pr5._scoped_url(url, schema))
+        yield {name: pr5._scoped_url(url, schema) for name, url in urls.items()}
+    finally:
+        for url in created:
+            pr5._drop_schema(url, schema)
+
+
+def _opened(url: str) -> tuple[str, str]:
+    """Banco e revisão Alembic vistos pela mesma conexão somente leitura do verificador."""
+    with read_only_connection(url, "postgresql", 10) as conn:
+        database = conn.exec_driver_sql("SELECT current_database()").scalar_one()
+        revision = conn.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one()
+    return str(database), str(revision)
+
+
+def _override(url: str, database: str) -> str:
+    """A mesma DSN, com o banco do caminho e ``dbname`` na querystring apontando outro."""
+    return (
+        make_url(url).update_query_dict({"dbname": database}).render_as_string(hide_password=False)
+    )
+
+
+def _binding_env(directory: Path, dsn: str, checks: str, **extra: str) -> dict[str, str]:
+    return {
+        "CARTORIO_OPS_CHECKS": checks,
+        "DATABASE_URL": dsn,
+        "CARTORIO_OPS_RELEASE_DIR": str(REPO_ROOT),
+        "CARTORIO_OPS_BACKUP_DIR": str(directory),
+        "CARTORIO_OPS_BACKUP_MAX_AGE_HOURS": "26",
+        **extra,
+    }
+
+
+def _verify(env: dict[str, str]) -> tuple[int, dict, str]:
+    result = run_cli("check", env=clean_env(**env))
+    return result.returncode, json.loads(result.stdout), result.stdout + result.stderr
+
+
+@pr5._requires_real_postgres
+def test_override_dsn_opens_the_other_real_database_on_the_same_revision(
+    binding_databases: dict[str, str],
+) -> None:
+    a, b = pg_gate.BINDING_DATABASES
+    heads, _ = release_heads(REPO_ROOT)
+    assert _opened(binding_databases[a]) == (a, heads[0])
+    assert _opened(binding_databases[b]) == (b, heads[0])
+    # O caminho diz A; a querystring diz B; quem responde é B.
+    assert _opened(_override(binding_databases[a], b)) == (b, heads[0])
+
+
+@pr5._requires_real_postgres
+@pytest.mark.parametrize("variant", ["plain", "override", "blank_dbname", "no_path"])
+def test_static_reading_of_the_dsn_matches_the_database_the_server_reports(
+    binding_databases: dict[str, str], variant: str
+) -> None:
+    """Modo backup isolado não conecta: a leitura da DSN tem de dar o banco que a conexão
+    real abre — conferido aqui contra ``current_database()`` do servidor."""
+    a, b = pg_gate.BINDING_DATABASES
+    url = make_url(binding_databases[a])
+    dsn = {
+        "plain": url.render_as_string(hide_password=False),
+        "override": _override(binding_databases[a], b),
+        "blank_dbname": url.render_as_string(hide_password=False) + "&dbname=",
+        "no_path": _override(url.set(database=None).render_as_string(hide_password=False), b),
+    }[variant]
+    observed, _ = _opened(dsn)
+    assert database_from_dsn(dsn) == (observed, None)
+
+
+@pr5._requires_real_postgres
+def test_manifest_of_the_database_the_override_did_not_open_is_refused(
+    binding_databases: dict[str, str], tmp_path: Path
+) -> None:
+    """A configuração da revisão, com servidor real: manifesto (e nome explícito) do banco
+    A; DSN que nomeia A no caminho e abre B pelo override; A e B na mesma revisão."""
+    a, b = pg_gate.BINDING_DATABASES
+    write_publication(tmp_path, utc_now() - timedelta(hours=2), overrides={"database": a})
+    override = _override(binding_databases[a], b)
+    explicit = {"CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": a}
+
+    code, report, output = _verify(
+        _binding_env(tmp_path, override, "database,alembic,backup", **explicit)
+    )
+    checks = report["checks"]
+    assert code == 2, json.dumps(report, indent=2)
+    assert checks["database"]["status"] == "ok"
+    assert checks["database"]["signals"]["connection"]["identity_observed"] is True
+    assert checks["alembic"]["reason"] == "revision_match"  # B também está na head
+    assert (checks["backup"]["status"], checks["backup"]["reason"]) == (
+        "inconclusive",
+        "expected_database_conflict",
+    )
+    for hidden in (a, b, str(make_url(override).password)):
+        assert hidden not in output
+
+    # Sem o nome explícito, o banco esperado é o que a conexão abriu, e a cópia de A cai.
+    code, report, _ = _verify(_binding_env(tmp_path, override, "database,alembic,backup"))
+    assert (code, report["checks"]["backup"]["reason"]) == (1, "database_mismatch")
+
+
+@pr5._requires_real_postgres
+def test_identity_and_manifest_coherent_on_the_real_server_return_zero(
+    binding_databases: dict[str, str], tmp_path: Path
+) -> None:
+    a, b = pg_gate.BINDING_DATABASES
+    write_publication(tmp_path / "a", utc_now() - timedelta(hours=2), overrides={"database": a})
+    env = _binding_env(
+        tmp_path / "a",
+        binding_databases[a],
+        "database,alembic,backup",
+        CARTORIO_OPS_BACKUP_EXPECTED_DATABASE=a,
+    )
+    code, report, _ = _verify(env)
+    assert code == 0, json.dumps(report, indent=2)
+    identity = report["checks"]["backup"]["signals"]["expected_database"]
+    assert identity["reason"] == "expected_database_from_connection"
+
+    # A DSN com override, lida como a conexão a abre: a cópia de B é a esperada.
+    write_publication(tmp_path / "b", utc_now() - timedelta(hours=2), overrides={"database": b})
+    override = _override(binding_databases[a], b)
+    code, report, _ = _verify(_binding_env(tmp_path / "b", override, "database,alembic,backup"))
+    assert code == 0, json.dumps(report, indent=2)
+
+
+@pr5._requires_real_postgres
+def test_isolated_backup_mode_reads_the_dsn_like_the_real_connection(
+    binding_databases: dict[str, str], tmp_path: Path
+) -> None:
+    a, b = pg_gate.BINDING_DATABASES
+    override = _override(binding_databases[a], b)
+    assert _opened(override)[0] == b
+
+    write_publication(tmp_path / "a", utc_now() - timedelta(hours=2), overrides={"database": a})
+    explicit = {"CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": a}
+    code, report, _ = _verify(_binding_env(tmp_path / "a", override, "backup", **explicit))
+    assert (code, report["checks"]["backup"]["reason"]) == (2, "expected_database_conflict")
+
+    write_publication(tmp_path / "b", utc_now() - timedelta(hours=2), overrides={"database": b})
+    code, report, _ = _verify(_binding_env(tmp_path / "b", override, "backup"))
+    identity = report["checks"]["backup"]["signals"]["expected_database"]
+    assert (code, identity["reason"]) == (0, "expected_database_from_dsn")

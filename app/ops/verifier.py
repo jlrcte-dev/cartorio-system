@@ -12,7 +12,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from app.ops.backup import check_backup
+from app.ops.backup import ConnectionIdentity, check_backup
 from app.ops.checks import check_alembic, check_api, check_database
 from app.ops.config import CHECK_NAMES, OpsConfig
 from app.ops.report import CheckResult, Clock, Status, build_report, single
@@ -35,6 +35,15 @@ def release_id(cfg: OpsConfig) -> str | None:
     return name if _SHA.match(name) else None
 
 
+def connection_identity(cfg: OpsConfig, database: CheckResult | None) -> ConnectionIdentity | None:
+    """Modo combinado — database e backup na mesma execução, em PostgreSQL: o backup se
+    vincula ao banco que a conexão da checagem database abriu. Sem ele observado (conexão
+    falhou, checagem quebrou), a identidade fica sem prova."""
+    if "database" not in cfg.checks or cfg.expected_dialect != "postgresql":
+        return None
+    return ConnectionIdentity(database.observed_database if database is not None else None)
+
+
 def run_checks(
     cfg: OpsConfig,
     *,
@@ -44,11 +53,17 @@ def run_checks(
 ) -> dict[str, Any]:
     now = clock()
     rid = release_id(cfg)
+    done: dict[str, CheckResult] = {}  # "database" roda antes de "backup" (CHECK_NAMES)
     planned: dict[str, Callable[[], CheckResult]] = {
         "api": lambda: check_api(cfg, runner=runner),
         "database": lambda: check_database(cfg),
         "alembic": lambda: check_alembic(cfg, release_id=rid),
-        "backup": lambda: check_backup(cfg, now=now, runner=runner),
+        "backup": lambda: check_backup(
+            cfg,
+            now=now,
+            runner=runner,
+            connection=connection_identity(cfg, done.get("database")),
+        ),
     }
     results: list[CheckResult] = []
     for name in CHECK_NAMES:
@@ -68,6 +83,7 @@ def run_checks(
             )
         result.duration_ms = round((time.monotonic() - start) * 1000)
         results.append(result)
+        done[name] = result
     errors = sorted({var for problems in cfg.problems.values() for var in problems})
     release = {"id": rid, "dir_configured": cfg.release_dir is not None}
     return build_report(
