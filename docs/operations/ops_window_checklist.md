@@ -79,6 +79,10 @@ Marcação: **OK** (observado, com evidência) · **PENDENTE** (sem observação
 ### 5. Instalação do verificador na VM — PENDENTE
 
 - Código e modelos prontos em bancada (esta sprint). Passos e reversão: runbook §7–§8.
+- Com as quatro checagens (padrão), o backup é conferido contra o banco que a DSN do
+  verificador abre de fato: ela precisa abrir o banco cujo nome a rotina grava no
+  manifesto, e `CARTORIO_OPS_BACKUP_EXPECTED_DATABASE`, se usada, tem de coincidir
+  (runbook §3).
 - Decisões antes de instalar: runbook §9 (limiar real, canal, observador externo).
 
 ### 6. Gate PostgreSQL no GitHub Actions — PENDENTE

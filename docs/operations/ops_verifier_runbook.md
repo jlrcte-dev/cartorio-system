@@ -39,7 +39,9 @@ TRABALHO=$(mktemp -d)
 # Gate PostgreSQL de bancada — o MESMO comando do job `postgres-gate` do CI
 python -m pip install -e ".[dev,postgres]"
 python scripts/ops/pg_gate.py --pg-bin /usr/lib/postgresql/18/bin \
-    --work-root "$TRABALHO" --report "$TRABALHO/pg-gate-report.json"
+    --work-root "$TRABALHO" --publish-dir "$TRABALHO/pg-gate-liberados"
+# O que o gate liberou para publicação, conferido de novo (o passo de seleção do CI)
+python scripts/ops/pg_gate.py --list-released "$TRABALHO/pg-gate-liberados"
 
 # Só o ensaio de recuperação (modo sintético), exportando a cópia gerada
 python -m app.ops.drill --pg-bin /usr/lib/postgresql/18/bin --work-root "$TRABALHO" \
@@ -61,9 +63,10 @@ python -m app.ops.cli render-units --templates deploy/ops --params deploy/ops/la
 `--pg-bin` precisa das ferramentas `initdb`, `pg_ctl`, `pg_dump`, `pg_restore` (e `postgres`
 para o gate) da **mesma versão principal**; o gate exige 18 (`--require-major`). No Windows,
 `--work-root` precisa ser um caminho ASCII (o `initdb` recebe argv na página de código ANSI)
-e o **modo cópia é recusado antes de copiar** (`copy_mode_unsupported_platform`): lá o
-isolamento da cópia dependeria da ACL herdada da raiz, que o ensaio não verifica. O gate
-inclui o modo cópia, logo só aprova em Linux.
+e o **modo cópia é recusado antes de copiar** (`copy_mode_unsupported_platform`), assim como
+a exportação que o alimenta (`export_unsupported_platform`): lá o isolamento da cópia
+dependeria da ACL herdada da raiz, que o ensaio não verifica. O gate inclui o modo cópia,
+logo só aprova em Linux.
 
 **Área privada desde a criação.** Os diretórios do ensaio nascem `0700` e os arquivos
 `0600` já no `mkdir`/`open` (dump e manifesto copiados, `pgpass`, senha do `initdb`,
@@ -72,6 +75,16 @@ nada, e a área preservada após falha continua privada. O relatório registra o
 `isolation`. A cópia de origem só é lida. A exportação (`--export-artifact`) só existe no
 modo sintético. Relatório que contenha credencial gerada pelo ensaio não é gravado: sai um
 mínimo reprovado (`secret_in_report`).
+
+**Destino da exportação.** Diretório novo nasce `0700` — também os pais que faltarem — e os
+arquivos, `0600`. Diretório que já existe é usado como está, com modo, dono e conteúdo
+preservados, desde que seja diretório de verdade, do próprio usuário, gravável por ele e
+**sem escrita para grupo ou outros** (senão a cópia poderia ser trocada antes de o modo
+cópia lê-la). Fora disso o ensaio é recusado antes de qualquer cluster, sem tocar no
+destino nem no alvo de um link: `export_dir_symlink`, `export_dir_not_directory`,
+`export_dir_not_owned`, `export_dir_writable_by_others`, `export_dir_not_writable`. Arquivo
+de mesmo nome nunca é sobrescrito (`export_file_exists`). O relatório registra
+`artifact.export_destination` (`created` ou `existing`).
 
 **Modo cópia: banco esperado.** `--from-manifest` exige `--expect-database`, informado à
 parte e nunca lido da cópia. O manifesto passa pela mesma validação do verificador (§5):
@@ -98,8 +111,22 @@ parado e o diretório dele removido (senão, `gate_cleanup_unconfirmed`).
 
 **O gate a partir da cópia sintética exportada** roda o modo cópia sob umask `022`: o banco
 esperado restaura com a área em `0700`/`0600`; um banco divergente é recusado sem cluster;
-a cópia de origem sai intocada (modo, data e SHA-256); nenhum relatório ou log publicado
-traz URL com senha. Relatórios: `pg-gate-report.json` e `pg-gate-report-{drill,copy,copy-foreign}.json`.
+a cópia de origem sai intocada (modo, data e SHA-256). No cluster dos testes o gate cria
+também os dois bancos da prova de vínculo ao banco efetivo (§3), na mesma revisão Alembic.
+
+**Publicação do gate (CI público).** A saída dos subprocessos (log do pytest e, por ensaio,
+log e relatório) fica numa área bruta privada, com marcador, e nada dela é impresso antes
+de conferido. A conferência procura URL com senha, campo de senha/segredo/token com valor
+em JSON, chave privada e as credenciais geradas pelo próprio gate. Log limpo é impresso;
+com credencial, fica retido e só sai a categoria. Relatório limpo vai para a área liberada
+(`--publish-dir`, que precisa não existir); com credencial, fica retido. Nos dois casos o
+gate reprova (`credential_in_output`). O manifesto `pg-gate-liberados.json` (nome e
+SHA-256 de cada arquivo liberado) é gravado por último, e a área bruta é removida. O
+workflow publica só o que `--list-released` devolve: os arquivos do manifesto, conferidos
+de novo. Divergência ou manifesto ausente não publica nada, e nada do diretório temporário
+entra por glob. Relatórios liberados: `pg-gate-report.json` e
+`pg-gate-report-{drill,copy,copy-foreign}.json`. O relatório do gate registra a
+conferência em `publication` e `secret_scan`, e o Gitleaks em `gitleaks` (não executado).
 
 ## 3. Parâmetros do verificador (ambiente)
 
@@ -116,17 +143,30 @@ traz URL com senha. Relatórios: `pg-gate-report.json` e `pg-gate-report-{drill,
 | `CARTORIO_OPS_RELEASE_ID` | relatório | não (deduzido de `releases/<sha>`) | — |
 | `CARTORIO_OPS_BACKUP_DIR` | backup | sim | `/var/lib/cartorio-lab-backups/recorrentes` |
 | `CARTORIO_OPS_BACKUP_MAX_AGE_HOURS` | backup | **sim, sem padrão** | `26` |
-| `CARTORIO_OPS_BACKUP_EXPECTED_DATABASE` | backup | sim, se a `DATABASE_URL` não nomear o banco sem ambiguidade | `cartorio_lab` |
+| `CARTORIO_OPS_BACKUP_EXPECTED_DATABASE` | backup | sim no backup isolado sem DSN PostgreSQL e na bancada SQLite; nos demais casos, opcional (se definida, precisa coincidir) | `cartorio_lab` |
 | `CARTORIO_OPS_BACKUP_SERVICE_UNIT` / `_TIMER_UNIT` | backup | não | `cartorio-lab-backup.service` / `.timer` |
 | `CARTORIO_OPS_RESTORE_EVIDENCE` / `_MAX_AGE_DAYS` | backup | não | relatório do último ensaio / `35` |
 | `CARTORIO_OPS_SYSTEMCTL` | api, backup | não | `systemctl` |
 
-**Banco esperado do backup:** o nome do banco da `DATABASE_URL` PostgreSQL e/ou
-`CARTORIO_OPS_BACKUP_EXPECTED_DATABASE`. Com os dois, precisam coincidir
-(`expected_database_conflict`). `dbname`, `service` ou `servicefile` na query da DSN
-trocariam o banco efetivo, então o nome dela fica ambíguo e só a variável decide. Sem nome
-inequívoco, a checagem é inconclusiva (`expected_database_missing`/`_ambiguous`), nunca
-saudável.
+**Banco esperado do backup.**
+
+- **Modo combinado** (`database` e `backup` na mesma execução, em PostgreSQL — o padrão):
+  o manifesto se vincula ao banco que a conexão somente leitura abriu de fato
+  (`current_database()`, overrides da libpq incluídos). O nome da variável e o lido da DSN,
+  quando existem, precisam coincidir com ele (`expected_database_conflict`). Se a conexão
+  não chegou a observá-lo, o resultado é `expected_database_unproven`.
+- **Backup isolado ou bancada SQLite:** vale o nome lido da DSN como a conexão o abriria
+  — o banco do caminho e, por cima, `dbname` da querystring; valor vazio é descartado — e/ou
+  a variável, coincidentes. A variável sozinha só vale sem DSN PostgreSQL.
+- **Ambíguo** (`expected_database_ambiguous`, mesmo com a variável): perfil de serviço
+  (`service`/`servicefile`), DSN sem banco, ou `dbname` repetido ou inválido. Sem observar
+  a conexão, não há identidade verificável.
+
+Sem banco comprovado a checagem nunca é saudável, mas as falhas que independem dele
+continuam aparecendo: cópia ausente, todas vencidas ou corrompida. Nenhuma cópia é dada
+como a última válida. O nome do banco nunca aparece no JSON: o sinal `expected_database`
+diz só a origem (`expected_database_from_connection`, `_from_dsn`, `_explicit`) ou o
+motivo, e `database` registra `identity_observed`.
 
 Tipos de unidade: `service` (persistente: só `active`/`running` passa — configure
 `postgresql@18-main.service`, nunca o guarda-chuva `postgresql.service`, que reporta
@@ -159,7 +199,7 @@ evidência; falha detectada continua `fail` (saída 1). Sem `--output`: `{"reque
 | `api` | `unit_not_running`, `unit_not_enabled`, `unit_not_found`, `last_run_failed`, `timer_inactive`, `http_status`, `unexpected_body`, `app_mismatch`, `unreachable`, `timeout` | `systemd_unavailable`, `systemctl_timeout`, `systemctl_failed`, `config_*` |
 | `database` | `dialect_mismatch`, `unavailable`, `timeout`, `auth_failed`, `database_missing`, `query_failed` | `config_missing`, `config_invalid` (`url_unparseable`, `driver_unavailable`) |
 | `alembic` | `revision_behind` (pendente de migration), `revision_unknown` (banco à frente ou outra linhagem) | `version_table_missing`, `version_table_unreadable`, `database_unavailable`, `release_unreadable` |
-| `backup` | `backup_missing`, `no_verifiable_copy`, `manifest_incomplete`, `manifest_inconsistent`, `reference_outside_dir`, `recovery_point_in_future`, `recovery_point_unreadable`, `database_mismatch`, `artifact_missing`, `size_mismatch`, `digest_mismatch`, `unverifiable_copy`, `no_valid_copy`, `backup_stale`, `last_attempt_failed`, `timer_inactive`, `timer_not_enabled`, `restore_test_failed`, `restore_test_stale` | `expected_database_missing`, `expected_database_ambiguous`, `expected_database_conflict`, `backup_dir_unavailable`, `backup_dir_unreadable`, `artifact_unreadable`, `restore_evidence_*`, `systemd_*` |
+| `backup` | `backup_missing`, `no_verifiable_copy`, `manifest_incomplete`, `manifest_inconsistent`, `reference_outside_dir`, `recovery_point_in_future`, `recovery_point_unreadable`, `database_mismatch`, `artifact_missing`, `size_mismatch`, `digest_mismatch`, `unverifiable_copy`, `no_valid_copy`, `backup_stale`, `last_attempt_failed`, `timer_inactive`, `timer_not_enabled`, `restore_test_failed`, `restore_test_stale` | `expected_database_missing`, `expected_database_ambiguous`, `expected_database_conflict`, `expected_database_unproven`, `backup_dir_unavailable`, `backup_dir_unreadable`, `artifact_unreadable`, `restore_evidence_*`, `systemd_*` |
 | geral | — | `output_not_published` (checagens saudáveis, relatório não publicado) |
 
 Observações: `/health` saudável **não** prova o banco (a engine é preguiçosa: DSN quebrada
@@ -176,6 +216,7 @@ O verificador lê o formato que a rotina existente já publica, sem alterá-la:
 
 | Sinal | Pergunta |
 |---|---|
+| `expected_database` | De que banco as cópias precisam ser, e de onde veio essa identidade (§3)? |
 | `last_copy` | Qual é a última publicação completa, e o manifesto dela é utilizável? |
 | `integrity` | O SHA-256 recalculado agora bate com o manifesto (mesmo artefato)? |
 | `publications` | Há cópia mais nova sem manifesto/ilegível além da carência de 10 min? |

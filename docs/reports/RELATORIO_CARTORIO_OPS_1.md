@@ -129,6 +129,46 @@ Prova local desta rodada:
 
 O resultado do CI fica no PR.
 
+## Fechamento da revisão do PR #6
+
+Três ajustes da última revisão, cada um com regressão, em commits aditivos sobre `37e3dcb`.
+Ficaram intocados:
+
+- os contratos da API e as migrations;
+- os jobs existentes e a restauração só em cluster descartável;
+- a recusa do modo cópia no Windows e a rotina de backup.
+
+| # | Ponto | Correção | Testes |
+|---|---|---|---|
+| 1 | **Vínculo ao banco efetivo.** O teste `test_explicit_name_decides_when_the_dsn_is_ambiguous` aceitava manifesto de `cartorio_lab` com DSN `/cartorio_lab?dbname=outro`, que o driver usa para conectar em `outro`. Com os dois bancos na mesma revisão, a verificação combinada aprovaria a cópia do banco errado. A leitura da DSN também se enganava com `?` não codificado na senha | **Combinado** (database e backup em PostgreSQL): `current_database()` na conexão somente leitura, levado em memória até o backup; nome explícito e nome da DSN precisam coincidir com ele (`expected_database_conflict`); sem identidade observada, `expected_database_unproven`. **Isolado:** a DSN é lida como o dialeto psycopg a entrega à libpq — caminho, e `dbname` da querystring por cima; vazio é descartado. **Ambíguo**, mesmo com nome explícito: perfil de serviço, banco ausente, ou `dbname` repetido ou inválido. Falhas que independem da identidade continuam visíveis. O nome do banco nunca vai ao JSON | `test_ops_backup.py`: leitura da DSN em 11 variantes, inclusive credenciais com caracteres especiais; conflito no lugar do sucesso antigo; perfil de serviço; nome explícito no backup isolado e na bancada SQLite; modo combinado com recusa, caminho saudável, perfil resolvido pela observação e falhas visíveis sem identidade; driver simulado pelo CLI. **Gate PG:** dois bancos reais na mesma revisão, `current_database()` da DSN com override, recusa do manifesto do outro banco, caminho saudável e modo isolado (`test_ops_postgres.py`) |
+| 2 | **Exportação.** `private_mkdir(exist_ok=True)` fazia `chmod 0700` num destino existente, inclusive compartilhado | Só diretório novo é criado, já `0700`, com os pais que faltarem. Destino existente é usado como está (modo, dono e conteúdo), depois de validado. Recusas, antes de qualquer cluster: link (sem tocar o alvo), não-diretório, outro dono, escrita de grupo ou outros, sem escrita. Arquivos `0600`, sem sobrescrita. No Windows a exportação é recusada como o modo cópia | POSIX: destino novo sob umask `022` com pai novo; existente em `0700`/`0750`/`0755` com sentinela intocada; compartilhado em `0770`/`0775`/`0777`/`1777` recusado e intocado; link recusado; sem sobrescrita; recusa antes de cluster. Também a regra de plataforma, e no gate a exportação seguida da restauração por cópia |
+| 3 | **CI público.** O gate imprimia os logs antes da varredura, e o upload com `if: always()` pegava os JSON por glob | A saída dos subprocessos vai para uma área bruta privada e só é impressa depois de conferida: log com credencial fica retido, só a categoria aparece. Relatório limpo vai para a área liberada (nova a cada run); com credencial, fica retido, e o gate reprova (`credential_in_output`). O manifesto de liberação é gravado por último. O workflow publica só o que `--list-released` confere de novo. `secret_scan` e `gitleaks` ficam em campos separados | Credencial fictícia em log e em JSON: saída 1, valor ausente de stdout e stderr, arquivo fora do upload. Run limpo libera os quatro relatórios. A seleção ignora arquivo bruto, antigo ou fora do manifesto; liberação adulterada ou sem manifesto não publica nada; área liberada de outro run é recusada |
+
+**Antes e depois (modo backup isolado, dados sintéticos, códigos de saída reais).** O mesmo
+cenário rodou num worktree destacado em `37e3dcb` e na branch.
+
+Antes:
+- (A) DSN `/cartorio_lab?dbname=outro`, nome explícito `cartorio_lab` e manifesto
+  `cartorio_lab` → saída **0**, `ok`;
+- (B) senha com `?` não codificado e `?dbname=outro`, sem nome explícito → saída **0**, `ok`.
+
+Depois:
+- (A) → saída **2**, `expected_database_conflict`;
+- (B) → saída **1**, `database_mismatch`.
+
+Prova local desta rodada:
+- `ruff format --check` (208 arquivos) e `ruff check` limpos;
+- `pytest -q` com **1622 passed, 36 skipped**, exit 0. Os 19 skips novos são 11 testes POSIX
+  do destino da exportação e 8 de servidor PostgreSQL real; os anteriores seguem com o
+  mesmo motivo;
+- Alembic em SQLite temporário: `upgrade`/`current`/`check` com exit 0, em `f4a5b6c7d8e9`,
+  sem operação pendente. `heads` falhou uma vez com `Bad file descriptor` ao ler o
+  `pyproject.toml` com a saída num pipe; repetido duas vezes com saída em arquivo, deu
+  exit 0;
+- `cartorio.db` ausente antes e depois; `git diff --check` limpo.
+
+Os modos POSIX e o servidor real só existem no CI Linux.
+
 ## Decisões assumidas (reversíveis)
 
 1. **Local do código:** `app/ops/` (vai junto com a release, sem importar módulos de
@@ -159,7 +199,17 @@ O resultado do CI fica no PR.
 11. **CI:** PostgreSQL 18 do PGDG sem cluster padrão; o gate cria os seus. Teste pulado
     reprova.
 12. **Modo cópia no Windows:** recusado antes de copiar, em vez de verificar ACL — lá o
-    isolamento da cópia dependeria da ACL herdada da raiz escolhida.
+    isolamento da cópia dependeria da ACL herdada da raiz escolhida. A exportação, que
+    alimenta o modo cópia, segue a mesma regra.
+13. **Perfil de serviço na DSN:** ambíguo enquanto a conexão não é observada, mesmo com
+    `dbname` explícito, que a libpq faria valer. Mais conservador que o necessário, e só no
+    backup isolado: no modo combinado quem decide é o banco observado.
+14. **Destino de exportação compartilhado:** recusado se grupo ou outros podem escrever nele,
+    porque a cópia poderia ser trocada antes de o modo cópia lê-la. Leitura por grupo ou
+    outros é aceita, já que os arquivos nascem `0600`.
+15. **Publicação do CI:** credencial detectada retém o arquivo inteiro e reprova o gate, sem
+    tentar mascarar. A varredura cobre URL com senha, campo de segredo em JSON, chave
+    privada e as credenciais geradas pelo próprio gate.
 
 ## Comandos e resultados (prova local, não é resultado de GitHub Actions)
 
@@ -238,7 +288,7 @@ autorizado: `gitleaks git --log-opts="c49c6579..sprint/cartorio-ops-1"`.
 
 | Prova | Comando | Causa | Impacto |
 |---|---|---|---|
-| Gate PostgreSQL completo e `systemd-analyze verify` | job `postgres-gate` (localmente: `python scripts/ops/pg_gate.py --pg-bin "$PG_BIN" --work-root "$TRABALHO" --report "$RELATORIO"`) | sem PostgreSQL nem systemd na bancada local | aceite depende do CI do PR; é a primeira execução desses passos |
+| Gate PostgreSQL completo e `systemd-analyze verify` | job `postgres-gate` (localmente: `python scripts/ops/pg_gate.py --pg-bin "$PG_BIN" --work-root "$TRABALHO" --publish-dir "$TRABALHO/pg-gate-liberados"`) | sem PostgreSQL nem systemd na bancada local | aceite depende do CI do PR; é a primeira execução desses passos |
 | Gitleaks | ver seção acima | binário externo não autorizado; fora do CI (TD-10) | coberto por varredura específica, não pela ferramenta |
 | Itens da janela real | [checklist](../operations/ops_window_checklist.md) | acesso à VM, ao host e ao PC dedicado | aceite real inexistente — esta sprint é código e bancada |
 

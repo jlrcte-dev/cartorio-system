@@ -175,11 +175,13 @@ pulada**:
 pip install -e ".[dev,postgres]"
 TRABALHO=$(mktemp -d)   # raiz nova, só do operador (0700)
 python scripts/ops/pg_gate.py --pg-bin /usr/lib/postgresql/18/bin \
-    --work-root "$TRABALHO" --report "$TRABALHO/pg-gate-report.json"
+    --work-root "$TRABALHO" --publish-dir "$TRABALHO/pg-gate-liberados"
 ```
 
 Ele roda a suíte do PR #5 (`tests/test_postgres_compat.py`), os cenários do verificador
-em PostgreSQL real (`tests/test_ops_postgres.py`), a prova de recuperação
-(`python -m app.ops.drill`) e, sobre a cópia que ela exporta, o modo cópia — que só roda
-em Linux, então o gate só aprova lá. Verificador, alerta, unidades systemd e
-interpretação dos estados: [`ops_verifier_runbook.md`](ops_verifier_runbook.md).
+em PostgreSQL real (`tests/test_ops_postgres.py`, inclusive o vínculo do backup ao banco
+efetivo com dois bancos reais), a prova de recuperação (`python -m app.ops.drill`) e,
+sobre a cópia que ela exporta, o modo cópia — que só roda em Linux, então o gate só aprova
+lá. Só imprime o que conferiu e só grava em `--publish-dir` (nova) os relatórios sem
+credencial. Verificador, alerta, unidades systemd e interpretação dos estados:
+[`ops_verifier_runbook.md`](ops_verifier_runbook.md).
