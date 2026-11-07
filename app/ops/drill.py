@@ -36,7 +36,6 @@ import json
 import os
 import re
 import secrets
-import shutil
 import subprocess
 import sys
 import time
@@ -52,6 +51,7 @@ from app.ops.checks import direct_opener, release_heads
 from app.ops.config import DATABASE_NAME
 from app.ops.pgcluster import (
     LOOPBACK,
+    PRIVATE_FILE_MODE,
     STOPPED_STATES,
     Cluster,
     DrillFailed,
@@ -59,6 +59,10 @@ from app.ops.pgcluster import (
     create_work_dir,
     free_port,
     pg_binary,
+    posix_mode,
+    private_copy,
+    private_mkdir,
+    private_write,
     remove_work_dir,
     require_clean_libpq_env,
     run_tool,
@@ -299,8 +303,7 @@ def _observe_target(cluster: Cluster, dbname: str) -> dict[str, Any]:
 def _pgpass(ctx: Ctx, cluster: Cluster, dbname: str, password: str) -> dict[str, str]:
     path = ctx.work / f"pgpass-{cluster.label}"
     line = f"{cluster.address()}:{cluster.port}:{dbname}:{APP_ROLE}:{password}\n"
-    path.write_text(line, "ascii")
-    path.chmod(0o600)
+    private_write(path, line.encode("ascii"))
     return subprocess_env(ctx.base_env, PGPASSFILE=str(path), PGCONNECT_TIMEOUT="10")
 
 
@@ -371,12 +374,25 @@ def _write_synthetic_record(ctx: Ctx, url: str) -> dict[str, Any]:
     return {"finding_id": finding_id, "code": code, "title": title}
 
 
+def _isolation(ctx: Ctx, artifact_dir: Path) -> dict[str, Any] | None:
+    """Modos POSIX da área privada, como evidência no relatório (no Windows não se
+    aplica: lá o modo cópia é recusado)."""
+    if os.name != "posix":
+        return None
+    return {
+        "work_dir": posix_mode(ctx.work),
+        "artifact_dir": posix_mode(artifact_dir),
+        "artifact_files": sorted({posix_mode(p) for p in artifact_dir.glob("backup-*")}),
+    }
+
+
 def _publish_dump(ctx: Ctx, origin: Cluster, password: str) -> tuple[Path, str]:
     """Gera a cópia como a rotina de backup: dump num staging, validação do TOC,
     rename atômico e, só depois, o manifesto no mesmo formato."""
     artifact_dir = ctx.work / "artefato"
     staging = artifact_dir / ".tmp"
-    staging.mkdir(parents=True)
+    private_mkdir(artifact_dir)
+    private_mkdir(staging)
     stamp = ctx.clock().strftime("%Y%m%dT%H%M%SZ")
     staged = staging / f"staging-{stamp}.dump"
     result = run_tool(
@@ -395,6 +411,8 @@ def _publish_dump(ctx: Ctx, origin: Cluster, password: str) -> tuple[Path, str]:
     )
     if result.returncode != 0:
         raise DrillFailed("pg_dump_failed", exit_code=result.returncode)
+    if os.name == "posix":
+        os.chmod(staged, PRIVATE_FILE_MODE)  # dentro de diretório 0700: sem janela
     _list_archive(ctx, staged)
     digest = sha256_file(staged)
     final = artifact_dir / f"backup-{stamp}.dump"
@@ -406,7 +424,8 @@ def _publish_dump(ctx: Ctx, origin: Cluster, password: str) -> tuple[Path, str]:
         "gerado_em_utc": stamp,
         "database": ORIGIN_DB,
     }
-    (artifact_dir / f"backup-{stamp}.json").write_text(json.dumps(manifest, indent=2), "utf-8")
+    private_write(artifact_dir / f"backup-{stamp}.json", json.dumps(manifest, indent=2).encode())
+    ctx.report["isolation"] = _isolation(ctx, artifact_dir)
     return artifact_dir, stamp
 
 
@@ -446,12 +465,13 @@ def _copy_phase(
     if parse_stamp(stamp) is None:
         raise DrillRefused("manifest_name_invalid")
     artifact_dir = ctx.work / "artefato"
-    artifact_dir.mkdir()
+    private_mkdir(artifact_dir)
     for name in (manifest.name, f"backup-{stamp}.dump"):
         source = manifest.parent / name
         if not source.is_file() or source.is_symlink():
             raise DrillFailed("copy_incomplete", missing=name)
-        shutil.copyfile(source, artifact_dir / name)
+        private_copy(source, artifact_dir / name)
+    ctx.report["isolation"] = _isolation(ctx, artifact_dir)
     ctx.report["record"] = {"finding_id": finding_id, "code_informed_by_operator": True}
     return {
         "dir": artifact_dir,
@@ -592,6 +612,8 @@ def run_drill(args: argparse.Namespace, *, clock: Clock = utc_now) -> int:
     verdict, reason, facts = "passed", "ok", {}
     try:
         require_clean_libpq_env(os.environ)
+        if args.from_manifest and not copy_mode_supported():
+            raise DrillRefused("copy_mode_unsupported_platform")
         if not (REPO_ROOT / "alembic" / "versions").is_dir():
             raise DrillRefused("repo_root_not_checkout")
         report["release"] = _git_release()
@@ -619,9 +641,9 @@ def run_drill(args: argparse.Namespace, *, clock: Clock = utc_now) -> int:
             source = _origin_phase(ctx, tools, heads)
         artifact = _verify_artifact(ctx, source)
         if args.export_artifact:  # o parser só aceita no modo sintético
-            args.export_artifact.mkdir(parents=True, exist_ok=True)
+            private_mkdir(args.export_artifact, parents=True, exist_ok=True)
             for item in source["dir"].glob(f"backup-{source['stamp']}.*"):
-                shutil.copyfile(item, args.export_artifact / item.name)
+                private_copy(item, args.export_artifact / item.name)
             report["artifact"]["exported"] = True
         _restore_phase(ctx, tools, heads, artifact, source)
         report["postgres"]["server_version"] = ctx.clusters[-1].server_version
@@ -645,9 +667,29 @@ def run_drill(args: argparse.Namespace, *, clock: Clock = utc_now) -> int:
     report.update(verdict=verdict, reason=reason, finished_at=utc_iso(clock()))
     if facts:
         report["failure"] = dict(facts)
+    report = without_secrets(report, ctx.secrets if ctx else [])
     write_json_atomic(args.report, report)
     print(json.dumps({k: report.get(k) for k in ("run_id", "mode", "verdict", "reason")}))
-    return _EXIT[verdict]
+    return _EXIT[report["verdict"]]
+
+
+def copy_mode_supported(platform: str = sys.platform) -> bool:
+    """O modo cópia exige isolamento comprovável da cópia privada: modos POSIX. No
+    Windows a ACL é herdada da raiz escolhida e não é verificada aqui — recusa."""
+    return platform != "win32"
+
+
+def without_secrets(report: dict[str, Any], generated: Sequence[str]) -> dict[str, Any]:
+    """Se alguma credencial gerada pelo ensaio aparecer no relatório, ele não é gravado:
+    sai um relatório mínimo, reprovado."""
+    serialized = json.dumps(report, ensure_ascii=False)
+    if not any(secret and secret in serialized for secret in generated):
+        return report
+    keep = ("schema", "schema_version", "run_id", "mode", "classification", "started_at")
+    return {key: report.get(key) for key in keep} | {
+        "verdict": "failed",
+        "reason": "secret_in_report",
+    }
 
 
 def final_verdict(verdict: str, reason: str, cleanup: dict[str, Any]) -> tuple[str, str]:
@@ -722,7 +764,12 @@ def main(argv: Sequence[str] | None = None, *, clock: Clock = utc_now) -> int:
             parser.error("--export-artifact só existe no modo sintético")
     elif args.expect_database:
         parser.error("--expect-database só existe no modo cópia (--from-manifest)")
-    return run_drill(args, clock=clock)
+    # Tudo o que o ensaio e seus processos filhos criarem nasce privado.
+    previous = os.umask(0o077)
+    try:
+        return run_drill(args, clock=clock)
+    finally:
+        os.umask(previous)
 
 
 if __name__ == "__main__":

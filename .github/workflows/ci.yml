@@ -120,6 +120,13 @@ jobs:
           systemd-analyze --version | head -n 1
           python -m pytest -p no:cacheprovider -rA tests/test_ops_units.py
 
+      # Área privada do ensaio sob umask 022. Num runner Linux estes testes não têm
+      # como ser pulados; -rA deixa o PASSED nominal no log.
+      - name: Área privada do ensaio (umask 022)
+        run: |
+          python -m pytest -p no:cacheprovider -rA tests/test_ops_drill.py \
+            -k "umask_022 or private_from_creation or stays_private"
+
       - name: "Gate PostgreSQL de bancada (PR #5 + verificador + prova de recuperação)"
         run: |
           python scripts/ops/pg_gate.py \
@@ -132,7 +139,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pg-gate-reports
-          path: |
-            ${{ runner.temp }}/pg-gate-report.json
-            ${{ runner.temp }}/pg-gate-report-drill.json
+          # Gate, prova sintética, modo cópia e recusa do banco divergente.
+          path: ${{ runner.temp }}/pg-gate-report*.json
           if-no-files-found: warn

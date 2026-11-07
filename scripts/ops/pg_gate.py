@@ -11,7 +11,11 @@
    para ele. Qualquer teste PULADO reprova o gate: prova obrigatória não passa por
    skip de configuração ausente.
 5. Derruba o cluster (limpeza restrita ao que criou) e roda a prova de recuperação.
-6. Grava um relatório JSON sem segredos. Saída 0 só com tudo aprovado.
+6. A partir da cópia exportada pela prova sintética, roda o modo cópia: o banco
+   esperado restaura numa área privada mesmo sob umask 022; um banco divergente é
+   recusado antes de qualquer cluster; a cópia de origem sai intocada.
+7. Grava um relatório JSON sem segredos e confere que nada do que publica carrega
+   URL com senha. Saída 0 só com tudo aprovado.
 """
 
 from __future__ import annotations
@@ -19,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -27,6 +32,8 @@ from typing import Any
 
 from defusedxml import ElementTree
 
+from app.ops.backup import sha256_file
+from app.ops.drill import ORIGIN_DB
 from app.ops.pgcluster import (
     STOPPED_STATES,
     Cluster,
@@ -48,6 +55,12 @@ SCHEMA = "cartorio_system.ops.pg_gate"
 PR5_USER = "cartorio_fase_b"
 PR5_DATABASE = "cartorio_fase_b_test"
 TEST_FILES = ("tests/test_postgres_compat.py", "tests/test_ops_postgres.py")
+# Banco que a cópia NÃO é: o modo cópia precisa recusá-la antes de restaurar.
+FOREIGN_DATABASE = "outro_banco_ficticio"
+# Área do modo cópia que o relatório do ensaio precisa mostrar, seja qual for o umask.
+PRIVATE_AREA = {"work_dir": "0700", "artifact_dir": "0700", "artifact_files": ["0600"]}
+# usuário:senha@ numa URL. Senha mascarada (***) não conta.
+CREDENTIAL_IN_URL = re.compile(r"://[^\s/@:]+:(?!\*+@)[^\s/@]+@")
 
 
 def junit_totals(path: Path) -> dict[str, int]:
@@ -122,37 +135,122 @@ def _run_suite(work: Path, cluster: Cluster, password: str, report: dict[str, An
     return gate_verdict(proc.returncode, totals)
 
 
-def _run_drill(args: argparse.Namespace) -> tuple[dict[str, Any], bool]:
-    """Prova de recuperação em processo próprio; o relatório completo fica ao lado."""
-    drill_report = args.report.with_name(args.report.stem + "-drill.json")
-    drill_log = args.report.with_name(args.report.stem + "-drill.log")
-    proc = run_tool(
-        [
-            sys.executable,
-            "-m",
-            "app.ops.drill",
-            "--pg-bin",
-            str(args.pg_bin),
-            "--work-root",
-            str(args.work_root),
-            "--report",
-            str(drill_report),
-        ],
-        env=subprocess_env(os.environ),
-        log=drill_log,
-        timeout=1200,
-    )
-    print(drill_log.read_text(encoding="utf-8", errors="replace"))
-    drill = json.loads(drill_report.read_text(encoding="utf-8")) if drill_report.exists() else {}
-    summary = {
-        "exit_code": proc.returncode,
-        "report_file": drill_report.name,
-        "verdict": drill.get("verdict"),
-        "reason": drill.get("reason"),
-        "server_version": (drill.get("postgres") or {}).get("server_version"),
-        "recovery_duration_seconds": (drill.get("recovery") or {}).get("duration_seconds"),
+def _drill(
+    args: argparse.Namespace, name: str, *extra: str, umask: int = 0o077
+) -> tuple[int, dict[str, Any], str]:
+    """Um ensaio em processo próprio, sob o umask dado; relatório e log ficam ao lado do
+    relatório do gate."""
+    report = args.report.with_name(f"{args.report.stem}-{name}.json")
+    log = args.report.with_name(f"{args.report.stem}-{name}.log")
+    cmd = [
+        sys.executable,
+        "-m",
+        "app.ops.drill",
+        "--pg-bin",
+        str(args.pg_bin),
+        "--work-root",
+        str(args.work_root),
+        "--report",
+        str(report),
+        *extra,
+    ]
+    previous = os.umask(umask)
+    try:
+        proc = run_tool(cmd, env=subprocess_env(os.environ), log=log, timeout=1200)
+    finally:
+        os.umask(previous)
+    print(log.read_text(encoding="utf-8", errors="replace"))
+    data = json.loads(report.read_text(encoding="utf-8")) if report.exists() else {}
+    return proc.returncode, data, report.name
+
+
+def _summary(code: int, data: dict[str, Any], report_file: str) -> dict[str, Any]:
+    return {
+        "exit_code": code,
+        "report_file": report_file,
+        "verdict": data.get("verdict"),
+        "reason": data.get("reason"),
+        "server_version": (data.get("postgres") or {}).get("server_version"),
+        "recovery_duration_seconds": (data.get("recovery") or {}).get("duration_seconds"),
     }
-    return summary, proc.returncode == 0 and drill.get("verdict") == "passed"
+
+
+def _snapshot(directory: Path) -> dict[str, tuple[int, int, str]]:
+    return {
+        p.name: (p.stat().st_mode, p.stat().st_mtime_ns, sha256_file(p))
+        for p in sorted(directory.iterdir())
+    }
+
+
+def _drill_proofs(args: argparse.Namespace, export: Path) -> tuple[dict[str, Any], list[str]]:
+    code, data, report_file = _drill(args, "drill", "--export-artifact", str(export))
+    results: dict[str, Any] = {"synthetic": _summary(code, data, report_file)}
+    if code != 0 or data.get("verdict") != "passed":
+        return results, ["restore_drill_not_passed"]
+    (manifest,) = export.glob("backup-*.json")
+    record = data["record"]
+    copy = [
+        "--from-manifest",
+        str(manifest),
+        "--expect-finding-id",
+        str(record["finding_id"]),
+        "--expect-finding-code",
+        str(record["finding_code"]),
+    ]
+    before = _snapshot(export)
+    reasons: list[str] = []
+
+    # umask 022 de propósito: a área privada não pode depender do umask de quem chama.
+    code, data, report_file = _drill(
+        args, "copy", *copy, "--expect-database", ORIGIN_DB, umask=0o022
+    )
+    results["copy"] = _summary(code, data, report_file) | {"isolation": data.get("isolation")}
+    if code != 0 or data.get("verdict") != "passed":
+        reasons.append("copy_drill_not_passed")
+    if data.get("isolation") != PRIVATE_AREA:
+        reasons.append("copy_area_not_private")
+
+    code, data, report_file = _drill(
+        args, "copy-foreign", *copy, "--expect-database", FOREIGN_DATABASE, umask=0o022
+    )
+    # No modo cópia não há origem: qualquer cluster na limpeza seria o destino.
+    provisioned = bool((data.get("cleanup") or {}).get("clusters"))
+    results["copy_foreign_database"] = _summary(code, data, report_file) | {
+        "cluster_provisioned": provisioned
+    }
+    refused = (code, data.get("verdict"), data.get("reason")) == (2, "refused", "database_mismatch")
+    if not refused or provisioned:
+        reasons.append("foreign_copy_not_refused")
+
+    results["copy_source_untouched"] = _snapshot(export) == before
+    if not results["copy_source_untouched"]:
+        reasons.append("copy_source_modified")
+    return results, reasons
+
+
+def _run_drills(args: argparse.Namespace, run_id: str) -> tuple[dict[str, Any], list[str]]:
+    """Prova sintética exportando a cópia; depois o modo cópia sobre ela. A cópia
+    exportada vive numa área marcada deste gate e sai junto com ela."""
+    export_id = f"{run_id}-copia"
+    export_root = create_work_dir(args.work_root, export_id)
+    try:
+        results, reasons = _drill_proofs(args, export_root / "artefato")
+    finally:
+        removed = remove_work_dir(export_root, export_id)
+    results["export_removed"] = removed
+    if not removed:
+        reasons.append("export_not_removed")
+    return results, reasons
+
+
+def published_credentials(report: Path) -> list[str]:
+    """Relatórios e logs de ensaio publicados ao lado do relatório do gate que tragam
+    URL com senha embutida."""
+    return sorted(
+        p.name
+        for p in report.parent.glob(f"{report.stem}-*")
+        if p.is_file() and CREDENTIAL_IN_URL.search(p.read_text(encoding="utf-8", errors="replace"))
+    )
 
 
 def gate_cleanup(cluster: Cluster | None, work: Path | None, run_id: str) -> dict[str, Any]:
@@ -186,7 +284,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--require-major", type=int, default=18)
     args = parser.parse_args(argv)
+    # O que o gate e seus processos filhos criarem nasce privado.
+    previous = os.umask(0o077)
+    try:
+        return _gate(args)
+    finally:
+        os.umask(previous)
 
+
+def _gate(args: argparse.Namespace) -> int:
     started = utc_now()
     run_id = f"{started.strftime('%Y%m%dT%H%M%SZ')}-{secrets.token_hex(3)}"
     report: dict[str, Any] = {
@@ -230,9 +336,16 @@ def main(argv: list[str] | None = None) -> int:
     # A prova de restauração só começa com o cluster dos testes confirmado parado e
     # o diretório dele removido.
     if not reasons:
-        report["drill"], drill_passed = _run_drill(args)
-        if not drill_passed:
-            reasons.append("restore_drill_not_passed")
+        try:
+            report["drill"], drill_reasons = _run_drills(args, run_id)
+        except Exception as exc:  # o relatório do gate sai em qualquer desfecho
+            drill_reasons = [f"unexpected_error:{type(exc).__name__}"]
+        reasons += drill_reasons
+
+    leaks = published_credentials(args.report)
+    report["published_scan"] = {"credential_in_url": leaks}
+    if leaks:
+        reasons.append("credential_in_published_output")
 
     report.update(verdict="passed" if not reasons else "failed", reasons=reasons)
     report["finished_at"] = utc_iso(utc_now())

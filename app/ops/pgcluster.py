@@ -14,10 +14,12 @@ Limpeza com escopo: só se remove diretório que carrega o marcador desta execu�
 from __future__ import annotations
 
 import contextlib
+import os
 import re
 import secrets
 import shutil
 import socket
+import stat
 import subprocess
 import sys
 import time
@@ -134,6 +136,38 @@ def verify_restore_target(
         raise DrillRefused("target_not_empty", user_relations=observed.get("user_relations"))
 
 
+# Área do ensaio: privada desde a criação. O modo vai no próprio mkdir/open (o umask
+# só consegue tirar permissão, nunca dar), então não há janela entre criar e restringir.
+PRIVATE_DIR_MODE = 0o700
+PRIVATE_FILE_MODE = 0o600
+_PRIVATE_OPEN_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+
+
+def private_mkdir(path: Path, *, parents: bool = False, exist_ok: bool = False) -> None:
+    path.mkdir(mode=PRIVATE_DIR_MODE, parents=parents, exist_ok=exist_ok)
+    if os.name == "posix":
+        os.chmod(path, PRIVATE_DIR_MODE)  # 0700 mesmo sob umask exótico; grupo/outros fora
+
+
+def private_write(path: Path, data: bytes) -> None:
+    """Cria o arquivo já em 0600 (falha se existir): credencial e manifesto nunca
+    passam por um modo mais aberto."""
+    fd = os.open(path, _PRIVATE_OPEN_FLAGS, PRIVATE_FILE_MODE)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(data)
+
+
+def private_copy(source: Path, target: Path) -> None:
+    """Copia o conteúdo para um arquivo novo em 0600. A origem só é lida."""
+    fd = os.open(target, _PRIVATE_OPEN_FLAGS, PRIVATE_FILE_MODE)
+    with source.open("rb") as src, os.fdopen(fd, "wb") as dst:
+        shutil.copyfileobj(src, dst, 1024 * 1024)
+
+
+def posix_mode(path: Path) -> str:
+    return f"{stat.S_IMODE(path.stat().st_mode):04o}"
+
+
 def ansi_safe(path: Path, platform: str = sys.platform) -> bool:
     """No Windows, initdb/pg_ctl recebem argv na página de código ANSI: um caminho
     não-ASCII pode chegar corrompido ao servidor e quebrar a prova de identidade."""
@@ -147,10 +181,10 @@ def create_work_dir(root: Path, run_id: str) -> Path:
         raise DrillRefused("work_root_not_ascii")
     path = root / f"cartorio-ops-drill-{run_id}"
     try:
-        path.mkdir()
+        private_mkdir(path)
     except FileExistsError as exc:
         raise DrillRefused("work_dir_reused") from exc
-    (path / WORK_MARKER).write_text(run_id, encoding="ascii")
+    private_write(path / WORK_MARKER, run_id.encode("ascii"))
     return path
 
 
@@ -230,12 +264,12 @@ class Cluster:
         return f"cartorio_ops_{self.label}_{self.run_id.replace('-', '_').lower()}"
 
     def initialize(self, env: Mapping[str, str]) -> None:
-        self.root.mkdir()
+        private_mkdir(self.root)
         self.password = secrets.token_urlsafe(24)
         self.token = secrets.token_hex(16)
         self.port = free_port()
         pwfile = self.root / "initdb.pw"
-        pwfile.write_text(self.password, encoding="ascii")
+        private_write(pwfile, self.password.encode("ascii"))
         try:
             result = run_tool(
                 [
@@ -258,7 +292,7 @@ class Cluster:
             pwfile.unlink(missing_ok=True)
         if result.returncode != 0:
             raise DrillFailed("initdb_failed", cluster=self.label, exit_code=result.returncode)
-        (self.data_dir / IDENTITY_FILE).write_text(self.token, encoding="ascii")
+        private_write(self.data_dir / IDENTITY_FILE, self.token.encode("ascii"))
         with (self.data_dir / "postgresql.conf").open("a", encoding="utf-8") as conf:
             conf.write(
                 "\n# cartorio-ops: bancada descartavel (rede so em loopback)\n"

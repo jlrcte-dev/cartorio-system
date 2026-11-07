@@ -635,11 +635,11 @@ def fake_gate(monkeypatch, fake_pg):
         monkeypatch.setattr(pgcluster.Cluster, "prove_identity", prove)
         monkeypatch.setattr(pg_gate, "_run_suite", lambda *args: [])
 
-        def fake_drill(args):
+        def fake_drills(args, run_id):
             drill_runs.append("synthetic")
-            return {"verdict": "passed"}, True
+            return {"synthetic": {"verdict": "passed"}}, []
 
-        monkeypatch.setattr(pg_gate, "_run_drill", fake_drill)
+        monkeypatch.setattr(pg_gate, "_run_drills", fake_drills)
         for name in ("PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE", "PGOPTIONS"):
             monkeypatch.delenv(name, raising=False)
         return drill_runs
@@ -674,3 +674,253 @@ def test_gate_runs_the_restore_proof_only_after_confirmed_cleanup(
     assert report["gate_cleanup"]["confirmed"] is True
     assert drill_runs == ["synthetic"]
     assert list((tmp_path / "work").iterdir()) == []
+
+
+# ---------------------------------------------------------------------------
+# Achado 1 do PR #6: área de trabalho, cópias e credenciais privadas
+# ---------------------------------------------------------------------------
+
+posix_only = pytest.mark.skipif(sys.platform == "win32", reason="modos de arquivo POSIX")
+
+
+def _mode(path: Path) -> int:
+    import stat
+
+    return stat.S_IMODE(path.stat().st_mode)
+
+
+def _snapshot(directory: Path) -> dict[str, tuple[int, int, bytes]]:
+    return {p.name: (_mode(p), p.stat().st_mtime_ns, p.read_bytes()) for p in directory.iterdir()}
+
+
+@posix_only
+def test_copy_mode_is_private_under_umask_022_and_leaves_the_source_untouched(
+    tmp_path: Path, any_work_root
+) -> None:
+    import os
+
+    manifest = _copy_source(tmp_path, "cartorio_lab")
+    for item in manifest.parent.iterdir():
+        item.chmod(0o600)
+    before = _snapshot(manifest.parent)
+    (tmp_path / "raiz").mkdir()
+    previous = os.umask(0o022)  # o cenário do achado: umask permissivo do operador
+    try:
+        ctx = _ctx(tmp_path / "raiz", "r-privado")
+        source = drill._copy_phase(ctx, manifest, 1, "COD-SINTETICO", "cartorio_lab")
+    finally:
+        os.umask(previous)
+
+    artifact_dir = source["dir"]
+    assert _mode(ctx.work) == 0o700 and _mode(artifact_dir) == 0o700
+    assert _mode(ctx.work / WORK_MARKER) == 0o600
+    copies = sorted(artifact_dir.iterdir())
+    assert [p.name for p in copies] == sorted(before)
+    assert {_mode(p) for p in copies} == {0o600}
+    assert {p.name: p.read_bytes() for p in copies} == {k: v[2] for k, v in before.items()}
+    assert _snapshot(manifest.parent) == before  # origem intocada: modo, mtime e conteúdo
+    assert ctx.report["isolation"] == {
+        "work_dir": "0700",
+        "artifact_dir": "0700",
+        "artifact_files": ["0600"],
+    }
+
+
+@posix_only
+def test_credentials_are_private_from_creation(tmp_path: Path, any_work_root, fake_pg) -> None:
+    import os
+
+    class RecordingTools(FakeTools):
+        pwfile_mode: int | None = None
+
+        def __call__(self, cmd, *, env, log, timeout=120):
+            if Path(cmd[0]).name == "initdb":
+                pwfile = Path(next(a for a in cmd if a.startswith("--pwfile=")).split("=", 1)[1])
+                self.pwfile_mode = _mode(pwfile)
+            return super().__call__(cmd, env=env, log=log, timeout=timeout)
+
+    tools = fake_pg(RecordingTools())
+    previous = os.umask(0o022)
+    try:
+        ctx = _ctx(tmp_path, "r-credenciais")
+        cluster = pgcluster.Cluster(
+            label="destino", run_id="r-credenciais", pg_bin=tmp_path, root=ctx.work / "destino"
+        )
+        cluster.initialize({})
+        cluster.port = 15432
+        drill._pgpass(ctx, cluster, "cartorio_drill_destino", "senha-gerada")
+    finally:
+        os.umask(previous)
+    assert tools.pwfile_mode == 0o600  # já 0600 quando o initdb o leu
+    assert not (cluster.root / "initdb.pw").exists()
+    assert _mode(cluster.root) == 0o700
+    assert _mode(ctx.work / "pgpass-destino") == 0o600
+
+
+@posix_only
+def test_area_kept_after_failure_stays_private(tmp_path: Path, any_work_root, fake_pg) -> None:
+    fake_pg(FakeTools())
+    ctx = _ctx(tmp_path, "r-mantida")
+    ctx.clusters.append(_running_cluster(ctx.work, "destino"))
+    cleanup = drill._cleanup(ctx, keep=True)
+    assert cleanup["kept"] == "keep_on_failure"
+    assert _mode(ctx.work) == 0o700
+
+
+def test_copy_mode_is_refused_before_copying_where_isolation_is_unprovable(
+    tmp_path: Path, any_work_root, monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(drill, "copy_mode_supported", lambda: False)
+    for name in ("PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE", "PGOPTIONS"):
+        monkeypatch.delenv(name, raising=False)
+    manifest = _copy_source(tmp_path, "cartorio_lab")
+    before = {p.name: p.read_bytes() for p in manifest.parent.iterdir()}
+    args = _drill_args(
+        tmp_path,
+        "--from-manifest",
+        str(manifest),
+        "--expect-finding-id",
+        "1",
+        "--expect-finding-code",
+        "COD-SINTETICO",
+        "--expect-database",
+        "cartorio_lab",
+    )
+    assert drill.main(args) == 2
+    capsys.readouterr()
+    report = json.loads((tmp_path / "drill.json").read_text(encoding="utf-8"))
+    assert (report["verdict"], report["reason"]) == ("refused", "copy_mode_unsupported_platform")
+    assert report["cleanup"] == {"confirmed": True, "work_dir_created": False}
+    assert list((tmp_path / "work").iterdir()) == []  # nada copiado
+    assert {p.name: p.read_bytes() for p in manifest.parent.iterdir()} == before
+
+
+def test_copy_mode_platform_rule() -> None:
+    assert drill.copy_mode_supported("win32") is False
+    assert drill.copy_mode_supported("linux") is True
+
+
+def test_report_with_a_generated_credential_is_never_written() -> None:
+    report = {"schema": "s", "run_id": "r", "verdict": "passed", "detalhe": "x senha-gerada-123 y"}
+    cleaned = drill.without_secrets(report, ["senha-gerada-123"])
+    assert (cleaned["verdict"], cleaned["reason"]) == ("failed", "secret_in_report")
+    assert "senha-gerada-123" not in json.dumps(cleaned)
+    assert drill.without_secrets(report, ["outra"]) is report
+
+
+# ---------------------------------------------------------------------------
+# Gate: modo cópia ponta a ponta a partir da cópia sintética exportada
+# ---------------------------------------------------------------------------
+
+
+def _scripted_drills(monkeypatch, overrides=None, *, mutate_source=False):
+    """Substitui ``pg_gate._drill``: a prova sintética "exporta" uma cópia; os demais
+    ensaios devolvem o desfecho roteirizado."""
+    healthy = {
+        "drill": (0, {"verdict": "passed", "record": {"finding_id": 7, "finding_code": "DRILL-X"}}),
+        "copy": (0, {"verdict": "passed", "isolation": dict(pg_gate.PRIVATE_AREA)}),
+        "copy-foreign": (
+            2,
+            {"verdict": "refused", "reason": "database_mismatch", "cleanup": {"clusters": {}}},
+        ),
+    }
+    outcomes = healthy | (overrides or {})
+    calls: list[dict] = []
+
+    def fake(args, name, *extra, umask=None):
+        calls.append({"name": name, "extra": extra, "umask": umask})
+        if name == "drill":
+            export = Path(extra[extra.index("--export-artifact") + 1])
+            export.mkdir(parents=True)
+            (export / "backup-20260101T000000Z.json").write_text("{}", encoding="utf-8")
+            (export / "backup-20260101T000000Z.dump").write_bytes(b"sintetico")
+        elif mutate_source:
+            manifest = Path(extra[extra.index("--from-manifest") + 1])
+            manifest.with_suffix(".dump").write_bytes(b"alterado")
+        code, data = outcomes[name]
+        return code, data, f"{name}.json"
+
+    monkeypatch.setattr(pg_gate, "_drill", fake)
+    return calls
+
+
+def test_gate_copy_proofs_restore_the_expected_database_and_refuse_a_foreign_one(
+    tmp_path: Path, monkeypatch
+) -> None:
+    calls = _scripted_drills(monkeypatch)
+    results, reasons = pg_gate._drill_proofs(None, tmp_path / "artefato")
+    assert reasons == []
+    assert [c["name"] for c in calls] == ["drill", "copy", "copy-foreign"]
+    assert calls[0]["umask"] is None
+    assert calls[1]["umask"] == calls[2]["umask"] == 0o022
+    assert calls[1]["extra"][-2:] == ("--expect-database", drill.ORIGIN_DB)
+    assert calls[2]["extra"][-2:] == ("--expect-database", pg_gate.FOREIGN_DATABASE)
+    for call in calls[1:]:
+        assert call["extra"][call["extra"].index("--expect-finding-id") + 1] == "7"
+    assert results["copy"]["isolation"] == pg_gate.PRIVATE_AREA
+    assert results["copy_foreign_database"]["cluster_provisioned"] is False
+    assert results["copy_source_untouched"] is True
+
+
+@pytest.mark.parametrize(
+    ("overrides", "reason"),
+    [
+        ({"copy": (1, {"verdict": "failed", "reason": "restore_failed"})}, "copy_drill_not_passed"),
+        (
+            {"copy": (0, {"verdict": "passed", "isolation": {"work_dir": "0755"}})},
+            "copy_area_not_private",
+        ),
+        (
+            {"copy-foreign": (0, {"verdict": "passed", "cleanup": {"clusters": {"destino": "x"}}})},
+            "foreign_copy_not_refused",
+        ),
+        (
+            {"copy-foreign": (2, {"verdict": "refused", "reason": "copy_incomplete"})},
+            "foreign_copy_not_refused",
+        ),
+    ],
+)
+def test_gate_copy_proofs_fail_on_each_broken_guarantee(
+    tmp_path: Path, monkeypatch, overrides, reason
+) -> None:
+    _scripted_drills(monkeypatch, overrides)
+    _, reasons = pg_gate._drill_proofs(None, tmp_path / "artefato")
+    assert reason in reasons
+
+
+def test_gate_copy_proofs_notice_a_modified_source(tmp_path: Path, monkeypatch) -> None:
+    _scripted_drills(monkeypatch, mutate_source=True)
+    results, reasons = pg_gate._drill_proofs(None, tmp_path / "artefato")
+    assert results["copy_source_untouched"] is False
+    assert "copy_source_modified" in reasons
+
+
+def test_gate_runs_no_copy_proof_without_a_passing_synthetic_drill(
+    tmp_path: Path, monkeypatch
+) -> None:
+    calls = _scripted_drills(monkeypatch, {"drill": (1, {"verdict": "failed"})})
+    _, reasons = pg_gate._drill_proofs(None, tmp_path / "artefato")
+    assert reasons == ["restore_drill_not_passed"]
+    assert [c["name"] for c in calls] == ["drill"]
+
+
+def test_gate_removes_the_exported_copy(tmp_path: Path, any_work_root, monkeypatch) -> None:
+    import argparse
+
+    _scripted_drills(monkeypatch)
+    (tmp_path / "work").mkdir()
+    args = argparse.Namespace(work_root=tmp_path / "work")
+    results, reasons = pg_gate._run_drills(args, "r-gate")
+    assert (reasons, results["export_removed"]) == ([], True)
+    assert list((tmp_path / "work").iterdir()) == []
+
+
+def test_published_files_with_a_password_in_a_url_are_flagged(tmp_path: Path) -> None:
+    report = tmp_path / "gate.json"
+    (tmp_path / "gate-copy.log").write_text(
+        "conectando em postgresql+psycopg://app:segredo-ficticio@127.0.0.1:5432/db", "utf-8"
+    )
+    (tmp_path / "gate-drill.log").write_text("postgresql+psycopg://app:***@127.0.0.1/db", "utf-8")
+    (tmp_path / "gate-drill.json").write_text('{"verdict": "passed"}', "utf-8")
+    (tmp_path / "outro.log").write_text("postgresql://app:segredo@127.0.0.1/db", "utf-8")
+    assert pg_gate.published_credentials(report) == ["gate-copy.log"]
