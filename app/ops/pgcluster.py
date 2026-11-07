@@ -313,9 +313,9 @@ class Cluster:
     def connect(
         self, dbname: str = "postgres", user: str = SUPERUSER, password: str | None = None
     ) -> psycopg.Connection[tuple[Any, ...]]:
+        host = self.address()  # o guarda vem antes até de importar o driver
         import psycopg
 
-        host = self.address()
         return psycopg.connect(
             host=host,
             hostaddr=host,
