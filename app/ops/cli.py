@@ -31,6 +31,8 @@ from app.ops.report import (
     Clock,
     Status,
     internal_error_report,
+    mark_output_not_published,
+    mark_output_published,
     utc_now,
     write_json_atomic,
 )
@@ -86,17 +88,17 @@ def _check(
         )
     except Exception as exc:  # o verificador nunca termina sem dizer por quê
         report = internal_error_report(clock(), exc, invocation)
-    print(json.dumps(report, ensure_ascii=False, indent=None if args.compact else 2))
-    code = int(report["exit_code"])
+    # O resultado final é decidido antes de imprimir: stdout, arquivo e código de saída
+    # precisam dizer a mesma coisa.
     if args.output is not None:
+        mark_output_published(report)
         try:
             write_json_atomic(args.output, report)
         except OSError as exc:
+            mark_output_not_published(report, type(exc).__name__)
             print(f"ERRO: relatório não publicado ({type(exc).__name__}).", file=sys.stderr)
-            # Sem relatório persistido o alerta não tem evidência: nunca sair como saudável.
-            if code == 0:
-                code = EXIT_INCONCLUSIVE
-    return code
+    print(json.dumps(report, ensure_ascii=False, indent=None if args.compact else 2))
+    return int(report["exit_code"])
 
 
 def _alert(args: argparse.Namespace, environ: Mapping[str, str], clock: Clock) -> int:

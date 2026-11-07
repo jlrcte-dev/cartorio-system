@@ -137,8 +137,34 @@ def build_report(
         "exit_code": EXIT_CODES[status],
         "release": release or {"id": None},
         "config_errors": sorted(config_errors or []),
+        "output": {"requested": False},
         "checks": {c.name: c.as_dict() for c in checks},
     }
+
+
+def mark_output_published(report: dict[str, Any]) -> None:
+    report["output"] = {"requested": True, "published": True}
+
+
+def mark_output_not_published(report: dict[str, Any], error_class: str) -> None:
+    """Arquivo pedido e não publicado: sem ele o alerta não tem evidência desta execução.
+
+    Checagens saudáveis viram inconclusivo; falha ou inconclusivo já detectados ficam como
+    estão (falha continua vencendo). Chamado ANTES de imprimir: stdout e código de saída
+    precisam dizer a mesma coisa.
+    """
+    report["output"] = {
+        "requested": True,
+        "published": False,
+        "reason": "output_not_published",
+        "error_class": error_class,
+    }
+    if report["overall"] == Status.OK.value:
+        report.update(
+            overall=Status.INCONCLUSIVE.value,
+            reason="output_not_published",
+            exit_code=EXIT_CODES[Status.INCONCLUSIVE],
+        )
 
 
 def internal_error_report(

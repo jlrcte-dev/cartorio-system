@@ -95,6 +95,7 @@ def test_envelope_has_versioned_schema_and_utc_instant() -> None:
         "exit_code",
         "release",
         "config_errors",
+        "output",
         "checks",
     }
     check = report["checks"]["api"]

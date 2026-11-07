@@ -363,3 +363,76 @@ def test_invocation_id_is_recorded_only_when_well_formed(bench, tmp_path, capsys
     env = _full_env(bench, tmp_path, CARTORIO_OPS_CHECKS="api", INVOCATION_ID="nao-e-hex")
     _, report = _main(capsys, env)
     assert report["invocation_id"] is None
+
+
+# ---------------------------------------------------------------------------
+# Achado 4 do PR #6: o JSON de stdout concorda com o código real do processo
+# ---------------------------------------------------------------------------
+
+
+def _backup_only_env(tmp_path: Path, scenario: str) -> dict[str, str]:
+    """Só a checagem de backup: saudável, falha (cópia vencida) ou inconclusiva."""
+    backups = tmp_path / "b"
+    if scenario == "healthy":
+        write_publication(backups, utc_now() - timedelta(hours=1))
+    elif scenario == "failing":
+        write_publication(backups, utc_now() - timedelta(hours=40))
+    env = {
+        "CARTORIO_OPS_CHECKS": "backup",
+        "CARTORIO_OPS_BACKUP_MAX_AGE_HOURS": "26",
+        "CARTORIO_OPS_BACKUP_EXPECTED_DATABASE": "cartorio_lab",
+    }
+    if scenario != "inconclusive":
+        env["CARTORIO_OPS_BACKUP_DIR"] = str(backups)
+    return clean_env(**env)
+
+
+@pytest.mark.parametrize(
+    ("scenario", "exit_code", "overall", "reason"),
+    [
+        ("healthy", 2, "inconclusive", "output_not_published"),
+        ("failing", 1, "fail", "check_failed"),
+        ("inconclusive", 2, "inconclusive", "check_inconclusive"),
+    ],
+)
+def test_unpublished_output_keeps_stdout_and_exit_code_in_agreement(
+    tmp_path: Path, scenario: str, exit_code: int, overall: str, reason: str
+) -> None:
+    blocker = tmp_path / "arquivo-no-lugar-do-diretorio"
+    blocker.write_text("x", encoding="utf-8")
+    result = run_cli(
+        "check",
+        "--compact",
+        "--output",
+        str(blocker / "last-check.json"),
+        env=_backup_only_env(tmp_path, scenario),
+    )
+    report = json.loads(result.stdout)
+    assert result.returncode == exit_code == report["exit_code"]
+    assert (report["overall"], report["reason"]) == (overall, reason)
+    assert report["output"]["published"] is False
+    assert report["output"]["reason"] == "output_not_published"
+    assert str(tmp_path) not in result.stdout  # caminho do arquivo não vaza no JSON
+
+
+@pytest.mark.parametrize(
+    ("scenario", "exit_code"), [("healthy", 0), ("failing", 1), ("inconclusive", 2)]
+)
+def test_published_output_equals_stdout_and_exit_code(
+    tmp_path: Path, scenario: str, exit_code: int
+) -> None:
+    output = tmp_path / "estado" / "last-check.json"
+    result = run_cli(
+        "check", "--compact", "--output", str(output), env=_backup_only_env(tmp_path, scenario)
+    )
+    report = json.loads(result.stdout)
+    assert json.loads(output.read_text(encoding="utf-8")) == report
+    assert result.returncode == exit_code == report["exit_code"]
+    assert report["output"] == {"requested": True, "published": True}
+
+
+def test_without_output_the_envelope_says_so(tmp_path: Path) -> None:
+    result = run_cli("check", "--compact", env=_backup_only_env(tmp_path, "healthy"))
+    report = json.loads(result.stdout)
+    assert (result.returncode, report["exit_code"]) == (0, 0)
+    assert report["output"] == {"requested": False}
