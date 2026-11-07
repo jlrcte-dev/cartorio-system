@@ -48,19 +48,26 @@ Marcação: **OK** (observado, com evidência) · **PENDENTE** (sem observação
 - Copiar `backup-<carimbo>.dump` e `.json` para o PC dedicado; conferir o SHA-256 contra o
   manifesto na origem e no destino da cópia.
 - Restaurar em destino isolado criado pelo próprio ensaio (loopback, credencial gerada,
-  sem acesso à rede da serventia). Valores de exemplo — troque pelos reais:
+  sem acesso à rede da serventia). O modo cópia só roda em Linux: no Windows é recusado
+  antes de copiar (`copy_mode_unsupported_platform`). Se o PC dedicado for Windows, o
+  ambiente Linux da restauração é decisão desta janela. Valores de exemplo — troque pelos
+  reais:
 
   ```bash
   PG_BIN=/usr/lib/postgresql/18/bin          # ferramentas da mesma versão principal do servidor
-  TRABALHO=/srv/ensaio                       # diretório de trabalho (ASCII no Windows)
+  TRABALHO=$(mktemp -d)                      # raiz nova, só do operador (0700)
   MANIFESTO=/srv/copias/backup-20260101T000000Z.json   # o .json ao lado do .dump copiado
   ACHADO_ID=1; ACHADO_COD=CODIGO-CONHECIDO   # registro que se sabe existir na cópia
+  BANCO=cartorio_lab                         # banco de que a cópia precisa ser (à parte)
   python -m app.ops.drill --pg-bin "$PG_BIN" --work-root "$TRABALHO" \
       --report "$TRABALHO/restauracao-pc-dedicado.json" --from-manifest "$MANIFESTO" \
-      --expect-finding-id "$ACHADO_ID" --expect-finding-code "$ACHADO_COD"
+      --expect-finding-id "$ACHADO_ID" --expect-finding-code "$ACHADO_COD" \
+      --expect-database "$BANCO"
   ```
-- Fecha quando: `verdict=passed`, revisão Alembic igual à da release, registro conhecido
-  conferido pela API do destino, relatório guardado com seu SHA-256.
+- Fecha quando: `verdict=passed`, banco do manifesto conferido
+  (`artifact.database_matched`), revisão Alembic igual à da release, registro conhecido
+  conferido pela API do destino, `cleanup.confirmed`, área em `0700`/`0600` (`isolation`),
+  relatório guardado com seu SHA-256.
 
 ### 4. Separado: partida após reboot do **host físico** (Proxmox) — PENDENTE
 

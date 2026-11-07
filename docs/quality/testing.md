@@ -181,9 +181,12 @@ Os testes `tests/test_ops_*.py` ficam em dois grupos:
   obrigatório (`CARTORIO_OPS_REQUIRE_SYSTEMD_ANALYZE=1` transforma o pulo em falha).
 - **Gate PostgreSQL** (`scripts/ops/pg_gate.py`, job `postgres-gate`):
   `tests/test_postgres_compat.py` (PR #5, inalterado) e `tests/test_ops_postgres.py`, que
-  reaproveita a fixture e as proteções do PR #5, mais o ensaio `python -m app.ops.drill`.
-  Ali, **teste pulado reprova o gate** — prova obrigatória não passa por configuração
-  ausente. Procedimento em [`../operations/how_to_run.md`](../operations/how_to_run.md) § 9.
+  reaproveita a fixture e as proteções do PR #5, mais o ensaio `python -m app.ops.drill`
+  (sintético e, sobre a cópia exportada, modo cópia com banco certo e com banco
+  divergente). Ali, **teste pulado reprova o gate** — prova obrigatória não passa por
+  configuração ausente. Os testes da área privada sob umask `022` só rodam em POSIX e têm
+  passo próprio com `-rA` no mesmo job. Procedimento em
+  [`../operations/how_to_run.md`](../operations/how_to_run.md) § 9.
 
 ## Lacunas conhecidas
 

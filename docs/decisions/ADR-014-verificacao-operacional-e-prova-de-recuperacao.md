@@ -39,19 +39,26 @@ publicada de fato restaura.
    estado e motivo estável por checagem. Códigos: `0` saudável (todas as obrigatórias
    comprovadas), `1` falha detectada, `2` inconclusivo. Precedência: falha > inconclusivo
    > ok. Nada de DSN, host, usuário, mensagem de exceção ou conteúdo do banco na saída.
+   O JSON impresso é o resultado final, igual ao arquivo publicado; se a publicação falhar
+   com as checagens saudáveis, o resultado é inconclusivo (`output_not_published`).
 3. **Backup avaliado pela evidência que a rotina já publica**, sem alterar a rotina: a idade
    vem do ponto de recuperação do manifesto (nunca do mtime); a integridade é o digest
    recalculado contra o manifesto do mesmo artefato; publicação parcial é indisponível, e
    além de uma carência curta vira falha (`unverifiable_copy`); referência fora do
-   diretório é recusada; cópia recente, integridade verificada e restauração testada são
-   sinais distintos; tentativa nova falha e cópia anterior válida aparecem juntas.
+   diretório é recusada; a publicação precisa ser do banco esperado (nome inequívoco da
+   DSN e/ou variável explícita, coerentes — sem ele, inconclusivo); cópia recente,
+   integridade verificada e restauração testada são sinais distintos; tentativa nova falha
+   e cópia anterior válida aparecem juntas.
 4. **Alerta por código de saída**: agenda própria (independente do timer do backup) e
    `OnFailure=` para uma unidade que converte o relatório em alerta num spool local. O
    canal definitivo é decisão de implantação, sobre o mesmo payload.
 5. **Prova de recuperação só em bancada descartável** (`python -m app.ops.drill`): o ensaio
    nunca recebe DSN; cria origem e destino próprios, em loopback, com credencial gerada, e
    comprova a identidade antes de qualquer escrita. Recusa alvo externo, reaproveitado ou
-   sem identidade comprovada; limpa só o que criou, inclusive em falha.
+   sem identidade comprovada; limpa só o que criou, inclusive em falha, e só depois de
+   confirmar a parada de todos os clusters (parada incerta preserva a área e reprova). A
+   área de trabalho é privada desde a criação. O modo cópia exige o banco esperado
+   informado à parte e só roda em Linux.
 6. **Gate PostgreSQL separado** no CI (`postgres-gate`, PostgreSQL 18 do PGDG), com o mesmo
    comando local (`scripts/ops/pg_gate.py`): suíte do PR #5 + cenários do verificador +
    ensaio de recuperação. Prova obrigatória pulada reprova o gate. O gate SQLite fica como

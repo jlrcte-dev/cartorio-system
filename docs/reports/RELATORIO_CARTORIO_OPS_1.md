@@ -87,6 +87,48 @@ backup existente. O job SQLite do CI ficou intacto (o diff do workflow é só de
    e `-rA` deixa o `PASSED` nominal no log.
 4. `apt-get update` antes da instalação do PGDG, para não depender do cache do runner.
 
+## Correções da revisão do PR #6
+
+Quatro achados da revisão, cada um com teste de regressão, em commits aditivos sobre
+`95c0c27`. Ficaram intocados a API, o domínio, as migrations, a rotina de backup, as
+proteções de identidade dos clusters e a correlação do alerta por execução do systemd.
+
+| # | Achado | Correção | Testes |
+|---|---|---|---|
+| 1 | Sob umask `022`, o modo cópia deixava a cópia do dump em `0644` dentro de diretórios `0755`; o runbook sugeria `--work-root /tmp` | Diretórios `0700` e arquivos `0600` criados já com o modo (dump e manifesto copiados, `pgpass`, senha do `initdb`, marcador, identidade); ensaio e gate sob umask `077`; modos registrados no relatório (`isolation`); relatório com credencial gerada não é gravado (`secret_in_report`); **no Windows o modo cópia é recusado antes de copiar** (`copy_mode_unsupported_platform`); exemplos com `mktemp -d` | `test_copy_mode_is_private_under_umask_022_and_leaves_the_source_untouched`, `test_credentials_are_private_from_creation`, `test_area_kept_after_failure_stays_private` (POSIX); `test_copy_mode_is_refused_before_copying_where_isolation_is_unprovable`; `test_report_with_a_generated_credential_is_never_written`; no gate, modo cópia ponta a ponta sob umask `022` |
+| 2 | Manifesto de outro banco passava como cópia válida | Banco esperado pelo nome inequívoco da DSN PostgreSQL e/ou `CARTORIO_OPS_BACKUP_EXPECTED_DATABASE` (coerentes; `dbname`/`service`/`servicefile` na query tornam a DSN ambígua; ausência ou ambiguidade é inconclusivo); comparação antes de a cópia contar como válida (`database_mismatch`, sem nomes no JSON); o ensaio usa a mesma validação, com `--expect-database` obrigatório no modo cópia | `test_ops_backup.py` (banco certo, banco estranho, cópia anterior correta mantida como último ponto válido, DSN ambígua, conflito, ausência, nome inválido); `test_copy_of_another_database_is_refused_before_restoring`; no gate, banco divergente recusado sem cluster |
+| 3 | Parada que falhava ainda resultava em `passed`, saída 0, `clusters_stopped=false` e diretório removido; timeout na partida podia deixar postmaster ativo | Estado por cluster (não iniciado, parado confirmado, incerto); parada tentada em todos mesmo com falha ou exceção; remoção só com todas as paradas confirmadas por `pg_ctl status` — senão a área fica preservada, com diagnóstico; `passed` exige `cleanup.confirmed` (`cleanup_unconfirmed`); o gate só começa a prova de restauração depois da limpeza confirmada | Falhas induzidas em `test_ops_drill.py`: timeout na partida, exceção e falha na parada, remoção que falha, falha original preservada, ensaio completo com cluster possivelmente ativo e gate sem restauração |
+| 4 | Com `--output` falhando e checagens saudáveis, o stdout dizia `ok`/0 e o processo saía 2 | Resultado final fechado antes de imprimir; bloco `output` no envelope; saudável vira `inconclusive`/`output_not_published` (2), falha continua `fail` (1); stdout igual ao arquivo quando publicado | `test_unpublished_output_keeps_stdout_and_exit_code_in_agreement` (saudável, falha e inconclusivo), `test_published_output_equals_stdout_and_exit_code`, `test_without_output_the_envelope_says_so` |
+
+**Antes e depois (bancada local, dados sintéticos, códigos de saída reais).** Antes da
+correção:
+- cópia de outro banco → `ok`;
+- parada que falha → diretório removido com `clusters_stopped=false`;
+- `--output` inválido → stdout `ok`/0 com saída real 2.
+
+Depois:
+- cópia de outro banco → `fail`/`database_mismatch`, sem nomes no JSON;
+- com uma cópia anterior correta, `last_valid_copy` e `age` ficam `ok` e o `last_copy` falha;
+- sem banco esperado → `inconclusive`/`expected_database_missing`;
+- parada que falha → área preservada, `confirmed=false`, e um ensaio aprovado vira
+  `failed`/`cleanup_unconfirmed`;
+- `--output` inválido → stdout `inconclusive`/`output_not_published`/2, saída real 2;
+- `--output` válido → saída 0, com o arquivo igual ao stdout;
+- modo cópia nesta bancada Windows → `refused`/`copy_mode_unsupported_platform`, saída 2,
+  nada criado na raiz e origem intocada.
+
+Os modos `0700`/`0600` sob umask `022` só existem em POSIX: a prova é do CI Linux (testes
+acima com `-rA` e o modo cópia do gate).
+
+Prova local desta rodada:
+- `ruff format --check` e `ruff check` limpos;
+- `pytest -q` com **1576 passed, 17 skipped**: os 3 skips novos são os testes POSIX da área
+  privada;
+- Alembic em SQLite temporário: `upgrade`/`current`/`heads` em `f4a5b6c7d8e9`, e `check`
+  sem operação pendente; `cartorio.db` ausente antes e depois.
+
+O resultado do CI fica no PR.
+
 ## Decisões assumidas (reversíveis)
 
 1. **Local do código:** `app/ops/` (vai junto com a release, sem importar módulos de
@@ -116,6 +158,8 @@ backup existente. O job SQLite do CI ficou intacto (o diff do workflow é só de
     execução e vazio; origem desligada antes da consulta.
 11. **CI:** PostgreSQL 18 do PGDG sem cluster padrão; o gate cria os seus. Teste pulado
     reprova.
+12. **Modo cópia no Windows:** recusado antes de copiar, em vez de verificar ACL — lá o
+    isolamento da cópia dependeria da ACL herdada da raiz escolhida.
 
 ## Comandos e resultados (prova local, não é resultado de GitHub Actions)
 
@@ -206,6 +250,8 @@ autorizado: `gitleaks git --log-opts="c49c6579..sprint/cartorio-ops-1"`.
 - **Comportamentos de plataforma achados na bancada:** no Windows, recusa de conexão em
   loopback chega como `ConnectionTimeout` do psycopg; `initdb` exige diretório ASCII.
 - **Tempos de bancada não são RTO:** o ensaio registra os tempos como medição de bancada.
+- **Modo cópia só em Linux:** se o PC dedicado for Windows, a restauração isolada do
+  item 3 do checklist precisa de um ambiente Linux, decidido na janela.
 
 ## Passos da janela de implantação
 

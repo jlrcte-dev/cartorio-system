@@ -194,7 +194,8 @@ REDE FÍSICA
 > PostgreSQL descartável — origem e destino criados pelo próprio ensaio, identidade
 > comprovada — e grava um relatório com integridade, release, ponto de recuperação, início,
 > fim e duração até a primeira consulta bem-sucedida. O mesmo formato serve à recuperação
-> de uma cópia guardada fora da VM (`--from-manifest`). Tempos de bancada não valem como
+> de uma cópia guardada fora da VM (`--from-manifest`, em Linux e com o banco esperado
+> informado à parte). Tempos de bancada não valem como
 > RTO de produção. Itens da primeira janela real:
 > [`../operations/ops_window_checklist.md`](../operations/ops_window_checklist.md).
 
