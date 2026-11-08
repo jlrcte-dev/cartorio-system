@@ -12,8 +12,12 @@ próprios, em loopback, com credencial gerada e descartada pelo ``app.ops.drill`
    sinal da aplicação para → o observador acusa a perda do sinal e mantém a última cópia
    válida → ``app.ops.drill`` restaura usando só o manifesto da geração no destino.
 3. **Saída:** só um resumo sintético (SHA, versão, resultado de cada prova, limpeza),
-   conferido contra credencial antes de impresso. Logs brutos nunca saem; a área é
-   removida no fim.
+   conferido contra credencial antes de impresso. Logs brutos nunca saem.
+4. **Limpeza:** os ensaios rodam com a área deste passo como raiz, então a área deles fica
+   DENTRO dela. Ela só sai quando cada ensaio confirmou a própria limpeza; senão (parada
+   inconclusiva, falha, prazo, relatório ausente, interrupção), os clusters que ficaram
+   são parados e confirmados por ``pg_ctl status`` antes. Parada incerta preserva a área
+   para diagnóstico e reprova o passo.
 
 Uso: python scripts/ops/offsite_gate.py --pg-bin /usr/lib/postgresql/18/bin --work-root DIR
 """
@@ -39,12 +43,17 @@ from app.ops.backup import sha256_file
 from app.ops.drill import ORIGIN_DB
 from app.ops.offsite import GENERATIONS
 from app.ops.pgcluster import (
+    IDENTITY_FILE,
+    STOPPED_STATES,
+    WORK_MARKER,
+    Cluster,
     DrillRefused,
     create_work_dir,
     private_mkdir,
     remove_work_dir,
     require_clean_libpq_env,
     run_tool,
+    stop_all,
     subprocess_env,
 )
 from app.ops.report import CheckResult, Status, build_report, utc_now, write_json_atomic
@@ -105,9 +114,77 @@ def e2e_reasons(facts: dict[str, Any]) -> list[str]:
     if not facts.get("origin_removed_before_restore"):
         reasons.append("origin_still_present")
     reasons += [f"restore_{name}" for name in RESTORE_CHECKS if not restore.get(name)]
+    cleanup = facts.get("work_cleanup") or {}
+    drills = cleanup.get("drills") or {}
+    if not drills or any(state != "confirmed" for state in drills.values()):
+        reasons.append("drill_cleanup_unconfirmed")
+    if cleanup.get("work_preserved"):
+        reasons.append("work_preserved_cluster_stop_unconfirmed")
     if not facts.get("work_removed"):
         reasons.append("work_not_removed")
     return reasons
+
+
+def drill_cleanup_state(report: dict[str, Any]) -> str:
+    """O que o pai sabe da limpeza de um ensaio filho: só ``confirmed`` dispensa a
+    varredura dos clusters que ele pode ter deixado."""
+    cleanup = report.get("cleanup")
+    if not report or not isinstance(cleanup, dict):
+        return "no_report"
+    return "confirmed" if cleanup.get("confirmed") is True else "unconfirmed"
+
+
+def stop_leftover_clusters(work: Path, pg_bin: Path) -> dict[str, int]:
+    """Para e confirma, com as garantias do próprio ensaio, cada cluster que um filho pode
+    ter deixado: área com o marcador de execução de ensaio e ``<rótulo>/data`` com o token
+    de identidade. Sem token o cluster nunca partiu (o ``initialize`` grava o token antes
+    de qualquer ``start``). Devolve só contagens por estado."""
+    counts = {"stopped": 0, "not_started": 0, "uncertain": 0}
+    env = subprocess_env(os.environ)
+    try:
+        for area in sorted(work.iterdir()):
+            marker = area / WORK_MARKER
+            if area.is_symlink() or not area.is_dir() or not marker.is_file():
+                continue
+            run_id = marker.read_text(encoding="ascii")
+            for root in sorted(area.iterdir()):
+                data = root / "data"
+                if root.is_symlink() or not data.is_dir():
+                    continue
+                if not (data / IDENTITY_FILE).is_file():
+                    counts["not_started"] += 1
+                    continue
+                cluster = Cluster(
+                    label=root.name, run_id=run_id, pg_bin=pg_bin, root=root, state="uncertain"
+                )
+                state = stop_all([cluster], env)[root.name]
+                counts["stopped" if state in STOPPED_STATES else "uncertain"] += 1
+    except (OSError, UnicodeDecodeError):
+        counts["uncertain"] += 1
+    return counts
+
+
+def work_cleanup(args: argparse.Namespace, work: Path, run_id: str) -> dict[str, Any]:
+    """Remove a área do passo só depois de os clusters dos ensaios filhos estarem parados
+    e confirmados; parada incerta preserva a área privada para diagnóstico.
+
+    A varredura roda sempre, não só quando um ensaio deixou de confirmar a limpeza: quem
+    decide é o que está no disco. Ensaio que limpou a própria área não deixa nada para ela
+    encontrar, e nenhum ``pg_ctl`` é chamado."""
+    leftover = stop_leftover_clusters(work, args.pg_bin)
+    preserved = leftover["uncertain"] > 0
+    if preserved:
+        print(
+            "[ops2] cluster possivelmente ativo: área de trabalho preservada para diagnóstico "
+            "(pg_ctl status -D <área do passo>/<área do ensaio>/<rótulo>/data)",
+            file=sys.stderr,
+        )
+    return {
+        "drills": dict(args.drills),
+        "leftover_clusters": leftover,
+        "work_preserved": preserved,
+        "removed": not preserved and remove_work_dir(work, run_id),
+    }
 
 
 def restore_facts(
@@ -212,12 +289,19 @@ def _drill(args: argparse.Namespace, raw: Path, name: str, *extra: str) -> tuple
     report, log = raw / f"{name}.json", raw / f"{name}.log"
     cmd = [sys.executable, "-m", "app.ops.drill", "--pg-bin", str(args.pg_bin)]
     cmd += ["--work-root", str(args.work), "--report", str(report), *extra]
+    # Registrado ANTES de rodar: uma interrupção no meio deixa o ensaio como não confirmado.
+    args.drills[name] = "running"
     previous = os.umask(0o022)  # a área privada não pode depender do umask de quem chama
     try:
         proc = run_tool(cmd, env=subprocess_env(os.environ), log=log, timeout=1200)
+    except subprocess.TimeoutExpired:
+        args.drills[name] = "timeout"
+        return -1, {}
     finally:
         os.umask(previous)
-    return proc.returncode, _json(report)
+    data = _json(report)
+    args.drills[name] = drill_cleanup_state(data)
+    return proc.returncode, data
 
 
 def _signal(path: Path) -> None:
@@ -329,13 +413,16 @@ def _gate(args: argparse.Namespace) -> int:
         print(f"[ops2] reprovado: área de trabalho recusada ({exc})")
         return 1
     args.work = work
+    args.drills = {}
     raw = work / "bruto"
     private_mkdir(raw)
     try:
         posix, reasons = _posix(raw)
         facts = _end_to_end(args, raw)
     finally:
-        removed = remove_work_dir(work, run_id)
+        cleanup = work_cleanup(args, work, run_id)
+    removed = cleanup.pop("removed")
+    facts["work_cleanup"] = cleanup
     facts["work_removed"] = removed and not work.exists()
     reasons += e2e_reasons(facts)
     summary = {

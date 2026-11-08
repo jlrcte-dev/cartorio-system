@@ -65,9 +65,11 @@ serventia (incêndio, furto, inundação), que fica para planejamento próprio.
    - `offsite_copy`: integridade e idade da cópia pelo ponto de recuperação do manifesto.
 
    A última cópia válida sai sempre à parte, como evidência independente. A saída
-   `cartorio_system.ops.offsite_observation` 1.0 tem só estados e motivos estáveis: texto
-   livre vindo do relatório vira `unrecognized`, e caminhos e nome de banco não saem.
-   Limiares configuráveis, com valores de laboratório.
+   `cartorio_system.ops.offsite_observation` 1.0 tem só estados e motivos estáveis: do
+   relatório só passam nome de checagem, estado e motivo do vocabulário do contrato
+   `cartorio_system.ops.check` 1.0, e o resto — mesmo no formato de um código — vira
+   `unrecognized`; caminhos e nome de banco não saem. Limiares configuráveis, positivos e
+   finitos, com valores de laboratório.
 4. **Fora deste piloto:** transporte de rede entre VM e destino, agenda definitiva, envio
    de alertas, retenção com exclusão, troca da rotina de backup, imagens de VM e Engegraph.
 

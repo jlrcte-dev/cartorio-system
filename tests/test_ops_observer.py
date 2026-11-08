@@ -6,9 +6,11 @@ nunca acessa banco.
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -125,6 +127,10 @@ def _check_doc(**fields) -> bytes:
         (_check_doc(schema_version="2.0"), "schema_version"),
         (_check_doc(generated_at="ontem", overall="ok"), "generated_at"),
         (_check_doc(generated_at="2026-11-07T11:50:00Z", overall="talvez"), "overall"),
+        (_check_doc(generated_at="2026-11-07T11:50:00Z", overall=[]), "overall"),
+        (_check_doc(generated_at="2026-11-07T11:50:00Z", overall={}), "overall"),
+        (_check_doc(generated_at="2026-11-07T11:50:00Z", overall=["ok"]), "overall"),
+        (_check_doc(generated_at="2026-11-07T11:50:00Z", overall=None), "overall"),
     ],
 )
 def test_invalid_report_is_a_signal_failure_and_no_check_is_assumed(
@@ -139,6 +145,19 @@ def test_invalid_report_is_a_signal_failure_and_no_check_is_assumed(
     assert result["signals"]["application_signal"]["detail"] == detail
     assert result["signals"]["last_check"] == {"status": "not_evaluated", "reason": "check_unknown"}
     assert result["signals"]["offsite_copy"]["reason"] == "copy_fresh"
+
+
+@pytest.mark.parametrize("value", [[], {}], ids=["lista", "objeto"])
+def test_unhashable_overall_keeps_reading_the_copy_and_its_evidence(tmp_path, copies, value):
+    """Lista ou objeto em ``overall`` levantava TypeError antes de a cópia ser lida."""
+    path = tmp_path / "last-check.json"
+    path.write_bytes(_check_doc(generated_at="2026-11-07T11:50:00Z", overall=value))
+
+    result = look(path, copies)
+
+    assert summary(result) == ("fail", "signal_invalid", 1)
+    assert result["signals"]["offsite_copy"]["reason"] == "copy_fresh"
+    assert result["last_valid_copy"]["stamp"] == stamp_of(RECENT)
 
 
 def test_oversized_or_non_file_signal_is_invalid(tmp_path, copies):
@@ -285,6 +304,143 @@ def test_free_text_from_the_report_never_reaches_the_output(tmp_path, copies):
     assert result["signals"]["last_check"]["problems"][0]["reason"] == "unrecognized"
 
 
+# 48 hexadecimais começando por letra: passava no formato de código que o observador
+# aceitava antes. Fictício.
+HEX_FICTICIO = "f3c9a1e07b5d2c8f" * 3
+FORMATO_ANTIGO = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+
+
+def _report_with(**overrides) -> dict:
+    report = build_report(
+        [*healthy_checks()[:3], CheckResult("database", Status.FAIL, "unavailable")],
+        NOW - timedelta(minutes=5),
+    )
+    report.update(overrides)
+    return report
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        _report_with(reason=HEX_FICTICIO),
+        _report_with(checks={HEX_FICTICIO: {"status": "fail", "reason": "unavailable"}}),
+        _report_with(checks={"database": {"status": HEX_FICTICIO, "reason": "unavailable"}}),
+        _report_with(checks={"database": {"status": "fail", "reason": HEX_FICTICIO}}),
+    ],
+    ids=["motivo_do_relatorio", "nome_da_checagem", "status_da_checagem", "motivo_da_checagem"],
+)
+def test_value_in_code_format_but_outside_the_contract_never_reaches_the_output(
+    tmp_path, copies, capsys, report
+):
+    assert len(HEX_FICTICIO) == 48 and FORMATO_ANTIGO.match(HEX_FICTICIO)
+    path = tmp_path / "last-check.json"
+    write_json_atomic(path, report)
+
+    result = look(path, copies)
+    argv = ["--signal", str(path), "--copies", str(copies), "--expected-database", DB]
+    observer.main(argv, clock=fixed_clock())
+    printed = capsys.readouterr().out
+
+    assert HEX_FICTICIO not in json.dumps(result) and HEX_FICTICIO not in printed
+    assert summary(result) == ("fail", "check_failed", 1)
+    check = result["signals"]["last_check"]
+    assert set(check) == {"status", "reason", "generated_at", "reported_reason", "problems"}
+    assert check["problems"]
+    assert all(set(item) == {"check", "status", "reason"} for item in check["problems"])
+    assert "unrecognized" in json.dumps(check)
+
+
+def test_known_codes_of_the_contract_are_kept(tmp_path, copies):
+    checks = [
+        CheckResult("alembic", Status.OK, "revision_match"),
+        CheckResult("api", Status.INCONCLUSIVE, "systemctl_timeout"),
+        CheckResult("backup", Status.FAIL, "backup_stale"),
+        CheckResult("database", Status.FAIL, "auth_failed"),
+    ]
+    path = write_signal(tmp_path / "last-check.json", NOW - timedelta(minutes=5), checks)
+
+    check = look(path, copies)["signals"]["last_check"]
+
+    assert check["reported_reason"] == "check_failed"
+    assert check["problems"] == [
+        {"check": "api", "status": "inconclusive", "reason": "systemctl_timeout"},
+        {"check": "backup", "status": "fail", "reason": "backup_stale"},
+        {"check": "database", "status": "fail", "reason": "auth_failed"},
+    ]
+
+
+_VERIFIER_MODULES = ("report", "checks", "backup", "systemd", "verifier")
+
+
+def _reason_literals_emitted_by_the_verifier() -> set[str]:
+    """Literais nas posições de motivo do verificador: argumento de ``signal``/``single``/
+    ``ProbeError``/``SystemctlError``/``CheckResult``/``Evaluation``, ``empty_reason=``,
+    atribuição a ``reason`` e o par ``(…, "motivo")`` devolvido pelas funções de apoio."""
+    positions = {
+        "signal": 1,
+        "single": 3,
+        "ProbeError": 1,
+        "SystemctlError": 0,
+        "CheckResult": 2,
+        "Evaluation": 2,
+    }
+
+    def literals(node: ast.AST) -> list[str]:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return [node.value]
+        if isinstance(node, ast.IfExp):
+            return literals(node.body) + literals(node.orelse)
+        if isinstance(node, ast.BoolOp):
+            return [v for value in node.values for v in literals(value)]
+        return []
+
+    found: set[str] = set()
+    for module in _VERIFIER_MODULES:
+        tree = ast.parse((REPO_ROOT / "app" / "ops" / f"{module}.py").read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                func = node.func
+                name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+                if name in positions and len(node.args) > positions[name]:
+                    found.update(literals(node.args[positions[name]]))
+                for keyword in node.keywords:
+                    if keyword.arg in ("reason", "empty_reason"):
+                        found.update(literals(keyword.value))
+            elif isinstance(node, ast.Assign):
+                for target in node.targets:
+                    named = isinstance(target, ast.Name) and target.id == "reason"
+                    keyed = isinstance(target, ast.Subscript) and literals(target.slice) == [
+                        "reason"
+                    ]
+                    if named or keyed:
+                        found.update(literals(node.value))
+            elif isinstance(node, ast.Return) and isinstance(node.value, ast.Tuple):
+                if len(node.value.elts) == 2:
+                    found.update(literals(node.value.elts[1]))
+    return found
+
+
+def test_every_reason_the_verifier_emits_is_in_the_observer_vocabulary():
+    emitted = _reason_literals_emitted_by_the_verifier()
+    assert len(emitted) > 60  # a coleta enxerga o verificador, não um arquivo vazio
+    # O problema da DSN volta no par de database_from_dsn, mas expected_database o
+    # converte antes de virar motivo de sinal.
+    not_a_signal_reason = {"dsn_not_postgresql"}
+    known = observer._CHECK_REASONS | observer._REPORT_REASONS
+    assert emitted - known - not_a_signal_reason == set()
+
+
+def test_observer_vocabulary_has_no_invented_code():
+    """Todo código reconhecido existe como literal no verificador: o vocabulário não
+    inventa motivo que o contrato não emite."""
+    source = "".join(
+        (REPO_ROOT / "app" / "ops" / f"{module}.py").read_text(encoding="utf-8")
+        for module in (*_VERIFIER_MODULES, "config")
+    )
+    vocabulary = observer._CHECK_REASONS | observer._REPORT_REASONS | observer._CHECK_NAMES
+    assert {code for code in vocabulary if f'"{code}"' not in source} == set()
+
+
 @POSIX_ONLY
 @pytest.mark.parametrize("part", ["root", offsite.GENERATIONS])
 def test_linked_copy_layout_is_never_followed(tmp_path, fresh_signal, part):
@@ -329,12 +485,25 @@ def test_cli_exit_code_follows_the_overall_state(tmp_path, copies, capsys, age, 
     assert str(tmp_path) not in out and DB not in out
 
 
+@pytest.mark.parametrize("value", ["0", "-1", "nan", "inf", "-inf", "1e300", "abc"])
 @pytest.mark.parametrize("flag", ["--signal-max-age-minutes", "--copy-max-age-hours"])
-def test_cli_rejects_non_positive_thresholds(fresh_signal, copies, flag):
+def test_cli_rejects_invalid_thresholds(fresh_signal, copies, capsys, flag, value):
+    """``nan``, ``inf`` e valores enormes chegavam ao ``timedelta`` e encerravam com
+    exceção; agora são argumento inválido (saída 2 do argparse)."""
     argv = ["--signal", str(fresh_signal), "--copies", str(copies), "--expected-database", DB]
     with pytest.raises(SystemExit) as exc:
-        observer.main([*argv, flag, "0"])
+        observer.main([*argv, flag, value])
     assert exc.value.code == 2
+    assert flag in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("flag", "value"), [("--signal-max-age-minutes", "0.5"), ("--copy-max-age-hours", "1e6")]
+)
+def test_cli_accepts_finite_positive_thresholds(fresh_signal, copies, capsys, flag, value):
+    argv = ["--signal", str(fresh_signal), "--copies", str(copies), "--expected-database", DB]
+    observer.main([*argv, flag, value], clock=fixed_clock())
+    assert json.loads(capsys.readouterr().out)["schema"] == observer.OBSERVATION_SCHEMA
 
 
 def test_cli_runs_with_no_database_configuration_at_all(tmp_path):

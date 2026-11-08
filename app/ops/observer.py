@@ -20,16 +20,16 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
+import math
 import stat
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from app.ops.backup import FUTURE_TOLERANCE
-from app.ops.config import DATABASE_NAME
+from app.ops.config import CHECK_NAMES, DATABASE_NAME
 from app.ops.offsite import read_copies
 from app.ops.report import (
     EXIT_CODES,
@@ -50,7 +50,119 @@ MAX_SIGNAL_BYTES = 1024 * 1024
 LAB_SIGNAL_MAX_AGE_MINUTES = 45.0
 LAB_COPY_MAX_AGE_HOURS = 26.0
 _PROBLEMS_LIMIT = 10
-_CODE = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+_UNRECOGNIZED = "unrecognized"
+# Vocabulário do contrato ``cartorio_system.ops.check`` 1.0, como o verificador o emite
+# (app.ops.report, checks, backup, systemd, verifier). O formato de código sozinho não
+# basta: um valor qualquer em minúsculas e dígitos — um segredo, um hash — passaria nele.
+_CHECK_NAMES = frozenset(CHECK_NAMES)
+_CHECK_STATUSES = frozenset(
+    s.value for s in (Status.OK, Status.FAIL, Status.INCONCLUSIVE, Status.SKIPPED)
+)
+_REPORT_REASONS = frozenset(
+    {
+        "all_checks_ok",
+        "check_failed",
+        "check_inconclusive",
+        "no_checks_executed",
+        "output_not_published",
+        "verifier_internal_error",
+    }
+)
+_CHECK_REASONS = frozenset(
+    {
+        # comuns e do verificador
+        "config_invalid",
+        "config_missing",
+        "no_signal",
+        "not_configured",
+        "not_selected",
+        "unexpected_error",
+        # api
+        "app_mismatch",
+        "healthy",
+        "http_status",
+        "timeout",
+        "unexpected_body",
+        "unexpected_response",
+        "unreachable",
+        # unidades systemd (api e backup)
+        "last_attempt_failed",
+        "last_run_failed",
+        "last_run_succeeded",
+        "no_run_since_boot",
+        "running",
+        "running_now",
+        "systemctl_failed",
+        "systemctl_timeout",
+        "systemd_unavailable",
+        "timer_active",
+        "timer_inactive",
+        "timer_not_enabled",
+        "unexpected_state",
+        "unit_not_enabled",
+        "unit_not_found",
+        "unit_not_loaded",
+        "unit_not_running",
+        # database e alembic
+        "auth_failed",
+        "database_missing",
+        "database_unavailable",
+        "dialect_mismatch",
+        "ok",
+        "query_failed",
+        "release_unreadable",
+        "revision_behind",
+        "revision_match",
+        "revision_unknown",
+        "unavailable",
+        "version_table_missing",
+        "version_table_unreadable",
+        # backup: identidade, diretório, publicações, idade e restauração
+        "expected_database_ambiguous",
+        "expected_database_conflict",
+        "expected_database_explicit",
+        "expected_database_from_connection",
+        "expected_database_from_dsn",
+        "expected_database_missing",
+        "expected_database_unproven",
+        "expected_database_unresolved",
+        "backup_dir_unavailable",
+        "backup_dir_unreadable",
+        "artifact_missing",
+        "artifact_not_regular",
+        "artifact_unreadable",
+        "available",
+        "backup_missing",
+        "backup_stale",
+        "complete",
+        "database_mismatch",
+        "digest_mismatch",
+        "digest_verified",
+        "manifest_incomplete",
+        "manifest_inconsistent",
+        "manifest_invalid",
+        "manifest_missing",
+        "manifest_not_usable",
+        "manifest_unparseable",
+        "manifest_unreadable",
+        "no_copy",
+        "no_unverifiable_copy",
+        "no_valid_copy",
+        "no_verifiable_copy",
+        "recovery_point_in_future",
+        "recovery_point_unreadable",
+        "reference_outside_dir",
+        "restore_evidence_invalid",
+        "restore_evidence_missing",
+        "restore_evidence_unreadable",
+        "restore_test_failed",
+        "restore_test_stale",
+        "restore_verified",
+        "size_mismatch",
+        "unverifiable_copy",
+        "within_max_age",
+    }
+)
 _CHECK_RESULTS = {
     "ok": (Status.OK, "check_ok"),
     "fail": (Status.FAIL, "check_failed"),
@@ -67,9 +179,9 @@ def _parse_utc(value: object) -> datetime | None:
         return None
 
 
-def _code(value: object) -> str:
-    """Texto vindo de outra máquina: só código estável passa; o resto vira marcador."""
-    return value if isinstance(value, str) and _CODE.match(value) else "unrecognized"
+def _known(value: object, vocabulary: frozenset[str]) -> str:
+    """Texto vindo de outra máquina: só código do contrato passa; o resto vira marcador."""
+    return value if isinstance(value, str) and value in vocabulary else _UNRECOGNIZED
 
 
 def _minutes(delta: timedelta) -> float:
@@ -111,7 +223,8 @@ def application_signal(
     generated = _parse_utc(report.get("generated_at"))
     if generated is None:
         return _invalid("generated_at")
-    if report.get("overall") not in _CHECK_RESULTS:
+    overall = report.get("overall")
+    if not isinstance(overall, str) or overall not in _CHECK_RESULTS:  # lista/objeto: TypeError
         return _invalid("overall")
     report = {**report, "generated_at": utc_iso(generated)}  # normalizado, já validado
     facts = {
@@ -138,16 +251,16 @@ def last_check(report: dict[str, Any] | None) -> dict[str, Any]:
             if isinstance(check, dict) and check.get("status") not in ("ok", "skipped"):
                 problems.append(
                     {
-                        "check": _code(name),
-                        "status": _code(check.get("status")),
-                        "reason": _code(check.get("reason")),
+                        "check": _known(name, _CHECK_NAMES),
+                        "status": _known(check.get("status"), _CHECK_STATUSES),
+                        "reason": _known(check.get("reason"), _CHECK_REASONS),
                     }
                 )
     return signal(
         status,
         reason,
         generated_at=report["generated_at"],
-        reported_reason=_code(report.get("reason")),
+        reported_reason=_known(report.get("reason"), _REPORT_REASONS),
         problems=problems,
     )
 
@@ -234,11 +347,22 @@ def observe(
     }
 
 
-def _positive(text: str) -> float:
-    value = float(text)
-    if value <= 0:
-        raise argparse.ArgumentTypeError("precisa ser maior que zero")
-    return value
+def _threshold(unit: str) -> Callable[[str], float]:
+    """Limiar positivo e finito que caiba num ``timedelta``: ``nan``, ``inf`` e valores
+    enormes passavam no ``> 0`` e só quebravam depois, na conversão."""
+
+    def parse(text: str) -> float:
+        value = float(text)
+        if not math.isfinite(value) or value <= 0:
+            raise argparse.ArgumentTypeError("precisa ser um número finito maior que zero")
+        try:
+            timedelta(**{unit: value})
+        except OverflowError:
+            raise argparse.ArgumentTypeError("grande demais para um limite de idade") from None
+        return value
+
+    parse.__name__ = "limiar"  # é o nome que o argparse mostra em "invalid ... value"
+    return parse
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -263,13 +387,13 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--signal-max-age-minutes",
-        type=_positive,
+        type=_threshold("minutes"),
         default=LAB_SIGNAL_MAX_AGE_MINUTES,
         help=f"limite de idade do sinal (laboratório: {LAB_SIGNAL_MAX_AGE_MINUTES:g})",
     )
     parser.add_argument(
         "--copy-max-age-hours",
-        type=_positive,
+        type=_threshold("hours"),
         default=LAB_COPY_MAX_AGE_HOURS,
         help=f"limite de idade da cópia (laboratório: {LAB_COPY_MAX_AGE_HOURS:g})",
     )

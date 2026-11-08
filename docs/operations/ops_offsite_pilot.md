@@ -69,8 +69,12 @@ Linux).
 da OPS-1, que fica intocada. Também confere o SHA-256 e os modos no destino, o observador
 com sinal e, com a origem e o sinal retirados, `signal_missing` com a cópia válida mantida.
 Roda antes os 13 testes POSIX com o nome de cada um no log. Reprova com teste pulado ou
-prova faltando e só imprime um resumo sintético conferido contra credencial. Comandos
-manuais equivalentes:
+prova faltando e só imprime um resumo sintético conferido contra credencial. Os ensaios
+criam a área deles dentro da área do passo; antes de removê-la, o passo para e confirma
+por `pg_ctl status` qualquer cluster que tenha ficado (ensaio sem limpeza confirmada,
+falha, prazo, relatório ausente, interrupção). Parada incerta preserva a área para
+diagnóstico e reprova com `work_preserved_cluster_stop_unconfirmed`; ensaio sem limpeza
+confirmada reprova com `drill_cleanup_unconfirmed`. Comandos manuais equivalentes:
 
 ```bash
 PG_BIN=/usr/lib/postgresql/18/bin
@@ -128,6 +132,14 @@ Estado geral: o mais grave (falha > inconclusivo > ok); motivo, o do primeiro si
 esse estado, na ordem acima. `last_valid_copy` (carimbo, ponto de recuperação, idade,
 tamanho, SHA-256) sai sempre que existe uma cópia válida, qualquer que seja o resto.
 
+Do relatório de entrada só passam códigos do contrato `cartorio_system.ops.check` 1.0:
+em `last_check`, o `reported_reason` e, em cada item de `problems`, o nome da checagem, o
+estado e o motivo. Qualquer outro valor, mesmo no formato de um código, sai como
+`unrecognized`. `overall` que não é um dos três estados (inclusive lista ou objeto) é
+`signal_invalid`, e a cópia é avaliada do mesmo jeito. Os limiares
+(`--signal-max-age-minutes`, `--copy-max-age-hours`) precisam ser números finitos maiores
+que zero; `nan`, `inf` ou valor grande demais são recusados como argumento (saída 2).
+
 ## 5. Cenários comprovados em bancada
 
 Testes em `tests/test_ops_offsite.py` e `tests/test_ops_observer.py`.
@@ -148,6 +160,10 @@ Testes em `tests/test_ops_offsite.py` e `tests/test_ops_observer.py`.
 | Cópia externa vencida | `copy_stale` pelo ponto de recuperação do manifesto, mesmo com mtime recente |
 | Origem indisponível com cópia válida no destino | `signal_stale` e, ao mesmo tempo, `copy_fresh` com `last_valid_copy` |
 | Sem configuração de banco no processo | o observador conclui com `DATABASE_URL` ausente |
+| `overall` como lista ou objeto | `signal_invalid`; a cópia é lida e `last_valid_copy` mantida |
+| Valor no formato de código fora do contrato (motivo, nome da checagem, estado) | `unrecognized`; o valor não sai no JSON nem na saída da CLI |
+| Limiar `nan`, `inf` ou enorme | argumento recusado, saída 2 |
+| Passo do CI: ensaio com parada inconclusiva, interrupção ou relatório ausente (simulados) | cluster parado e confirmado antes de remover; parada incerta preserva a área e reprova — `tests/test_ops_offsite_gate.py` |
 
 ## 6. Premissas da bancada e alcance da prova
 
