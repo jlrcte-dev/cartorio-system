@@ -4,7 +4,7 @@
 > implementada salvo indicação explícita.
 
 Última atualização: 2026-05-04 · atualização parcial em 2026-11-07 (§3.4, §3.5 e §6,
-sprint `CARTORIO-OPS-1`)
+sprint `CARTORIO-OPS-1`) e em 2026-11-08 (§3.4 e §6, fechamento da `CARTORIO-OPS-1`)
 
 ---
 
@@ -168,13 +168,14 @@ REDE FÍSICA
 - Dashboard ou relatório semanal revisado pelo gestor
 - Registro de cada alerta recebido e ação tomada
 
-> **Estado em 2026-11-07 (VM-CartorioSystem, só o Cartório System):** existe em código
-> (branch `sprint/cartorio-ops-1`, ainda sem merge) um verificador somente leitura que
+> **Estado em 2026-11-08 (VM-CartorioSystem, só o Cartório System):** está em `main`
+> (PR #6, merge `b22e1b6`, CI do PR e pós-merge verdes) um verificador somente leitura que
 > separa processo/API, PostgreSQL, revisão Alembic e backup — idade pelo ponto de
 > recuperação, integridade pelo digest do manifesto, última tentativa e timer —, com saída
-> JSON versionada e alerta num spool local por `OnFailure=`. Canal definitivo (e-mail,
-> mensageria), observador externo (VM ou host fora do ar) e instalação na VM continuam
-> pendentes. Ver [`../operations/ops_verifier_runbook.md`](../operations/ops_verifier_runbook.md).
+> JSON versionada e alerta num spool local por `OnFailure=`. Provado com dados sintéticos
+> na bancada e no CI; ainda não instalado na VM. Canal definitivo (e-mail, mensageria),
+> observador externo (VM ou host fora do ar) e instalação na VM continuam pendentes. Ver
+> [`../operations/ops_verifier_runbook.md`](../operations/ops_verifier_runbook.md).
 
 ### 3.5 Teste de restauração
 
@@ -275,16 +276,18 @@ Prioridade: serviços que mais se beneficiam do isolamento e que são mais fáce
 2. `VM-CartorioSystem` — novo sistema, não há migração de dados legados complexa
 3. `VM-Backup-Monitor` — agente de backup centralizado
 
-**Estado de execução da Fase 1 (2026-11-07).** Separado por fonte — Git, relato
-operacional (runbook privado, fora do Git) e bancada:
+**Estado de execução da Fase 1 (2026-11-08).** Separado por fonte — Git e CI, relato
+operacional (runbook privado, fora do Git), bancada e aceite real:
 
 | Item | Situação | Fonte |
 |---|---|---|
 | Host Proxmox + `VM-CartorioSystem` em homologação, dados sintéticos | Em operação desde 05–06/11 | Relato |
 | Banco ativo em PostgreSQL 18 | Desde 07/11; decisão ADR-013 ainda fora do Git | Relato |
-| Compatibilidade PostgreSQL do código | `main` = `c49c6579` (PR #5), CI verde | Git |
-| Backup local diário (`pg_dump` + manifesto SHA-256) | 1º disparo automático observado; 2º pendente | Relato |
-| Verificador operacional, alerta local, gate PostgreSQL, prova de recuperação | Código e bancada (`CARTORIO-OPS-1`); instalação pendente | Git (branch) + bancada |
+| Compatibilidade PostgreSQL do código | PR #5 em `main` (`c49c6579`), CI verde | Git |
+| Backup local diário (`pg_dump` + manifesto SHA-256) | Dois disparos automáticos consecutivos observados no journal (08/11); integridade do 2º par e restauração de cópia automática pendentes | Relato |
+| Verificador operacional, alerta local, gate PostgreSQL, prova de recuperação — código | Em `main` (PR #6, merge `b22e1b6`); CI do PR `42413480266` e pós-merge `42431949823` verdes; PostgreSQL 18.6, gate sem teste pulado | Git e CI + bancada |
+| Verificador operacional — implantação | Não instalado na VM; release ativa anterior a `app/ops` (leitura de 08/11) | Relato |
+| Verificador operacional — aceite real | Pendente: itens 1 a 5 do [checklist](../operations/ops_window_checklist.md) | — |
 | Partida após reboot (convidado e host), cópia no PC dedicado, restauração dela | Pendentes de janela | — |
 | `VM-TestRestore`, `VM-Backup-Monitor`, cópia fora do host | Não iniciados | — |
 

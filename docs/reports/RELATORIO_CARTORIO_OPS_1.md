@@ -6,6 +6,8 @@
   gate PostgreSQL e prova de recuperação em bancada — Fase 1 do
   [roadmap de infraestrutura](../infrastructure/infrastructure_roadmap.md)
 - **Decisão:** [ADR-014](../decisions/ADR-014-verificacao-operacional-e-prova-de-recuperacao.md) (*Proposto*)
+- **Integração:** PR #6 integrado em `main` em 2026-11-08 00:55:09 UTC (merge `b22e1b6`);
+  CI pós-merge verde — ver [Integração em `main` e prova no CI](#integração-em-main-e-prova-no-ci-08112026)
 
 ## Veredito
 
@@ -24,10 +26,58 @@ branch e abrir PR em rascunho: **o aceite dessas provas é o CI do PR** (jobs
 versão do PostgreSQL e relatório sanitizado do ensaio. Este arquivo não é reescrito a cada
 run, para não mudar a revisão que o CI testou.
 
+## Integração em `main` e prova no CI (08/11/2026)
+
+Registro acrescentado depois do merge. O que está acima fica como foi escrito: é o
+histórico da bancada original e das revisões.
+
+| Referência | Evidência |
+|---|---|
+| PR | #6 integrado em 2026-11-08 00:55:09 UTC, por merge commit |
+| Merge em `main` | `b22e1b6cd75022a828a2669b75a6ec61acf1f560` |
+| Pais | `c49c6579cf97614323cd228f4b0c25825b40c2fe` (base) e `7b92e4db23c32e3bf98856f070ea07424caa4735` (head aprovada) |
+| Árvore | `0afd9f7a951d03688c16d6014ed3acb4dec43899`, igual à da revisão testada pelo CI do PR (`8b269390d71500c1621345338a903ae778f6d607`); `git diff --exit-code` vazio entre as duas |
+| CI do PR | run [`42413480266`](https://github.com/jlrcte-dev/cartorio-system/actions/runs/42413480266) (`pull_request`), dois jobs verdes |
+| CI pós-merge | run [`42431949823`](https://github.com/jlrcte-dev/cartorio-system/actions/runs/42431949823) (`push` em `main`, SHA `b22e1b6`), primeira tentativa, dois jobs verdes |
+| `quality-gate` | **1638 passed / 20 skipped**, Ruff (formatação e lint) limpo, Alembic no head `f4a5b6c7d8e9` sem operação pendente |
+| `postgres-gate` | PostgreSQL **18.6** (PGDG); unidades aprovadas no `systemd-analyze verify`; 14 testes de permissão; gate com **36 passed e 0 pulados** (22 da suíte do PR #5 e 14 do verificador, 8 deles com dois bancos reais); quatro relatórios liberados |
+| Artefato | [`pg-gate-reports`](https://github.com/jlrcte-dev/cartorio-system/actions/runs/42431949823/artifacts/13597826553), só os quatro relatórios liberados; os do ensaio registram `release.git_sha = b22e1b6` |
+
+**O que o CI comprovou, em ambiente sintético:**
+- verificação do digest da cópia (`digest_verified`);
+- restauração num cluster distinto da origem (`system_identifier` diferente), com a origem
+  parada antes;
+- leitura do registro conhecido pela API do destino;
+- recusa da cópia de banco divergente (`database_mismatch`, saída 2, sem criar cluster);
+- limpeza confirmada, área `0700`/`0600` e cópia de origem intocada.
+
+**Limitado na bancada original × provado depois no CI:**
+
+| Prova | Bancada original (Windows) | CI (Linux, PostgreSQL 18.6) |
+|---|---|---|
+| Suíte do PR #5 em PostgreSQL | não executada | 22 testes aprovados |
+| Verificador contra servidor real, inclusive o vínculo ao banco efetivo | não executado | 14 testes aprovados, 8 com dois bancos reais na mesma revisão |
+| Ensaio de recuperação, modo cópia e recusa de banco divergente | não executado | aprovado, com os quatro relatórios liberados |
+| `systemd-analyze verify` das unidades | inexistente no Windows | aprovado, em passo obrigatório |
+| Modos `0700`/`0600` sob umask `022` e destino da exportação | testes POSIX pulados | 14 testes de permissão aprovados |
+| Publicação do gate (conferir antes de imprimir e liberar) | simulada nos testes | 4 relatórios liberados, nada retido |
+
+**Continua fora do alcance do CI:** os itens operacionais 1 a 5 do
+[checklist](../operations/ops_window_checklist.md), a recuperação com cópia real, o RTO real
+e o Gitleaks. Tempos do ensaio são medição de bancada.
+
+**Segredos — duas evidências separadas:**
+- **Varredura específica:** logs dos dois jobs e os quatro relatórios do run pós-merge,
+  com os padrões e os valores reais conhecidos do ambiente privado (lista fora do Git):
+  nenhuma ocorrência. O gate registra a própria conferência em `secret_scan`.
+- **Gitleaks:** não executado (`gitleaks.executed=false` no relatório do gate). Segue na
+  dívida TD-10.
+
 ## Para revisão humana
 
 1. **Evidência do CI no PR:** conferir o run, o SHA efetivamente testado e o artefato
-   `pg-gate-reports` antes de qualquer decisão de merge.
+   `pg-gate-reports` antes de qualquer decisão de merge. *(Conferido antes do merge; ver
+   [Integração em `main`](#integração-em-main-e-prova-no-ci-08112026).)*
 2. **Decisões de implantação** ([runbook §9](../operations/ops_verifier_runbook.md)):
    limiar real de idade do backup, validade da restauração testada, canal de alerta,
    observador externo, usuário e DSN do verificador.
@@ -292,6 +342,10 @@ autorizado: `gitleaks git --log-opts="c49c6579..sprint/cartorio-ops-1"`.
 | Gitleaks | ver seção acima | binário externo não autorizado; fora do CI (TD-10) | coberto por varredura específica, não pela ferramenta |
 | Itens da janela real | [checklist](../operations/ops_window_checklist.md) | acesso à VM, ao host e ao PC dedicado | aceite real inexistente — esta sprint é código e bancada |
 
+*Atualização de 08/11/2026:* a primeira linha foi fechada pelo CI do PR e pelo CI
+pós-merge (ver [Integração em `main`](#integração-em-main-e-prova-no-ci-08112026)). As
+outras duas seguem abertas.
+
 ## Observações de risco
 
 - **Verificador e alerta vivem dentro da VM:** queda da VM ou do host não alerta.
@@ -305,8 +359,27 @@ autorizado: `gitleaks git --log-opts="c49c6579..sprint/cartorio-ops-1"`.
 
 ## Passos da janela de implantação
 
-Na ordem: (1) merge e implantação da release pelo procedimento por SHA; (2) arquivo de
-configuração com os valores decididos; (3) execução única via `systemd-run`; (4) unidades
-geradas, verificadas e instaladas; (5) timer habilitado; (6) prova opcional da cadeia de
-alerta; (7) itens 1–4 do checklist com evidência fora do Git. Detalhe e reversão:
-[runbook §7–§8](../operations/ops_verifier_runbook.md).
+*Atualizado em 08/11/2026, depois do merge. A versão anterior começava pelo merge, já
+feito.* Na ordem, cada passo com evidência fora do Git:
+
+1. **Preparar a release a instalar**, sem ativar: o SHA de `main` com CI verde (hoje
+   `b22e1b6`, run `42431949823`), conferido com `git ls-remote` e `gh run list --commit`;
+   release buscada por SHA num diretório próprio, ambiente com `.[postgres]`, `pip check`
+   limpo e `alembic heads` igual à revisão do banco. Entre `c49c6579` e `b22e1b6` não há
+   mudança de dependência, migration ou código do app fora de `app/ops`.
+2. **Ativar a release** pelo procedimento por SHA do ambiente privado: troca atômica do
+   ponteiro, restart controlado do app, `GET /api/v1/health` 200 e leitura de um registro
+   conhecido pela API (o `/health` não toca o banco). A release anterior fica para retorno.
+   Os tempos deste restart são registrados à parte dos reboots dos itens 2 e 4.
+3. **Configurar o verificador** com os valores decididos ([runbook §9](../operations/ops_verifier_runbook.md)).
+4. **Execução única** via `systemd-run` (§7.2): `overall=ok`, saída 0.
+5. **Unidades** geradas, verificadas com `systemd-analyze verify` e instaladas (§7.3), com a
+   primeira execução pela unidade (§7.4).
+6. **Timer** habilitado (§7.5).
+7. **Prova da cadeia de alerta** (§7.6, opcional e seguro): saída 1, alerta novo, volta à
+   saída 0.
+8. **Itens operacionais** do [checklist](../operations/ops_window_checklist.md), cada um com
+   aceite próprio.
+
+Reversão: o verificador sai pelo runbook §8, e a release, trocando o ponteiro de volta e
+reiniciando o app.

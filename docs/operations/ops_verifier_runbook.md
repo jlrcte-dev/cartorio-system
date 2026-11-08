@@ -311,18 +311,79 @@ systemctl list-timers "$PREFIXO-check.timer" --no-pager
 `EnvironmentFile=` **adicional**. `Environment=` não serve: no systemd, `EnvironmentFile=`
 vence `Environment=`, e o limiar de `$CONF` prevaleceria sem nenhum erro visível.
 
+O teste cria só dois arquivos, com nomes próprios e uma marca na primeira linha, e nunca
+sobrescreve: se a pasta é link ou um dos dois já existe, aborta antes de criar qualquer
+coisa. Outros overrides da pasta `.service.d` (inclusive o `override.conf` do
+`systemctl edit`) e o `db.env` do app não são tocados. A limpeza remove só o que esta
+execução criou — também quando ela falha no meio — e a pasta só sai se foi criada aqui e
+ficou vazia. O bloco roda num `bash` próprio para que o `trap` de limpeza valha até o fim:
+
 ```bash
-TESTE="/etc/systemd/system/$PREFIXO-check.service.d"
-install -d "$TESTE"
-echo "CARTORIO_OPS_BACKUP_MAX_AGE_HOURS=0.001" > "$TESTE/limiar-teste.env"
-printf '[Service]\nEnvironmentFile=%s/limiar-teste.env\n' "$TESTE" > "$TESTE/override.conf"
+PREFIXO="$PREFIXO" UNIDADES=/etc/systemd/system ALERTAS="/var/lib/$ESTADO/alerts" \
+bash -s <<'TESTE_ALERTA'
+set -euo pipefail
+DIR="$UNIDADES/$PREFIXO-check.service.d"
+DROPIN="$DIR/90-cartorio-ops-teste-alerta.conf"
+LIMIAR="$DIR/cartorio-ops-teste-alerta.env"
+MARCA="# cartorio-ops: teste de alerta do runbook (7.6) - removivel"
+UNIDADE="$PREFIXO-check.service"
+CRIADOS=()     # só o que esta execução criou, na ordem de criação
+CRIOU_DIR=0
+
+limpar() {
+  local i
+  for (( i=${#CRIADOS[@]}-1; i>=0; i-- )); do rm -f -- "${CRIADOS[i]}"; done
+  CRIADOS=()
+  if [ "$CRIOU_DIR" = 1 ]; then rmdir -- "$DIR" 2>/dev/null && CRIOU_DIR=0 || true; fi
+  systemctl daemon-reload
+}
+trap limpar EXIT
+
+# 1. Nada é sobrescrito: pasta que é link, ou arquivo com o nome do teste, aborta.
+if [ -L "$DIR" ]; then echo "ABORTADO: $DIR é link" >&2; exit 3; fi
+for alvo in "$DROPIN" "$LIMIAR"; do
+  if [ -e "$alvo" ] || [ -L "$alvo" ]; then echo "ABORTADO: $alvo já existe" >&2; exit 3; fi
+done
+if [ ! -d "$DIR" ]; then mkdir -m 0755 -- "$DIR"; CRIOU_DIR=1; fi
+
+# 2. Criação exclusiva (noclobber): só entra na lista o que esta execução criou.
+set -o noclobber
+umask 077
+: > "$LIMIAR"; CRIADOS+=("$LIMIAR")
+printf '%s\nCARTORIO_OPS_BACKUP_MAX_AGE_HOURS=0.001\n' "$MARCA" >> "$LIMIAR"
+: > "$DROPIN"; CRIADOS+=("$DROPIN")
+printf '%s\n[Service]\nEnvironmentFile=%s\n' "$MARCA" "$LIMIAR" >> "$DROPIN"
+chmod 0644 -- "$DROPIN"
 systemctl daemon-reload
-systemctl start "$PREFIXO-check.service" || true   # sai 1 -> OnFailure= -> alerta
-ls -l "/var/lib/$ESTADO/alerts/"                    # um alert-*.json novo: backup_stale
-rm -r -- "$TESTE"
-systemctl daemon-reload
-systemctl start "$PREFIXO-check.service"            # volta a sair 0
+
+# 3. Com o limiar mínimo, a execução sai 1 e o OnFailure= grava um alerta novo.
+ANTES=$( (ls -1 -- "$ALERTAS" 2>/dev/null || true) | sort )
+if systemctl start "$UNIDADE"; then echo "TESTE FALHOU: a execução devia sair 1" >&2; exit 4; fi
+STATUS=$(systemctl show -p ExecMainStatus --value "$UNIDADE")
+[ "$STATUS" = 1 ] || { echo "TESTE FALHOU: saída $STATUS, esperada 1" >&2; exit 4; }
+NOVO=""
+for _ in $(seq 1 30); do
+  NOVO=$(comm -13 <(printf '%s\n' "$ANTES") <( (ls -1 -- "$ALERTAS" 2>/dev/null || true) | sort ) | grep -m 1 . || true)
+  [ -n "$NOVO" ] && break
+  sleep 1
+done
+[ -n "$NOVO" ] || { echo "TESTE FALHOU: nenhum alerta novo em 30 s" >&2; exit 5; }
+grep -q 'backup_stale' -- "$ALERTAS/$NOVO" || { echo "TESTE FALHOU: $NOVO sem backup_stale" >&2; exit 5; }
+echo "OK: saída 1 e alerta novo $NOVO (backup_stale)"
+
+# 4. Volta ao normal: retira só o que criou, recarrega e confere saída 0 e overall ok.
+limpar
+systemctl start "$UNIDADE"
+grep -q '"overall": "ok"' -- "$(dirname -- "$ALERTAS")/last-check.json"
+echo "OK: sem o drop-in de teste a execução voltou a sair 0 com overall ok"
+TESTE_ALERTA
 ```
+
+Saída `3` = nada foi criado (nome em uso); `4` = a execução não falhou como devia; `5` =
+sem alerta novo. Em todos os casos a limpeza já rodou; confira com
+`ls -la /etc/systemd/system/$PREFIXO-check.service.d` e, se o check ficou `failed`, rode
+`systemctl start "$PREFIXO-check.service"` de novo. Se a sessão cair no meio, o §8 (passo
+5) retira as sobras pelo nome e pela marca.
 
 Evidência a guardar (fora do Git): JSON do check, saída de `list-timers`, arquivo de alerta.
 
@@ -342,7 +403,18 @@ systemctl reset-failed "$PREFIXO-check.service" "$PREFIXO-alert.service"   # 3. 
 rm -f -- "/etc/systemd/system/$PREFIXO-check.service" \
          "/etc/systemd/system/$PREFIXO-check.timer" \
          "/etc/systemd/system/$PREFIXO-alert.service"                      # 4. unidades
-rm -rf -- "/etc/systemd/system/$PREFIXO-check.service.d"                   # 5. drop-in do §7.6
+
+# 5. Sobras do teste de alerta do §7.6: só os dois arquivos com o nome E a marca do teste
+DIR="/etc/systemd/system/$PREFIXO-check.service.d"
+MARCA="# cartorio-ops: teste de alerta do runbook (7.6) - removivel"
+for f in "$DIR/90-cartorio-ops-teste-alerta.conf" "$DIR/cartorio-ops-teste-alerta.env"; do
+  if [ -f "$f" ] && [ ! -L "$f" ] && [ "$(head -n 1 -- "$f")" = "$MARCA" ]; then
+    rm -f -- "$f"
+  elif [ -e "$f" ] || [ -L "$f" ]; then
+    echo "MANTIDO: $f não tem a marca do teste; conferir à mão" >&2
+  fi
+done
+if [ -d "$DIR" ] && [ ! -L "$DIR" ]; then rmdir -- "$DIR" 2>/dev/null || true; fi   # só se vazia
 systemctl daemon-reload
 
 # 6. Conferência: nada do verificador carregado nem agendado
@@ -354,13 +426,20 @@ systemctl list-timers --all --no-pager | grep -c -- "$PREFIXO" || true   # esper
   falha de todas as unidades do host — inclusive a falha do backup, que é evidência.
 - **Não remova o `db.env` do app**: as unidades do verificador só o leem; ele pertence ao
   serviço da aplicação.
+- **Não apague a pasta `$PREFIXO-check.service.d` inteira**: outros overrides (por exemplo,
+  de `systemctl edit`) ficam nela. O passo 5 retira só o que o §7.6 cria, e a pasta só sai
+  vazia.
 - O arquivo de configuração do verificador e o diretório de estado (`last-check.json`,
   `alerts/`) ficam como evidência. Removê-los é decisão separada, depois de guardar o que
   interessa.
 
 ## 9. Decisões de implantação pendentes
 
-Limiar real de idade (a rotina hoje é diária; a meta Classe 3 é RPO ≤ 4 h) · validade da
-restauração testada · canal de alerta definitivo e deduplicação · observador externo ·
-usuário do verificador (o do app, ou um próprio no mesmo grupo) · DSN do verificador (a do
-app, que prova a credencial em uso, ou um papel só de leitura).
+- **Frequência efetiva de geração do backup** — define o RPO. A rotina hoje é diária, aquém
+  da meta Classe 3 de RPO ≤ 4 h. É decisão da rotina de backup, não do verificador.
+- **Limite de idade do verificador** (`CARTORIO_OPS_BACKUP_MAX_AGE_HOURS`) — só detecta
+  atraso da rotina que existe; não melhora o RPO. Decidir junto com a frequência, mas
+  registrar à parte.
+- Validade da restauração testada · canal de alerta definitivo e deduplicação · observador
+  externo · usuário do verificador (o do app, ou um próprio no mesmo grupo) · DSN do
+  verificador (a do app, que prova a credencial em uso, ou um papel só de leitura).

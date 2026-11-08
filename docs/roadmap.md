@@ -37,7 +37,7 @@
 | Autenticação, trilha transversal | Não iniciados | — | — |
 | `drive_capture` (Drive do cartório, somente leitura) | Implementado; acesso real validado em smoke local de uma fonte piloto (20/10/2026) — ADR-011 *Proposto* | CLI manual | Não |
 | `services_snapshot` (retrato de serviços da planilha piloto) | Atualização manual local; setores, status e indicadores de datas agregados (formato local 1.1) | CLI manual | Não |
-| `ops` (verificador operacional e prova de recuperação, `CARTORIO-OPS-1`) | Código e bancada local em branch, sem merge; ver § 2.1 — [ADR-014](decisions/ADR-014-verificacao-operacional-e-prova-de-recuperacao.md) *Proposto* | CLI + systemd | Não — instalação na VM pendente |
+| `ops` (verificador operacional e prova de recuperação, `CARTORIO-OPS-1`) | Em `main` desde 08/11/2026 (PR #6, `b22e1b6`), provado com dados sintéticos na bancada e no CI; ver § 2.1 — [ADR-014](decisions/ADR-014-verificacao-operacional-e-prova-de-recuperacao.md) *Proposto* | CLI + systemd | Não — instalação na VM pendente |
 | Knowledge Base / IA, Document Registry, Atlas | Blueprint apenas | — | — |
 
 Diagnóstico completo e evidências:
@@ -74,10 +74,20 @@ Cada entrega tem três afirmações diferentes, que não se substituem:
 
 | Entrega | Código (Git) | Evidência de bancada | Aceite real (VM) |
 |---|---|---|---|
-| Compatibilidade PostgreSQL (Fase B, PR #5) | ✅ `main` = `c49c6579`, CI pós-merge verde | ✅ suíte do PR #5 em PostgreSQL descartável | ✅ release ativa na homologação (relato operacional) |
+| Compatibilidade PostgreSQL (Fase B, PR #5) | ✅ em `main` desde `c49c6579`, CI pós-merge verde | ✅ suíte do PR #5 em PostgreSQL descartável | ✅ release ativa na homologação (relato operacional) |
 | Troca do banco ativo de homologação para PostgreSQL 18 (ADR-013) | ◻ minuta local, fora do Git | ✅ ensaios de dump/restore e migração (relato) | ✅ executada em 07/11/2026 (relato) |
-| Rotina local de backup diário | ◻ script e unidades só na VM, fora do Git | ✅ disparo manual e falha induzida (relato) | ◧ 1º disparo automático observado; 2º pendente |
-| `CARTORIO-OPS-1` — verificador, alerta local, gate PostgreSQL, prova de recuperação | ◧ branch `sprint/cartorio-ops-1`, sem push nem merge | ◧ ver [relatório](reports/RELATORIO_CARTORIO_OPS_1.md): parte da prova PostgreSQL depende de servidor | ◻ instalação e itens da [janela](operations/ops_window_checklist.md) pendentes |
+| Rotina local de backup diário | ◻ script e unidades só na VM, fora do Git | ✅ disparo manual e falha induzida (relato) | ◧ dois disparos automáticos consecutivos observados (relato de 08/11); integridade do 2º par e restauração de cópia automática pendentes |
+| `CARTORIO-OPS-1` — verificador, alerta local, gate PostgreSQL, prova de recuperação | ✅ `main` = `b22e1b6` (PR #6); CI do PR e pós-merge verdes | ✅ bancada local e CI com PostgreSQL 18.6, dados sintéticos — ver [relatório](reports/RELATORIO_CARTORIO_OPS_1.md) | ◻ instalação e itens 1 a 5 da [janela](operations/ops_window_checklist.md) pendentes |
+
+`CARTORIO-OPS-1` em três afirmações separadas (08/11/2026):
+
+- **Git e CI:** integrada em `main` pelo merge `b22e1b6`, com a árvore testada no PR; CI do
+  PR `42413480266` e pós-merge `42431949823` verdes, gate PostgreSQL sem teste pulado. É a
+  evidência de engenharia (item 6 do checklist).
+- **Relato de homologação:** o verificador ainda não está instalado na VM, e a release
+  ativa é anterior a `app/ops` (leitura somente leitura de 08/11).
+- **Aceite real:** pendente — itens 1 a 5 do [checklist](operations/ops_window_checklist.md),
+  cada um com evidência fora do Git e aceite próprio.
 
 ### HORIZONTE B — Evolução de valor em `notas/inventarios` ◧ em andamento
 
