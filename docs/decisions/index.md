@@ -55,13 +55,13 @@ Arquivo: [`technical_decisions.md`](technical_decisions.md)
 | [ADR-010](ADR-010-inventory-fraction-percentage-rendering.md) | Representação de percentual e fração ideal em inventários — precisão derivada da entrada; fração opcional e nunca inferida | Aceito |
 | [ADR-011](ADR-011-drive-readonly-capture.md) | Captura local somente leitura de fontes do Google Drive do cartório — service account própria, escopo `drive.readonly`, allowlist explícita | Proposto |
 | [ADR-012](ADR-012-atlas-finance-snapshot-export.md) | Exportação financeira para o Atlas — contrato próprio `cartorio_system.atlas.finance_snapshot` 1.0, fechado e validado antes da troca atômica | Proposto |
+| [ADR-013](ADR-013-troca-banco-ativo-sqlite-postgresql.md) | Troca do banco ativo de homologação de SQLite para PostgreSQL 18 — executada em 07/11/2026, só homologação e dados sintéticos; dado real da serventia exige decisão própria | Aceito |
 | [ADR-014](ADR-014-verificacao-operacional-e-prova-de-recuperacao.md) | Verificação operacional somente leitura e prova de recuperação em bancada — contrato `cartorio_system.ops.check` 1.0, saída 0/1/2, gate PostgreSQL próprio | Proposto |
 | [ADR-015](ADR-015-copia-verificada-e-observador-fora-do-host.md) | Cópia verificada e observador fora do host (piloto) — gerações promovidas por `rename`, banco esperado à parte, observador sem acesso a banco | Proposto |
 
-> **Nota factual (2026-11-07):** o número **ADR-013** pertence à decisão de trocar o banco
-> ativo de homologação de SQLite para PostgreSQL. Segundo o relato operacional, ela foi
-> aceita e executada em 07/11/2026, mas o arquivo existe só como minuta local e **ainda não
-> está no Git**. Integrá-lo é tarefa documental própria; este índice não o reescreve.
+> **Nota factual (2026-11-08):** o ADR-013 ficou só como minuta local de 06 a 08/11/2026 e
+> entrou no Git nesta data, na versão publicável; caminhos, papéis e roteiro operacional
+> continuam no dossiê privado do operador.
 
 ---
 
