@@ -62,7 +62,15 @@ python -m app.ops.observer --signal /srv/lab/sinal/last-check.json --copies /srv
 
 Gera dump e manifesto sintéticos com o ensaio, copia, retira a origem do fluxo e restaura
 a partir do destino com o modo cópia. Na bancada Windows não roda (sem PostgreSQL nem
-Linux): **pendente**, para uma bancada Linux autorizada.
+Linux).
+
+**No CI:** o passo "OPS-2: cópia fora do host" do job `postgres-gate`
+(`scripts/ops/offsite_gate.py`) faz esta sequência automaticamente, depois da publicação
+da OPS-1, que fica intocada. Também confere o SHA-256 e os modos no destino, o observador
+com sinal e, com a origem e o sinal retirados, `signal_missing` com a cópia válida mantida.
+Roda antes os 13 testes POSIX com o nome de cada um no log. Reprova com teste pulado ou
+prova faltando e só imprime um resumo sintético conferido contra credencial. Comandos
+manuais equivalentes:
 
 ```bash
 PG_BIN=/usr/lib/postgresql/18/bin
@@ -145,11 +153,12 @@ Testes em `tests/test_ops_offsite.py` e `tests/test_ops_observer.py`.
 
 - **Bancada:** Windows, sem PostgreSQL, Linux nem systemd. A lógica roda com a plataforma
   injetada, como os testes do modo cópia da OPS-1. Os testes POSIX (modos e links) ficam
-  pulados aqui e rodam no CI Linux depois da publicação.
+  pulados aqui e rodam no CI Linux depois da publicação (passo OPS-2 do `postgres-gate`).
 - **Dados:** só sintéticos. Nenhum dump real, nenhum acesso à homologação para o piloto.
 - **Alcance:** contrato, verificação, publicação atômica, idempotência, colisão, falhas e
-  leitura. **Não** prova transporte, desempenho com volume real, disco ou energia do
-  destino, nem a restauração ponta a ponta (§3.1, pendente).
+  leitura; a restauração ponta a ponta é provada pelo passo do CI (§3.1), não por esta
+  bancada. **Não** prova transporte, desempenho com volume real, nem disco ou energia do
+  equipamento de destino — isso é o aceite no PC dedicado.
 - **Tempos** do ensaio são medição de bancada; não dimensionam RTO.
 
 ## 7. Escolha do destino
@@ -186,5 +195,5 @@ com planejamento próprio.
 - Batimento do próprio destino.
 - Demonstração ponta a ponta em Linux com PostgreSQL 18 (§3.1).
 - Testes POSIX no CI.
-- Integrar a demonstração ao `postgres-gate` exige mudar o gate da OPS-1: é decisão do PR,
-  não deste piloto.
+- A prova no `postgres-gate` (§3.1) só vale depois do primeiro run verde do PR, com os 13
+  testes POSIX nominais e o resumo `cartorio_system.ops.offsite_gate` aprovado.

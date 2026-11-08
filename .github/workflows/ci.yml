@@ -155,3 +155,14 @@ jobs:
           # Gate, prova sintética, modo cópia e recusa do banco divergente.
           path: ${{ steps.liberados.outputs.paths }}
           if-no-files-found: error
+
+      # OPS-2 (piloto fora do host), depois da publicação da OPS-1, que fica intocada.
+      # Os 13 testes POSIX com nome no log e a prova ponta a ponta: exportar → copiar →
+      # retirar a origem e o sinal → observar → restaurar só do destino → ler pela API →
+      # limpar. Teste pulado ou prova faltando reprova; só sai um resumo sintético
+      # conferido contra credencial, e a área do passo é removida no fim.
+      - name: "OPS-2: cópia fora do host (POSIX + ponta a ponta)"
+        run: |
+          python scripts/ops/offsite_gate.py \
+            --pg-bin /usr/lib/postgresql/18/bin \
+            --work-root "$RUNNER_TEMP"
