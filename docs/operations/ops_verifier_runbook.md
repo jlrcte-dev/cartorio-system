@@ -404,17 +404,25 @@ rm -f -- "/etc/systemd/system/$PREFIXO-check.service" \
          "/etc/systemd/system/$PREFIXO-check.timer" \
          "/etc/systemd/system/$PREFIXO-alert.service"                      # 4. unidades
 
-# 5. Sobras do teste de alerta do §7.6: só os dois arquivos com o nome E a marca do teste
+# 5. Sobras do teste de alerta do §7.6: só os dois arquivos com o nome E a marca do teste.
+#    A pasta é conferida ANTES de ler qualquer filho: se ela for link, "$DIR/arquivo"
+#    resolve dentro do alvo, e o teste do arquivo final não percebe.
 DIR="/etc/systemd/system/$PREFIXO-check.service.d"
 MARCA="# cartorio-ops: teste de alerta do runbook (7.6) - removivel"
-for f in "$DIR/90-cartorio-ops-teste-alerta.conf" "$DIR/cartorio-ops-teste-alerta.env"; do
-  if [ -f "$f" ] && [ ! -L "$f" ] && [ "$(head -n 1 -- "$f")" = "$MARCA" ]; then
-    rm -f -- "$f"
-  elif [ -e "$f" ] || [ -L "$f" ]; then
-    echo "MANTIDO: $f não tem a marca do teste; conferir à mão" >&2
-  fi
-done
-if [ -d "$DIR" ] && [ ! -L "$DIR" ]; then rmdir -- "$DIR" 2>/dev/null || true; fi   # só se vazia
+if [ -L "$DIR" ]; then
+  echo "PENDENTE: $DIR é link; link e alvo mantidos, nada lido dentro dele; conferir à mão" >&2
+elif [ -d "$DIR" ]; then
+  for f in "$DIR/90-cartorio-ops-teste-alerta.conf" "$DIR/cartorio-ops-teste-alerta.env"; do
+    if [ -f "$f" ] && [ ! -L "$f" ] && [ "$(head -n 1 -- "$f")" = "$MARCA" ]; then
+      rm -f -- "$f"
+    elif [ -e "$f" ] || [ -L "$f" ]; then
+      echo "MANTIDO: $f não tem a marca do teste; conferir à mão" >&2
+    fi
+  done
+  rmdir -- "$DIR" 2>/dev/null || true   # só se vazia
+elif [ -e "$DIR" ]; then
+  echo "PENDENTE: $DIR existe e não é pasta; mantido; conferir à mão" >&2
+fi
 systemctl daemon-reload
 
 # 6. Conferência: nada do verificador carregado nem agendado
@@ -428,7 +436,8 @@ systemctl list-timers --all --no-pager | grep -c -- "$PREFIXO" || true   # esper
   serviço da aplicação.
 - **Não apague a pasta `$PREFIXO-check.service.d` inteira**: outros overrides (por exemplo,
   de `systemctl edit`) ficam nela. O passo 5 retira só o que o §7.6 cria, e a pasta só sai
-  vazia.
+  vazia. Se a pasta for link, o passo 5 não lê nem remove nada dentro dela e avisa
+  `PENDENTE`: link e alvo ficam como estão até a conferência à mão.
 - O arquivo de configuração do verificador e o diretório de estado (`last-check.json`,
   `alerts/`) ficam como evidência. Removê-los é decisão separada, depois de guardar o que
   interessa.
