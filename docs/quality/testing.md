@@ -168,6 +168,29 @@ rm -f _tmp_check.db
 O round-trip completo (`upgrade head` → `downgrade base` → `upgrade head`)
 continua sendo validação manual, executada apenas em banco descartável.
 
+## Verificador operacional e gate PostgreSQL (CARTORIO-OPS-1)
+
+Os testes `tests/test_ops_*.py` ficam em dois grupos:
+
+- **Gate padrão (SQLite):** contrato JSON, códigos de saída e precedência; configuração;
+  systemd com saídas sintéticas de `systemctl show`; backup com relógio controlado
+  (`tests/ops_support.py`, `NOW` fixo) e cópias sintéticas no formato da rotina; cenários
+  de aceite com a **API real** (uvicorn) sobre SQLite migrado pelo Alembic; recusa de
+  alvos indevidos do ensaio de restauração; renderização das unidades. `systemd-analyze
+  verify` roda onde existir (Linux) e é pulado no Windows; no job `postgres-gate` ele é
+  obrigatório (`CARTORIO_OPS_REQUIRE_SYSTEMD_ANALYZE=1` transforma o pulo em falha).
+- **Gate PostgreSQL** (`scripts/ops/pg_gate.py`, job `postgres-gate`):
+  `tests/test_postgres_compat.py` (PR #5, inalterado) e `tests/test_ops_postgres.py`, que
+  reaproveita a fixture e as proteções do PR #5 — inclusive a prova, com dois bancos reais
+  na mesma revisão, de que o backup se vincula ao banco que a conexão abriu —, mais o
+  ensaio `python -m app.ops.drill` (sintético e, sobre a cópia exportada, modo cópia com
+  banco certo e com banco divergente). Ali, **teste pulado reprova o gate** — prova
+  obrigatória não passa por configuração ausente. Os testes da área privada e do destino da
+  exportação sob umask `022` só rodam em POSIX e têm passo próprio com `-rA` no mesmo job.
+  O gate só imprime e publica o que conferiu; os testes dessa conferência (credencial
+  fictícia em log e em relatório) rodam também no gate SQLite. Procedimento em
+  [`../operations/how_to_run.md`](../operations/how_to_run.md) § 9.
+
 ## Lacunas conhecidas
 
 - **Sem cobertura objetiva.** `pytest-cov` não está instalado; adotar cobertura

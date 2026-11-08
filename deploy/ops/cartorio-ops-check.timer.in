@@ -1,0 +1,16 @@
+# Modelo: deploy/ops/cartorio-ops-check.timer.in (CARTORIO-OPS-1).
+# Agenda propria, independente do timer do backup: e ela que percebe atraso ou
+# ausencia de execucao da rotina de backup. OnBootSec cobre a verificacao logo
+# depois de um boot da VM ou do host.
+[Unit]
+Description=Cartorio System - agenda do verificador operacional
+
+[Timer]
+OnBootSec=10min
+OnCalendar=@CHECK_CALENDAR@
+RandomizedDelaySec=60
+AccuracySec=1min
+Unit=@UNIT_PREFIX@-check.service
+
+[Install]
+WantedBy=timers.target

@@ -37,6 +37,7 @@
 | Autenticação, trilha transversal | Não iniciados | — | — |
 | `drive_capture` (Drive do cartório, somente leitura) | Implementado; acesso real validado em smoke local de uma fonte piloto (20/10/2026) — ADR-011 *Proposto* | CLI manual | Não |
 | `services_snapshot` (retrato de serviços da planilha piloto) | Atualização manual local; setores, status e indicadores de datas agregados (formato local 1.1) | CLI manual | Não |
+| `ops` (verificador operacional e prova de recuperação, `CARTORIO-OPS-1`) | Código e bancada local em branch, sem merge; ver § 2.1 — [ADR-014](decisions/ADR-014-verificacao-operacional-e-prova-de-recuperacao.md) *Proposto* | CLI + systemd | Não — instalação na VM pendente |
 | Knowledge Base / IA, Document Registry, Atlas | Blueprint apenas | — | — |
 
 Diagnóstico completo e evidências:
@@ -61,6 +62,22 @@ Sprint `CARTORIO-SYSTEM-ENGINEERING-STABILIZATION-1` (2026-09-03):
 - CI mínimo em `.github/workflows/ci.yml`: formatação, lint, testes e migrations
   em banco temporário.
 - Documentos guarda-chuva reconciliados com o código.
+
+### 2.1 Frente paralela — infraestrutura e continuidade (Fase 1 do roadmap de infraestrutura)
+
+> Seção acrescentada em 2026-11-07 (sprint `CARTORIO-OPS-1`). Não muda a prioridade dos
+> horizontes abaixo: é a frente de VM-CartorioSystem do
+> [roadmap de infraestrutura](infrastructure/infrastructure_roadmap.md), registrada aqui
+> porque nenhuma sprint entra no repositório sem constar deste roadmap.
+
+Cada entrega tem três afirmações diferentes, que não se substituem:
+
+| Entrega | Código (Git) | Evidência de bancada | Aceite real (VM) |
+|---|---|---|---|
+| Compatibilidade PostgreSQL (Fase B, PR #5) | ✅ `main` = `c49c6579`, CI pós-merge verde | ✅ suíte do PR #5 em PostgreSQL descartável | ✅ release ativa na homologação (relato operacional) |
+| Troca do banco ativo de homologação para PostgreSQL 18 (ADR-013) | ◻ minuta local, fora do Git | ✅ ensaios de dump/restore e migração (relato) | ✅ executada em 07/11/2026 (relato) |
+| Rotina local de backup diário | ◻ script e unidades só na VM, fora do Git | ✅ disparo manual e falha induzida (relato) | ◧ 1º disparo automático observado; 2º pendente |
+| `CARTORIO-OPS-1` — verificador, alerta local, gate PostgreSQL, prova de recuperação | ◧ branch `sprint/cartorio-ops-1`, sem push nem merge | ◧ ver [relatório](reports/RELATORIO_CARTORIO_OPS_1.md): parte da prova PostgreSQL depende de servidor | ◻ instalação e itens da [janela](operations/ops_window_checklist.md) pendentes |
 
 ### HORIZONTE B — Evolução de valor em `notas/inventarios` ◧ em andamento
 

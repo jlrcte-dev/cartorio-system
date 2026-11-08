@@ -1,0 +1,29 @@
+# Modelo: deploy/ops/cartorio-ops-check.service.in (CARTORIO-OPS-1).
+# Verificador operacional SOMENTE LEITURA do Cartorio System. Saida: JSON no journal
+# (stdout) e em /var/lib/@STATE_DIR_NAME@/last-check.json. Codigo 0 = saudavel,
+# 1 = falha detectada, 2 = inconclusivo; qualquer codigo diferente de 0 deixa a
+# unidade em "failed" e aciona OnFailure= (alerta).
+[Unit]
+Description=Cartorio System - verificador operacional (somente leitura)
+OnFailure=@UNIT_PREFIX@-alert.service
+
+[Service]
+Type=oneshot
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
+WorkingDirectory=@RELEASE_DIR@
+# Configuracao do verificador (sem segredo) e a DSN do proprio app: o verificador
+# prova a mesma DSN que o servico usa, sem copia da credencial.
+EnvironmentFile=@CONFIG_FILE@
+EnvironmentFile=@DB_ENV_FILE@
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+StateDirectory=@STATE_DIR_NAME@
+StateDirectoryMode=0750
+UMask=0027
+ExecStart=@PYTHON@ -m app.ops.cli check --output /var/lib/@STATE_DIR_NAME@/last-check.json
+TimeoutStartSec=300
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes

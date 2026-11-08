@@ -1,0 +1,11 @@
+# Parametros de LABORATORIO (ficticios) para `python -m app.ops.cli render-units`.
+# Os valores reais da VM sao decisao de implantacao e ficam fora do Git.
+UNIT_PREFIX=cartorio-lab-ops
+SERVICE_USER=cartorio-lab
+SERVICE_GROUP=cartorio-lab
+RELEASE_DIR=/opt/cartorio-lab/current
+PYTHON=/opt/cartorio-lab/current/.venv/bin/python
+CONFIG_FILE=/etc/cartorio-lab/ops.env
+DB_ENV_FILE=/etc/cartorio-lab/db.env
+STATE_DIR_NAME=cartorio-lab-ops
+CHECK_CALENDAR=*:0/30
