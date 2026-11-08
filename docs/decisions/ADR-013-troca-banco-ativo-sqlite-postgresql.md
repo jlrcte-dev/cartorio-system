@@ -122,8 +122,9 @@ maior.
   recursos exclusivos do PostgreSQL. É item de design da janela de corte real.
 - **Volume e desempenho reais.** As bancadas tinham poucos registros, e os tempos
   medidos (centésimos de segundo) não dimensionam um corte com dado real.
-- **Rotina de backup versionada.** A rotina diária da homologação existe e roda, mas o
-  script e as unidades ainda vivem só na VM.
+- **Rotina de backup versionada.** A rotina diária da homologação existe e roda (ver
+  [ops_backup_routine.md](../operations/ops_backup_routine.md)), mas o script e as
+  unidades ainda vivem só na VM.
 
 ## Consequências positivas
 
