@@ -116,6 +116,20 @@ Depende de decisão humana explícita, item a item:
 (depende das decisões DHP-01..10), Document Registry, integração Atlas e as
 Etapas 2–7 do módulo financeiro.
 
+### 2.2 Frente paralela — cópia verificada e observação fora do host (piloto `CARTORIO-OPS-2`)
+
+> Seção acrescentada em 2026-11-08. Continua a frente do § 2.1 sobre o limite que a
+> `CARTORIO-OPS-1` deixou declarado: cópia e alerta só dentro da VM. Não muda a
+> prioridade dos horizontes.
+
+| Entrega | Código (Git) | Evidência de bancada | Aceite real |
+|---|---|---|---|
+| Importação verificada para destino privado e observador fora do host — [ADR-015](decisions/ADR-015-copia-verificada-e-observador-fora-do-host.md) *Proposto* | ◧ branch `sprint/cartorio-ops-2`, sem push | ◧ lógica e cenários em bancada Windows; testes POSIX e demonstração em Linux com PostgreSQL 18 pendentes — ver [piloto](operations/ops_offsite_pilot.md) | ◻ PC dedicado sem inventário; transporte, agenda e canal por decidir |
+
+A recuperação a partir do destino é o item 3 do
+[checklist da janela da OPS-1](operations/ops_window_checklist.md); o reboot do host, que
+a cópia fora dele precisa sobreviver, é o item 4.
+
 ---
 
 ## 3. Etapas concluídas

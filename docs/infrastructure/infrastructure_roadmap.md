@@ -286,7 +286,8 @@ operacional (runbook privado, fora do Git) e bancada:
 | Backup local diário (`pg_dump` + manifesto SHA-256) | 1º disparo automático observado; 2º pendente | Relato |
 | Verificador operacional, alerta local, gate PostgreSQL, prova de recuperação | Código e bancada (`CARTORIO-OPS-1`); instalação pendente | Git (branch) + bancada |
 | Partida após reboot (convidado e host), cópia no PC dedicado, restauração dela | Pendentes de janela | — |
-| `VM-TestRestore`, `VM-Backup-Monitor`, cópia fora do host | Não iniciados | — |
+| Cópia verificada fora do host e observador externo (piloto `CARTORIO-OPS-2`, [ADR-015](../decisions/ADR-015-copia-verificada-e-observador-fora-do-host.md)) | Piloto em bancada, em branch; PC dedicado sem inventário | Git (branch) + bancada |
+| `VM-TestRestore`, `VM-Backup-Monitor` | Não iniciados | — |
 
 ### Fase 2 — FileServer e identidade (120 a 180 dias)
 
