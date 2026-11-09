@@ -1,7 +1,13 @@
 # ADR-014 — Verificação operacional somente leitura e prova de recuperação em bancada
 
-- **Status:** Proposto — implementado e provado em bancada local com dados sintéticos;
-  aceite depende de revisão humana e da instalação numa janela própria.
+- **Status:** Proposto — integrado em `main` e provado com dados sintéticos na bancada local
+  e no CI. O aceite depende da instalação e da evidência numa janela própria
+  ([checklist](../operations/ops_window_checklist.md), itens 1 a 5).
+- **Evidência de engenharia (08/11/2026):** PR #6 integrado como merge `b22e1b6` (pais
+  `c49c6579` e `7b92e4d`), com árvore igual à da revisão testada no PR. CI do PR
+  `42413480266` e pós-merge `42431949823` verdes, com PostgreSQL 18.6: 36 testes do gate
+  aprovados, nenhum pulado, `systemd-analyze verify` aprovado e quatro relatórios liberados.
+  Não substitui o aceite operacional.
 - **Data:** 2026-11-07
 - **Sprint:** `CARTORIO-OPS-1` (Fase 1 do roadmap de infraestrutura)
 - **Código:** `app/ops/`, `deploy/ops/`, `scripts/ops/pg_gate.py`, job `postgres-gate`
@@ -102,6 +108,8 @@ publicada de fato restaura.
 ## Referências
 
 - PR #5 (compatibilidade PostgreSQL): https://github.com/jlrcte-dev/cartorio-system/pull/5
+- PR #6 (esta decisão): https://github.com/jlrcte-dev/cartorio-system/pull/6 — CI pós-merge:
+  https://github.com/jlrcte-dev/cartorio-system/actions/runs/42431949823
 - [`docs/infrastructure/infrastructure_roadmap.md`](../infrastructure/infrastructure_roadmap.md) §3.4–3.5 e §6
 - [`docs/operations/ops_window_checklist.md`](../operations/ops_window_checklist.md)
 - [`docs/reports/RELATORIO_CARTORIO_OPS_1.md`](../reports/RELATORIO_CARTORIO_OPS_1.md)
