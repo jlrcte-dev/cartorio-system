@@ -70,10 +70,12 @@ da OPS-1, que fica intocada. Também confere o SHA-256 e os modos no destino, o 
 com sinal e, com a origem e o sinal retirados, `signal_missing` com a cópia válida mantida.
 Roda antes os 13 testes POSIX com o nome de cada um no log. Reprova com teste pulado ou
 prova faltando e só imprime um resumo sintético conferido contra credencial. Os ensaios
-criam a área deles dentro da área do passo; antes de removê-la, o passo para e confirma
-por `pg_ctl status` qualquer cluster que tenha ficado (ensaio sem limpeza confirmada,
-falha, prazo, relatório ausente, interrupção). Parada incerta preserva a área para
-diagnóstico e reprova com `work_preserved_cluster_stop_unconfirmed`; ensaio sem limpeza
+criam a área deles dentro da área do passo, e só o ensaio para e confirma o cluster que
+criou. O passo remove a própria área apenas se cada ensaio confirmou a limpeza e a
+inspeção do primeiro nível (sem seguir link nem abrir arquivo) não acha sobra: área de
+ensaio, link ou entrada desconhecida. Prazo, interrupção, relatório ausente, sobra ou
+inspeção incompleta preservam a área para diagnóstico e reprovam com
+`work_preserved_cleanup_unproven`; ensaio sem limpeza
 confirmada reprova com `drill_cleanup_unconfirmed`. Comandos manuais equivalentes:
 
 ```bash
@@ -163,7 +165,7 @@ Testes em `tests/test_ops_offsite.py` e `tests/test_ops_observer.py`.
 | `overall` como lista ou objeto | `signal_invalid`; a cópia é lida e `last_valid_copy` mantida |
 | Valor no formato de código fora do contrato (motivo, nome da checagem, estado) | `unrecognized`; o valor não sai no JSON nem na saída da CLI |
 | Limiar `nan`, `inf` ou enorme | argumento recusado, saída 2 |
-| Passo do CI: ensaio com parada inconclusiva, interrupção ou relatório ausente (simulados) | cluster parado e confirmado antes de remover; parada incerta preserva a área e reprova — `tests/test_ops_offsite_gate.py` |
+| Passo do CI: ensaio inconclusivo, prazo, interrupção, relatório ausente, `data` vinculado para fora, `postmaster.pid` sem token, sobra com confirmação contraditória (simulados) | área preservada e passo reprovado, nenhuma parada chamada pelo passo, link e alvo intactos; caso saudável remove a área e aprova — `tests/test_ops_offsite_gate.py` |
 
 ## 6. Premissas da bancada e alcance da prova
 

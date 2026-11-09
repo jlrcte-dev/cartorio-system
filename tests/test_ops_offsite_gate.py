@@ -7,6 +7,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,7 +17,6 @@ import pytest
 from app.ops import pgcluster
 from app.ops.pgcluster import IDENTITY_FILE, WORK_MARKER, create_work_dir, private_write
 from tests.ops_support import REPO_ROOT
-from tests.test_ops_drill import FakeTools
 
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "ops"))
 import offsite_gate  # noqa: E402
@@ -52,7 +52,8 @@ HEALTHY = {
     },
     "work_cleanup": {
         "drills": {"ensaio-sintetico": "confirmed", "restauracao-do-destino": "confirmed"},
-        "leftover_clusters": {"stopped": 0, "not_started": 0, "uncertain": 0},
+        "inspection": "complete",
+        "leftover": {"drill_areas": 0, "links": 0, "unexpected": 0},
         "work_preserved": False,
     },
     "work_removed": True,
@@ -123,7 +124,7 @@ def test_complete_end_to_end_facts_pass():
             "drill_cleanup_unconfirmed",
         ),
         (("work_cleanup", "drills"), {}, "drill_cleanup_unconfirmed"),
-        (("work_cleanup", "work_preserved"), True, "work_preserved_cluster_stop_unconfirmed"),
+        (("work_cleanup", "work_preserved"), True, "work_preserved_cleanup_unproven"),
     ],
 )
 def test_each_missing_proof_fails_with_its_own_reason(path, value, reason):
@@ -206,6 +207,11 @@ def test_workflow_runs_ops2_after_the_ops1_publication_without_touching_the_gate
 
 
 # --- Limpeza da área do passo: os ensaios filhos vivem DENTRO dela -------------------
+#
+# O pai nunca para cluster: só decide se pode remover a própria área. Nenhum teste daqui
+# sobe processo; o registrador abaixo prova que a limpeza não executa nada.
+
+POSIX_ONLY = pytest.mark.skipif(os.name != "posix", reason="links simbólicos: CI Linux")
 
 
 @pytest.fixture
@@ -215,27 +221,38 @@ def any_work_root(monkeypatch):
 
 
 @pytest.fixture
-def fake_pg(monkeypatch):
-    """``pg_ctl`` simulado pelo mesmo ``FakeTools`` dos testes do ensaio: a parada e a
-    confirmação por ``pg_ctl status`` são as do ``Cluster`` real."""
+def executions(monkeypatch):
+    """Registra qualquer tentativa de executar ferramenta ou processo durante o passo."""
+    calls: list[list[str]] = []
 
-    def install(tools: FakeTools) -> FakeTools:
-        monkeypatch.setattr(pgcluster, "run_tool", tools)
-        monkeypatch.setattr(pgcluster, "pg_binary", lambda pg_bin, name: Path(name))
-        return tools
+    def record(cmd, *args, **kwargs):
+        calls.append(list(cmd))
+        return subprocess.CompletedProcess(cmd, 0)
 
-    return install
+    monkeypatch.setattr(pgcluster, "run_tool", record)
+    monkeypatch.setattr(offsite_gate, "run_tool", record)
+    monkeypatch.setattr(subprocess, "run", record)
+    return calls
 
 
-def _child_area(work: Path, run_id: str, label: str = "destino", *, started: bool = True):
-    """Área de um ensaio filho como o ``app.ops.drill`` a deixa: marcador da execução e
-    ``<rótulo>/data`` com o token de identidade gravado antes de qualquer partida."""
+def _child_area(work: Path, run_id: str, label: str = "destino", *, token=True, pid=False):
+    """Área de um ensaio filho como o ``app.ops.drill`` a deixa ao preservar: marcador da
+    execução e ``<rótulo>/data``, com ou sem token e ``postmaster.pid``."""
     area = create_work_dir(work, run_id)
     data = area / label / "data"
     data.mkdir(parents=True)
-    if started:
+    if token:
         private_write(data / IDENTITY_FILE, b"token-ficticio")
+    if pid:
+        private_write(data / "postmaster.pid", b"4242\n")
     return area
+
+
+def _step_dirs(work: Path) -> None:
+    """O que o próprio passo deixa na área num fluxo completo."""
+    for name in ("bruto", "destino", "sinal"):
+        (work / name).mkdir(exist_ok=True)
+        (work / name / "x.json").write_text("{}", encoding="utf-8")
 
 
 def _gate(tmp_path, monkeypatch, end_to_end):
@@ -255,52 +272,127 @@ def _healthy_e2e() -> dict:
     return copy.deepcopy({k: v for k, v in HEALTHY.items() if k != "work_cleanup"})
 
 
-def test_inconclusive_child_stop_preserves_the_nested_area_and_fails(
-    tmp_path, monkeypatch, capsys, any_work_root, fake_pg
+def _confirmed(args) -> None:
+    args.drills.update({"ensaio-sintetico": "confirmed", "restauracao-do-destino": "confirmed"})
+
+
+def _tree(folder: Path) -> dict[str, bytes]:
+    return {str(p.relative_to(folder)): p.read_bytes() for p in folder.rglob("*") if p.is_file()}
+
+
+def _assert_preserved(tmp_path, args, captured, *reasons) -> dict:
+    summary = _summary(captured.out)
+    assert summary["verdict"] == "failed"
+    assert {"work_preserved_cleanup_unproven", "work_not_removed", *reasons} <= set(
+        summary["reasons"]
+    )
+    assert summary["end_to_end"]["work_cleanup"]["work_preserved"] is True
+    assert summary["end_to_end"]["work_removed"] is False
+    assert args.work.is_dir() and (args.work / WORK_MARKER).is_file()
+    assert "limpeza não comprovada" in captured.err
+    for text in (captured.out, captured.err):
+        assert str(tmp_path) not in text and "filho-" not in text
+    return summary["end_to_end"]["work_cleanup"]
+
+
+@POSIX_ONLY
+def test_child_data_linked_outside_is_left_alone_and_never_stopped(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
 ):
-    """O filho não confirmou a parada e preservou a área dele (aninhada): o pai tenta
-    parar, a confirmação segue incerta, e nada é removido."""
-    tools = fake_pg(FakeTools(stop={"destino": 1}, status={"destino": 0}))
+    """``data`` do ensaio filho como link para fora da área: o pai não segue o link, não lê
+    o alvo e não chama parada; link, alvo e arquivos ficam como estavam."""
+    outside = tmp_path / "fora"
+    outside.mkdir()
+    (outside / IDENTITY_FILE).write_bytes(b"token-de-outro-lugar")
+    (outside / "postmaster.pid").write_bytes(b"4242\n")
+    before = _tree(outside)
     seen = {}
 
     def end_to_end(args, raw):
-        seen["child"] = _child_area(args.work, "filho-inconclusivo")
+        child = create_work_dir(args.work, "filho-data-link")
+        (child / "destino").mkdir()
+        (child / "destino" / "data").symlink_to(outside, target_is_directory=True)
+        args.drills["restauracao-do-destino"] = "unconfirmed"
+        seen["link"] = child / "destino" / "data"
+        return _healthy_e2e()
+
+    args, run = _gate(tmp_path, monkeypatch, end_to_end)
+    assert run() == 1
+
+    cleanup = _assert_preserved(tmp_path, args, capsys.readouterr(), "drill_cleanup_unconfirmed")
+    assert cleanup["leftover"] == {"drill_areas": 1, "links": 0, "unexpected": 0}
+    assert seen["link"].is_symlink() and seen["link"].resolve() == outside.resolve()
+    assert _tree(outside) == before
+    assert executions == []
+
+
+@POSIX_ONLY
+def test_link_at_the_top_of_the_area_is_never_followed(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
+):
+    outside = tmp_path / "fora"
+    outside.mkdir()
+    (outside / "dado.txt").write_bytes(b"alheio")
+
+    def end_to_end(args, raw):
+        _confirmed(args)
+        (args.work / "destino").symlink_to(outside, target_is_directory=True)
+        return _healthy_e2e()
+
+    args, run = _gate(tmp_path, monkeypatch, end_to_end)
+    assert run() == 1
+
+    cleanup = _assert_preserved(tmp_path, args, capsys.readouterr())
+    assert cleanup["leftover"] == {"drill_areas": 0, "links": 1, "unexpected": 0}
+    assert (args.work / "destino").is_symlink() and _tree(outside) == {"dado.txt": b"alheio"}
+    assert executions == []
+
+
+def test_postmaster_pid_without_token_and_inconclusive_stop_preserves_the_area(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
+):
+    """Falta de token não prova que o cluster nunca subiu: com o ensaio inconclusivo e a
+    área dele ainda no disco, nada sai."""
+    seen = {}
+
+    def end_to_end(args, raw):
+        seen["child"] = _child_area(args.work, "filho-pid", token=False, pid=True)
         args.drills["restauracao-do-destino"] = "unconfirmed"
         return _healthy_e2e()
 
     args, run = _gate(tmp_path, monkeypatch, end_to_end)
     assert run() == 1
 
-    captured = capsys.readouterr()
-    child = seen["child"]
-    assert args.work.exists() and (args.work / WORK_MARKER).is_file()
-    assert (child / WORK_MARKER).is_file()
-    assert (child / "destino" / "data" / IDENTITY_FILE).read_bytes() == b"token-ficticio"
-    assert ("stop", "destino") in tools.calls and ("status", "destino") in tools.calls
-    summary = _summary(captured.out)
-    assert summary["verdict"] == "failed"
-    assert {"drill_cleanup_unconfirmed", "work_preserved_cluster_stop_unconfirmed"} <= set(
-        summary["reasons"]
-    )
-    assert summary["end_to_end"]["work_cleanup"]["leftover_clusters"] == {
-        "stopped": 0,
-        "not_started": 0,
-        "uncertain": 1,
-    }
-    assert summary["end_to_end"]["work_removed"] is False
-    assert "cluster possivelmente ativo" in captured.err
-    for text in (captured.out, captured.err):
-        assert str(tmp_path) not in text and "filho-inconclusivo" not in text
+    cleanup = _assert_preserved(tmp_path, args, capsys.readouterr(), "drill_cleanup_unconfirmed")
+    assert cleanup["leftover"] == {"drill_areas": 1, "links": 0, "unexpected": 0}
+    assert (seen["child"] / "destino" / "data" / "postmaster.pid").read_bytes() == b"4242\n"
+    assert executions == []
 
 
-@pytest.mark.parametrize(("status", "removed"), [(3, True), (0, False)], ids=["parado", "incerto"])
-def test_interruption_mid_drill_handles_the_leftover_cluster_before_removing(
-    tmp_path, monkeypatch, capsys, any_work_root, fake_pg, status, removed
+@pytest.mark.parametrize("state", ["timeout", "no_report", "unconfirmed", "running"])
+def test_drill_without_confirmed_cleanup_preserves_even_with_nothing_on_disk(
+    tmp_path, monkeypatch, capsys, any_work_root, executions, state
 ):
-    """Interrupção com o ensaio ainda em curso: o registro anterior à execução faz o pai
-    tratar o cluster que pode ter ficado antes de remover a área."""
-    tools = fake_pg(FakeTools(status={"origem": status}))
+    """Prazo, relatório ausente, limpeza não confirmada e execução que não terminou são
+    inconclusivos: sem a confirmação do ensaio, a área fica."""
 
+    def end_to_end(args, raw):
+        _confirmed(args)
+        args.drills["restauracao-do-destino"] = state
+        _step_dirs(args.work)
+        return _healthy_e2e()
+
+    args, run = _gate(tmp_path, monkeypatch, end_to_end)
+    assert run() == 1
+
+    cleanup = _assert_preserved(tmp_path, args, capsys.readouterr(), "drill_cleanup_unconfirmed")
+    assert cleanup["leftover"] == {"drill_areas": 0, "links": 0, "unexpected": 0}
+    assert executions == []
+
+
+def test_interruption_mid_drill_preserves_the_area(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
+):
     def end_to_end(args, raw):
         args.drills["ensaio-sintetico"] = "running"
         _child_area(args.work, "filho-interrompido", "origem")
@@ -310,92 +402,137 @@ def test_interruption_mid_drill_handles_the_leftover_cluster_before_removing(
     with pytest.raises(KeyboardInterrupt):
         run()
 
-    assert ("status", "origem") in tools.calls
-    assert args.work.exists() is not removed
-    assert ("cluster possivelmente ativo" in capsys.readouterr().err) is not removed
+    assert args.work.is_dir() and "limpeza não comprovada" in capsys.readouterr().err
+    assert executions == []
 
 
-def test_missing_report_from_a_drill_sweeps_its_clusters_before_removal(
-    tmp_path, monkeypatch, capsys, any_work_root, fake_pg
+def test_missing_report_from_a_real_drill_call_preserves_the_area(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
 ):
-    """Ensaio filho real (``_drill``) que morre sem relatório depois de subir um cluster:
-    o pai para e confirma, e só então remove."""
-    tools = fake_pg(FakeTools(status={"destino": 3}))
+    """``_drill`` de verdade, com o subprocesso simulado: o ensaio morre sem relatório e
+    deixa a área dele."""
 
     def drill_without_report(cmd, *, env, log, timeout):
-        work_root = Path(cmd[cmd.index("--work-root") + 1])
-        _child_area(work_root, "filho-sem-relatorio")
+        _child_area(Path(cmd[cmd.index("--work-root") + 1]), "filho-sem-relatorio")
         return subprocess.CompletedProcess(cmd, -9)
 
     monkeypatch.setattr(offsite_gate, "run_tool", drill_without_report)
 
     def end_to_end(args, raw):
-        code, report = offsite_gate._drill(args, raw, "ensaio-sintetico")
-        assert (code, report) == (-9, {})
-        return {"export": {"exit_code": code, "verdict": None}}
+        assert offsite_gate._drill(args, raw, "ensaio-sintetico") == (-9, {})
+        return {"export": {"exit_code": -9, "verdict": None}}
+
+    args, run = _gate(tmp_path, monkeypatch, end_to_end)
+    assert run() == 1
+
+    cleanup = _assert_preserved(tmp_path, args, capsys.readouterr(), "drill_cleanup_unconfirmed")
+    assert cleanup["drills"] == {"ensaio-sintetico": "no_report"}
+    assert cleanup["leftover"]["drill_areas"] == 1
+    assert executions == []
+
+
+def test_child_leftover_wins_over_a_contradictory_confirmation(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
+):
+    """Os dois relatórios dizem "limpeza confirmada", mas uma área de ensaio ficou: vale o
+    disco."""
+
+    def end_to_end(args, raw):
+        _confirmed(args)
+        _step_dirs(args.work)
+        _child_area(args.work, "filho-contraditorio")
+        return _healthy_e2e()
+
+    args, run = _gate(tmp_path, monkeypatch, end_to_end)
+    assert run() == 1
+
+    cleanup = _assert_preserved(tmp_path, args, capsys.readouterr())
+    assert cleanup["leftover"] == {"drill_areas": 1, "links": 0, "unexpected": 0}
+    assert executions == []
+
+
+def test_unexpected_entry_in_the_area_preserves_it(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
+):
+    def end_to_end(args, raw):
+        _confirmed(args)
+        (args.work / "sobra-desconhecida.txt").write_text("x", encoding="utf-8")
+        return _healthy_e2e()
+
+    args, run = _gate(tmp_path, monkeypatch, end_to_end)
+    assert run() == 1
+
+    cleanup = _assert_preserved(tmp_path, args, capsys.readouterr())
+    assert (cleanup["inspection"], cleanup["leftover"]["unexpected"]) == ("complete", 1)
+    assert executions == []
+
+
+class _OsWithUnreadableArea:
+    """O ``os`` do módulo do passo, com ``scandir`` falhando: erro de inspeção simulado."""
+
+    def __getattr__(self, name):
+        return getattr(os, name)
+
+    @staticmethod
+    def scandir(path):
+        raise PermissionError(13, "simulado")
+
+
+def test_failed_inspection_preserves_the_area(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
+):
+    def end_to_end(args, raw):
+        _confirmed(args)
+        monkeypatch.setattr(offsite_gate, "os", _OsWithUnreadableArea())
+        return _healthy_e2e()
+
+    args, run = _gate(tmp_path, monkeypatch, end_to_end)
+    assert run() == 1
+
+    cleanup = _assert_preserved(tmp_path, args, capsys.readouterr())
+    assert (cleanup["inspection"], cleanup["leftover"]) == ("failed", None)
+    assert executions == []
+
+
+def test_area_owned_by_another_run_is_never_removed(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
+):
+    def end_to_end(args, raw):
+        _confirmed(args)
+        (args.work / WORK_MARKER).write_text("outra-execucao", encoding="ascii")
+        return _healthy_e2e()
 
     args, run = _gate(tmp_path, monkeypatch, end_to_end)
     assert run() == 1
 
     summary = _summary(capsys.readouterr().out)
-    cleanup = summary["end_to_end"]["work_cleanup"]
-    assert cleanup["drills"] == {"ensaio-sintetico": "no_report"}
-    assert cleanup["leftover_clusters"] == {"stopped": 1, "not_started": 0, "uncertain": 0}
-    assert ("stop", "destino") in tools.calls and ("status", "destino") in tools.calls
-    assert not args.work.exists() and summary["end_to_end"]["work_removed"] is True
-    assert "drill_cleanup_unconfirmed" in summary["reasons"]
-    assert "work_preserved_cluster_stop_unconfirmed" not in summary["reasons"]
+    assert summary["reasons"] == ["work_not_removed"]
+    assert args.work.is_dir()
 
 
-def test_healthy_drills_remove_the_area_without_touching_any_cluster(
-    tmp_path, monkeypatch, capsys, any_work_root, fake_pg
+def test_healthy_drills_without_leftovers_remove_the_area_and_pass(
+    tmp_path, monkeypatch, capsys, any_work_root, executions
 ):
-    tools = fake_pg(FakeTools())
-
     def end_to_end(args, raw):
-        args.drills.update({"ensaio-sintetico": "confirmed", "restauracao-do-destino": "confirmed"})
+        _confirmed(args)
+        _step_dirs(args.work)
         return _healthy_e2e()
 
     args, run = _gate(tmp_path, monkeypatch, end_to_end)
     assert run() == 0
 
-    summary = _summary(capsys.readouterr().out)
+    captured = capsys.readouterr()
+    summary = _summary(captured.out)
     assert (summary["verdict"], summary["reasons"]) == ("passed", [])
-    assert summary["end_to_end"]["work_cleanup"]["leftover_clusters"] == {
-        "stopped": 0,
-        "not_started": 0,
-        "uncertain": 0,
+    assert summary["end_to_end"]["work_cleanup"] == {
+        "drills": {"ensaio-sintetico": "confirmed", "restauracao-do-destino": "confirmed"},
+        "inspection": "complete",
+        "leftover": {"drill_areas": 0, "links": 0, "unexpected": 0},
+        "work_preserved": False,
     }
-    assert not args.work.exists() and tools.calls == []
-
-
-def test_area_left_on_disk_is_swept_even_if_every_drill_reported_confirmed(
-    tmp_path, monkeypatch, capsys, any_work_root, fake_pg
-):
-    """Quem decide é o disco, não só o relatório: área de ensaio que ficou é tratada
-    mesmo com todos os relatórios dizendo que a limpeza foi confirmada."""
-    tools = fake_pg(FakeTools(stop={"destino": 1}, status={"destino": 0}))
-
-    def end_to_end(args, raw):
-        args.drills.update({"ensaio-sintetico": "confirmed", "restauracao-do-destino": "confirmed"})
-        _child_area(args.work, "filho-nao-registrado")
-        return _healthy_e2e()
-
-    args, run = _gate(tmp_path, monkeypatch, end_to_end)
-    assert run() == 1
-
-    summary = _summary(capsys.readouterr().out)
-    assert summary["reasons"] == ["work_preserved_cluster_stop_unconfirmed", "work_not_removed"]
-    assert args.work.exists() and ("status", "destino") in tools.calls
-
-
-def test_cluster_that_never_started_needs_no_stop(tmp_path, any_work_root, fake_pg):
-    tools = fake_pg(FakeTools())
-    work = create_work_dir(tmp_path, "passo")
-    _child_area(work, "filho-sem-partida", started=False)
-    counts = offsite_gate.stop_leftover_clusters(work, tmp_path)
-    assert counts == {"stopped": 0, "not_started": 1, "uncertain": 0}
-    assert tools.calls == []
+    assert summary["end_to_end"]["work_removed"] is True
+    assert not args.work.exists() and captured.err == ""
+    assert executions == []
 
 
 @pytest.mark.parametrize(

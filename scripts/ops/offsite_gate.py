@@ -14,10 +14,10 @@ próprios, em loopback, com credencial gerada e descartada pelo ``app.ops.drill`
 3. **Saída:** só um resumo sintético (SHA, versão, resultado de cada prova, limpeza),
    conferido contra credencial antes de impresso. Logs brutos nunca saem.
 4. **Limpeza:** os ensaios rodam com a área deste passo como raiz, então a área deles fica
-   DENTRO dela. Ela só sai quando cada ensaio confirmou a própria limpeza; senão (parada
-   inconclusiva, falha, prazo, relatório ausente, interrupção), os clusters que ficaram
-   são parados e confirmados por ``pg_ctl status`` antes. Parada incerta preserva a área
-   para diagnóstico e reprova o passo.
+   DENTRO dela. Parar e confirmar cluster é só do ensaio. A área do passo só sai com cada
+   ensaio tendo confirmado a própria limpeza e nenhuma sobra no disco (área de ensaio, link
+   ou entrada desconhecida). Senão — parada inconclusiva, falha, prazo, relatório ausente,
+   interrupção — ela fica para diagnóstico e o passo reprova.
 
 Uso: python scripts/ops/offsite_gate.py --pg-bin /usr/lib/postgresql/18/bin --work-root DIR
 """
@@ -43,17 +43,13 @@ from app.ops.backup import sha256_file
 from app.ops.drill import ORIGIN_DB
 from app.ops.offsite import GENERATIONS
 from app.ops.pgcluster import (
-    IDENTITY_FILE,
-    STOPPED_STATES,
     WORK_MARKER,
-    Cluster,
     DrillRefused,
     create_work_dir,
     private_mkdir,
     remove_work_dir,
     require_clean_libpq_env,
     run_tool,
-    stop_all,
     subprocess_env,
 )
 from app.ops.report import CheckResult, Status, build_report, utc_now, write_json_atomic
@@ -66,6 +62,10 @@ POSIX_SELECTION = (
     " or linked_generation or linked_copy_layout"
 )
 POSIX_EXPECTED = 13
+# O que o próprio passo cria na área dele (ver _end_to_end e _gate); o resto é sobra.
+_STEP_DIRS = frozenset({"bruto", "origem", "destino", "sinal"})
+# Nome que pgcluster.create_work_dir dá à área de cada ensaio filho.
+_DRILL_AREA_PREFIX = "cartorio-ops-drill-"
 _PASSED = re.compile(r"^PASSED (tests/test_ops_(?:offsite|observer)\.py::\S+)$")
 # Destino privado desde a criação, mesmo sob umask 022.
 PRIVATE_MODES = {"destination": "0700", "generation": "0700", "files": "0600"}
@@ -119,71 +119,71 @@ def e2e_reasons(facts: dict[str, Any]) -> list[str]:
     if not drills or any(state != "confirmed" for state in drills.values()):
         reasons.append("drill_cleanup_unconfirmed")
     if cleanup.get("work_preserved"):
-        reasons.append("work_preserved_cluster_stop_unconfirmed")
+        reasons.append("work_preserved_cleanup_unproven")
     if not facts.get("work_removed"):
         reasons.append("work_not_removed")
     return reasons
 
 
 def drill_cleanup_state(report: dict[str, Any]) -> str:
-    """O que o pai sabe da limpeza de um ensaio filho: só ``confirmed`` dispensa a
-    varredura dos clusters que ele pode ter deixado."""
+    """O que o pai sabe da limpeza de um ensaio filho, só pelo relatório dele: ``confirmed``
+    quando o próprio ensaio parou, confirmou e removeu o que criou."""
     cleanup = report.get("cleanup")
     if not report or not isinstance(cleanup, dict):
         return "no_report"
     return "confirmed" if cleanup.get("confirmed") is True else "unconfirmed"
 
 
-def stop_leftover_clusters(work: Path, pg_bin: Path) -> dict[str, int]:
-    """Para e confirma, com as garantias do próprio ensaio, cada cluster que um filho pode
-    ter deixado: área com o marcador de execução de ensaio e ``<rótulo>/data`` com o token
-    de identidade. Sem token o cluster nunca partiu (o ``initialize`` grava o token antes
-    de qualquer ``start``). Devolve só contagens por estado."""
-    counts = {"stopped": 0, "not_started": 0, "uncertain": 0}
-    env = subprocess_env(os.environ)
+def inspect_work(work: Path) -> dict[str, int] | None:
+    """Sobras no primeiro nível da área do passo, sem seguir link nem abrir nada: só
+    ``lstat`` das entradas. ``None`` = a inspeção não terminou.
+
+    Ensaio que confirmou a limpeza já removeu a própria área; qualquer área de ensaio que
+    reste — com ou sem token, com ``postmaster.pid`` ou link dentro — é de um cluster que
+    só aquele ensaio saberia parar."""
+    leftover = {"drill_areas": 0, "links": 0, "unexpected": 0}
     try:
-        for area in sorted(work.iterdir()):
-            marker = area / WORK_MARKER
-            if area.is_symlink() or not area.is_dir() or not marker.is_file():
-                continue
-            run_id = marker.read_text(encoding="ascii")
-            for root in sorted(area.iterdir()):
-                data = root / "data"
-                if root.is_symlink() or not data.is_dir():
+        with os.scandir(work) as entries:
+            for entry in entries:
+                if entry.is_symlink():
+                    leftover["links"] += 1
+                elif entry.name == WORK_MARKER and entry.is_file(follow_symlinks=False):
                     continue
-                if not (data / IDENTITY_FILE).is_file():
-                    counts["not_started"] += 1
+                elif entry.name in _STEP_DIRS and entry.is_dir(follow_symlinks=False):
                     continue
-                cluster = Cluster(
-                    label=root.name, run_id=run_id, pg_bin=pg_bin, root=root, state="uncertain"
-                )
-                state = stop_all([cluster], env)[root.name]
-                counts["stopped" if state in STOPPED_STATES else "uncertain"] += 1
-    except (OSError, UnicodeDecodeError):
-        counts["uncertain"] += 1
-    return counts
+                elif entry.name.startswith(_DRILL_AREA_PREFIX):
+                    leftover["drill_areas"] += 1
+                else:
+                    leftover["unexpected"] += 1
+    except OSError:
+        return None
+    return leftover
 
 
 def work_cleanup(args: argparse.Namespace, work: Path, run_id: str) -> dict[str, Any]:
-    """Remove a área do passo só depois de os clusters dos ensaios filhos estarem parados
-    e confirmados; parada incerta preserva a área privada para diagnóstico.
-
-    A varredura roda sempre, não só quando um ensaio deixou de confirmar a limpeza: quem
-    decide é o que está no disco. Ensaio que limpou a própria área não deixa nada para ela
-    encontrar, e nenhum ``pg_ctl`` é chamado."""
-    leftover = stop_leftover_clusters(work, args.pg_bin)
-    preserved = leftover["uncertain"] > 0
-    if preserved:
+    """Remove a área do passo só com a limpeza comprovada: todo ensaio confirmou a própria
+    (timeout, interrupção e relatório ausente não confirmam), a inspeção terminou e não há
+    sobra. Senão a área privada fica para diagnóstico e o passo reprova. O pai nunca para
+    cluster: parar e confirmar é do ensaio que o criou e o conhece."""
+    drills = dict(args.drills)
+    leftover = inspect_work(work)
+    proven = (
+        leftover is not None
+        and not any(leftover.values())
+        and all(state == "confirmed" for state in drills.values())
+    )
+    if not proven:
         print(
-            "[ops2] cluster possivelmente ativo: área de trabalho preservada para diagnóstico "
-            "(pg_ctl status -D <área do passo>/<área do ensaio>/<rótulo>/data)",
+            "[ops2] limpeza não comprovada: área de trabalho preservada para diagnóstico "
+            "(ensaio sem limpeza confirmada, sobra ou link na área, ou inspeção incompleta)",
             file=sys.stderr,
         )
     return {
-        "drills": dict(args.drills),
-        "leftover_clusters": leftover,
-        "work_preserved": preserved,
-        "removed": not preserved and remove_work_dir(work, run_id),
+        "drills": drills,
+        "inspection": "complete" if leftover is not None else "failed",
+        "leftover": leftover,
+        "work_preserved": not proven,
+        "removed": proven and remove_work_dir(work, run_id),
     }
 
 
