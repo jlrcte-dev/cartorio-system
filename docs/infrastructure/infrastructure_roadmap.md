@@ -282,7 +282,7 @@ operacional (runbook privado, fora do Git), bancada e aceite real:
 | Item | Situação | Fonte |
 |---|---|---|
 | Host Proxmox + `VM-CartorioSystem` em homologação, dados sintéticos | Em operação desde 05–06/11 | Relato |
-| Banco ativo em PostgreSQL 18 | Desde 07/11; decisão ADR-013 ainda fora do Git | Relato |
+| Banco ativo em PostgreSQL 18 | Desde 07/11; decisão no [ADR-013](../decisions/ADR-013-troca-banco-ativo-sqlite-postgresql.md) | Relato |
 | Compatibilidade PostgreSQL do código | PR #5 em `main` (`c49c6579`), CI verde | Git |
 | Backup local diário (`pg_dump` + manifesto SHA-256) | Dois disparos automáticos consecutivos observados no journal (08/11); integridade do 2º par e restauração de cópia automática pendentes | Relato |
 | Verificador operacional, alerta local, gate PostgreSQL, prova de recuperação — código | Em `main` (PR #6, merge `b22e1b6`); CI do PR `42413480266` e pós-merge `42431949823` verdes; PostgreSQL 18.6, gate sem teste pulado | Git e CI + bancada |
