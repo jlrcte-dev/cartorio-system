@@ -81,6 +81,7 @@
 | [`operations/local_data_policy.md`](operations/local_data_policy.md) | Política de dados locais e dados sensíveis |
 | [`operations/ops_verifier_runbook.md`](operations/ops_verifier_runbook.md) | Verificador operacional, alerta local, gate PostgreSQL e prova de recuperação (CARTORIO-OPS-1) |
 | [`operations/ops_window_checklist.md`](operations/ops_window_checklist.md) | Checklist da janela de operação de continuidade: itens, evidência por fonte, RPO/RTO |
+| [`operations/ops_offsite_pilot.md`](operations/ops_offsite_pilot.md) | Piloto da cópia verificada e do observador fora do host (CARTORIO-OPS-2): contrato, comandos, cenários, lista do PC dedicado |
 
 ---
 

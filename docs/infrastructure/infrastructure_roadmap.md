@@ -289,7 +289,8 @@ operacional (runbook privado, fora do Git), bancada e aceite real:
 | Verificador operacional — implantação | Não instalado na VM; release ativa anterior a `app/ops` (leitura de 08/11) | Relato |
 | Verificador operacional — aceite real | Pendente: itens 1 a 5 do [checklist](../operations/ops_window_checklist.md) | — |
 | Partida após reboot (convidado e host), cópia no PC dedicado, restauração dela | Pendentes de janela | — |
-| `VM-TestRestore`, `VM-Backup-Monitor`, cópia fora do host | Não iniciados | — |
+| Cópia verificada fora do host e observador externo (piloto `CARTORIO-OPS-2`, [ADR-015](../decisions/ADR-015-copia-verificada-e-observador-fora-do-host.md)) | Piloto em bancada, em branch; PC dedicado sem inventário | Git (branch) + bancada |
+| `VM-TestRestore`, `VM-Backup-Monitor` | Não iniciados | — |
 
 ### Fase 2 — FileServer e identidade (120 a 180 dias)
 

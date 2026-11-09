@@ -190,6 +190,18 @@ Os testes `tests/test_ops_*.py` ficam em dois grupos:
   O gate só imprime e publica o que conferiu; os testes dessa conferência (credencial
   fictícia em log e em relatório) rodam também no gate SQLite. Procedimento em
   [`../operations/how_to_run.md`](../operations/how_to_run.md) § 9.
+- **Piloto OPS-2 no mesmo job** (`scripts/ops/offsite_gate.py`, passo próprio depois da
+  publicação da OPS-1). Primeiro, os 13 testes POSIX de `tests/test_ops_offsite.py` e
+  `tests/test_ops_observer.py`, com `-rA`: exatamente 13 aprovados, nenhum pulado. Depois,
+  a prova ponta a ponta: ensaio sintético exporta, `app.ops.offsite` copia, a origem e o
+  sinal são retirados, o observador acusa a perda mantendo a cópia válida, e
+  `app.ops.drill --from-manifest` restaura só do destino. A área do passo só sai com a
+  limpeza de cada ensaio confirmada e nenhuma sobra nela (o passo nunca para cluster);
+  senão fica para diagnóstico e o passo reprova. As regras de aprovação e a limpeza
+  (inconclusivo, prazo, interrupção, relatório ausente, links, sobras, simulados) são
+  testadas em
+  `tests/test_ops_offsite_gate.py`. Guia em
+  [`../operations/ops_offsite_pilot.md`](../operations/ops_offsite_pilot.md).
 
 ## Lacunas conhecidas
 

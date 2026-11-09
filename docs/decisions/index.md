@@ -56,6 +56,7 @@ Arquivo: [`technical_decisions.md`](technical_decisions.md)
 | [ADR-011](ADR-011-drive-readonly-capture.md) | Captura local somente leitura de fontes do Google Drive do cartório — service account própria, escopo `drive.readonly`, allowlist explícita | Proposto |
 | [ADR-012](ADR-012-atlas-finance-snapshot-export.md) | Exportação financeira para o Atlas — contrato próprio `cartorio_system.atlas.finance_snapshot` 1.0, fechado e validado antes da troca atômica | Proposto |
 | [ADR-014](ADR-014-verificacao-operacional-e-prova-de-recuperacao.md) | Verificação operacional somente leitura e prova de recuperação em bancada — contrato `cartorio_system.ops.check` 1.0, saída 0/1/2, gate PostgreSQL próprio | Proposto |
+| [ADR-015](ADR-015-copia-verificada-e-observador-fora-do-host.md) | Cópia verificada e observador fora do host (piloto) — gerações promovidas por `rename`, banco esperado à parte, observador sem acesso a banco | Proposto |
 
 > **Nota factual (2026-11-07):** o número **ADR-013** pertence à decisão de trocar o banco
 > ativo de homologação de SQLite para PostgreSQL. Segundo o relato operacional, ela foi
