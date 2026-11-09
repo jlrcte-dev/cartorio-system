@@ -190,6 +190,10 @@ com planejamento próprio.
 
 ## 8. Lista para o dia em que o PC estiver disponível
 
+A [ADR-016](../decisions/ADR-016-politica-de-protecao-do-banco.md) (*Proposto*) traz uma
+proposta para Transporte, Retenção, executor e Criptografia. Ela não substitui a decisão de
+cada linha abaixo.
+
 | Item | O que verificar | Quem |
 |---|---|---|
 | Disco | saúde (SMART), espaço para N gerações, sistema de arquivos com `rename` atômico | operador, na janela |

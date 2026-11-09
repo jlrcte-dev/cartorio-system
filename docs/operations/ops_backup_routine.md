@@ -52,7 +52,8 @@ arquivos. A conferência de conteúdo continua sendo o item 1 do
 ## Fora desta rotina
 
 - **Cópia fora do host.** Todas as cópias ficam no disco da própria VM. O destino externo é
-  pendência da ADR-013 e tema da OPS-2.
+  pendência da ADR-013 e tema da OPS-2. RPO, retenção, destino e executor estão propostos na
+  [ADR-016](../decisions/ADR-016-politica-de-protecao-do-banco.md), ainda sem aceite.
 - **Alerta.** Uma falha só aparece no journal; ninguém é avisado.
 - **Teste periódico de restauração.** A restauração foi provada uma vez, no disparo
   manual. A verificação recorrente é escopo do verificador da OPS-1
