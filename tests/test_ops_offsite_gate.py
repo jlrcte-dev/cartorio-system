@@ -58,11 +58,13 @@ HEALTHY = {
     },
     "work_removed": True,
 }
-OK_TOTALS = {"tests": 13, "failures": 0, "errors": 0, "skipped": 0, "exit_code": 0}
-PASSED = [f"tests/test_ops_offsite.py::caso_{n}" for n in range(13)]
+POSIX_N = offsite_gate.POSIX_EXPECTED
+OK_TOTALS = {"tests": POSIX_N, "failures": 0, "errors": 0, "skipped": 0, "exit_code": 0}
+PASSED = [f"tests/test_ops_offsite.py::caso_{n}" for n in range(POSIX_N)]
 
 
-def test_posix_selection_collects_exactly_the_13_posix_cases():
+def test_posix_selection_collects_exactly_the_posix_cases():
+    """13 da OPS-2 e 19 da OPS-3 (S1, S2, S4 — inclusive o ``.preparo`` vinculado)."""
     done = subprocess.run(
         [sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "--collect-only", "-q"]
         + [*offsite_gate.POSIX_FILES, "-k", offsite_gate.POSIX_SELECTION],
@@ -73,16 +75,17 @@ def test_posix_selection_collects_exactly_the_13_posix_cases():
         check=False,
     )
     ids = [line for line in done.stdout.splitlines() if "::" in line]
-    assert len(ids) == offsite_gate.POSIX_EXPECTED == 13, done.stdout
+    assert len(ids) == offsite_gate.POSIX_EXPECTED == 32, done.stdout
     assert all(offsite_gate._PASSED.match(f"PASSED {node}") for node in ids)
 
 
-def test_posix_proof_passes_only_with_13_named_passes_and_no_skip():
+def test_posix_proof_passes_only_with_every_named_pass_and_no_skip():
     assert offsite_gate.posix_reasons(OK_TOTALS, PASSED) == []
     skipped = OK_TOTALS | {"skipped": 2}
-    assert "mandatory_proof_skipped" in offsite_gate.posix_reasons(skipped, PASSED[:11])
-    assert "posix_tests_not_all_passed" in offsite_gate.posix_reasons(skipped, PASSED[:11])
-    assert offsite_gate.posix_reasons(OK_TOTALS | {"tests": 12}, PASSED[:12]) == [
+    short = PASSED[: POSIX_N - 2]
+    assert "mandatory_proof_skipped" in offsite_gate.posix_reasons(skipped, short)
+    assert "posix_tests_not_all_passed" in offsite_gate.posix_reasons(skipped, short)
+    assert offsite_gate.posix_reasons(OK_TOTALS | {"tests": POSIX_N - 1}, PASSED[:-1]) == [
         "posix_tests_not_all_passed"
     ]
     assert "tests_failed" in offsite_gate.posix_reasons(OK_TOTALS | {"failures": 1}, PASSED)
@@ -90,6 +93,33 @@ def test_posix_proof_passes_only_with_13_named_passes_and_no_skip():
 
 def test_complete_end_to_end_facts_pass():
     assert offsite_gate.e2e_reasons(HEALTHY) == []
+
+
+def test_gate_reads_what_it_needs_from_a_real_import_report_1_1(tmp_path):
+    """Consumidor do relatório da importação: a OPS-3 levou o esquema a 1.1 (campo novo
+    ``staging.leftovers``) sem mexer no que o passo lê — veredito e carimbo da origem."""
+    from datetime import timedelta
+
+    from app.ops import offsite
+    from tests.ops_support import NOW, stamp_of, write_publication
+
+    moment = NOW - timedelta(hours=1)
+    write_publication(tmp_path / "origem", moment)
+    report = offsite.run_import(
+        tmp_path / "origem", tmp_path / "destino", "cartorio_lab", now=NOW, platform="linux"
+    )
+    out = tmp_path / "offsite.json"
+    out.write_text(json.dumps(report), encoding="utf-8")
+
+    read = offsite_gate._json(out)
+
+    assert (read["schema"], read["schema_version"].split(".")[0]) == (
+        "cartorio_system.ops.offsite_import",
+        "1",
+    )
+    assert read.get("verdict") == "published"
+    assert (read.get("source") or {}).get("stamp") == stamp_of(moment)
+    assert set(read["staging"]) == {"used", "removed", "leftovers"}
 
 
 @pytest.mark.parametrize(
@@ -258,7 +288,9 @@ def _step_dirs(work: Path) -> None:
 def _gate(tmp_path, monkeypatch, end_to_end):
     root = tmp_path / "raiz"
     root.mkdir()
-    monkeypatch.setattr(offsite_gate, "_posix", lambda raw: ({"tests": 13, "passed": PASSED}, []))
+    monkeypatch.setattr(
+        offsite_gate, "_posix", lambda raw: ({"tests": POSIX_N, "passed": PASSED}, [])
+    )
     monkeypatch.setattr(offsite_gate, "_end_to_end", end_to_end)
     args = argparse.Namespace(pg_bin=tmp_path / "bin", work_root=root)
     return args, lambda: offsite_gate._gate(args)

@@ -19,6 +19,7 @@ cadência, e a igualdade prova que o arquivo publicado é, bit a bit, o que foi 
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -27,7 +28,7 @@ import stat
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 from sqlalchemy import exc as sa_exc
 from sqlalchemy.engine import make_url
@@ -56,6 +57,14 @@ FUTURE_TOLERANCE = timedelta(minutes=5)
 PARTIAL_GRACE = timedelta(minutes=10)
 _HASH_CHUNK = 1024 * 1024
 _LISTED_LIMIT = 10
+# Leitura relativa a um diretório aberto: sem seguir link e sem bloquear num FIFO.
+_READ_NOFOLLOW = (
+    os.O_RDONLY
+    | getattr(os, "O_NOFOLLOW", 0)
+    | getattr(os, "O_NONBLOCK", 0)
+    | getattr(os, "O_CLOEXEC", 0)
+    | getattr(os, "O_BINARY", 0)
+)
 
 RESTORE_DRILL_SCHEMA = "cartorio_system.ops.restore_drill"
 
@@ -74,10 +83,14 @@ def parse_stamp(text: object) -> datetime | None:
 
 
 def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
     with path.open("rb") as handle:
-        while chunk := handle.read(_HASH_CHUNK):
-            digest.update(chunk)
+        return _sha256_stream(handle)
+
+
+def _sha256_stream(handle: BinaryIO) -> str:
+    digest = hashlib.sha256()
+    while chunk := handle.read(_HASH_CHUNK):
+        digest.update(chunk)
     return digest.hexdigest()
 
 
@@ -92,21 +105,67 @@ class Evaluation:
     recovery_point: datetime | None = None
 
 
-def _regular_file_inside(directory: Path, name: str) -> tuple[Path | None, str | None]:
+class _NotRegularAnymore(Exception):
+    """Entre o ``lstat`` e a abertura, o nome virou link ou outra coisa (só com ``dir_fd``)."""
+
+
+class _Folder:
+    """Onde a publicação é lida. Sem ``fd``, pelo caminho — o verificador, como sempre
+    foi. Com ``fd`` (diretório já aberto pelo chamador, POSIX), cada nome é aberto
+    relativo a ele e sem seguir link: o caminho não é resolvido de novo, e trocar um
+    componente dele depois da abertura não muda o que se lê."""
+
+    def __init__(self, path: Path, fd: int | None) -> None:
+        self.path = path
+        self.fd = fd
+
+    def lstat(self, name: str) -> os.stat_result:
+        if self.fd is None:
+            return (self.path / name).lstat()
+        return os.stat(name, dir_fd=self.fd, follow_symlinks=False)
+
+    def stat(self, name: str) -> os.stat_result:
+        if self.fd is None:
+            return (self.path / name).stat()
+        return os.stat(name, dir_fd=self.fd, follow_symlinks=False)
+
+    def open(self, name: str) -> BinaryIO:
+        if self.fd is None:
+            return (self.path / name).open("rb")
+        try:
+            fd = os.open(name, _READ_NOFOLLOW, dir_fd=self.fd)
+        except OSError as exc:
+            if exc.errno == errno.ELOOP:
+                raise _NotRegularAnymore from exc
+            raise
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            os.close(fd)
+            raise _NotRegularAnymore
+        return os.fdopen(fd, "rb")
+
+    def inside(self, name: str) -> bool:
+        """Com ``fd``, um nome sem separador que não é link está no diretório aberto por
+        construção; pelo caminho, confere a resolução."""
+        if self.fd is not None:
+            return True
+        path = self.path / name
+        return path.resolve().parent == self.path.resolve()
+
+
+def _regular_file_inside(folder: _Folder, name: str) -> tuple[str | None, str | None]:
     """Recusa nome com separador ou ``..``, link simbólico e o que resolva fora do
     diretório configurado."""
     if not name or name != Path(name).name or name in (".", "..") or "\\" in name:
         return None, "reference_outside_dir"
-    path = directory / name
     try:
-        info = path.lstat()
+        info = folder.lstat(name)
     except FileNotFoundError:
         return None, "artifact_missing"
-    if stat.S_ISLNK(info.st_mode) or path.resolve().parent != directory.resolve():
+    if stat.S_ISLNK(info.st_mode) or not folder.inside(name):
         return None, "reference_outside_dir"
     if not stat.S_ISREG(info.st_mode):
         return None, "artifact_not_regular"
-    return path, None
+    return name, None
 
 
 def database_from_dsn(url_text: str | None) -> tuple[str | None, str | None]:
@@ -173,23 +232,33 @@ def expected_database(
 
 
 def evaluate_publication(
-    directory: Path, stamp: str, now: datetime, expected_database: str | None
+    directory: Path,
+    stamp: str,
+    now: datetime,
+    expected_database: str | None,
+    *,
+    dir_fd: int | None = None,
 ) -> Evaluation:
     """Avalia ``backup-<stamp>.json`` e o artefato que ele referencia. O manifesto é a
     evidência: o campo ``database`` precisa ser o banco esperado. Sem banco esperado
-    comprovado (``None``) só a identidade fica sem avaliar."""
-    manifest_path = directory / f"backup-{stamp}.json"
+    comprovado (``None``) só a identidade fica sem avaliar. ``dir_fd``: ``directory`` já
+    aberto pelo chamador; a leitura fica presa a ele (ver :class:`_Folder`)."""
+    folder = _Folder(directory, dir_fd)
+    manifest = f"backup-{stamp}.json"
     try:
-        info = manifest_path.lstat()
+        info = folder.lstat(manifest)
         if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
             return Evaluation(stamp, "invalid", "reference_outside_dir")
         if info.st_size > MAX_MANIFEST_BYTES:
             return Evaluation(stamp, "invalid", "manifest_invalid")
-        raw = manifest_path.read_bytes()
+        with folder.open(manifest) as handle:
+            raw = handle.read()
     except FileNotFoundError:
         return Evaluation(stamp, "unavailable", "manifest_missing")
     except PermissionError:
         return Evaluation(stamp, "unreadable", "manifest_unreadable")
+    except _NotRegularAnymore:
+        return Evaluation(stamp, "invalid", "reference_outside_dir")
     try:
         manifest = json.loads(raw)
     except (UnicodeDecodeError, ValueError):
@@ -209,7 +278,7 @@ def evaluate_publication(
     if isinstance(size, bool) or not isinstance(size, int) or size < 0:
         return Evaluation(stamp, "invalid", "manifest_incomplete")
 
-    artifact, problem = _regular_file_inside(directory, name)
+    artifact, problem = _regular_file_inside(folder, name)
     if problem == "reference_outside_dir":
         return Evaluation(stamp, "invalid", problem)
     if not _ARTIFACT.match(name) or name != f"backup-{stamp}.dump" or generated != stamp:
@@ -227,15 +296,18 @@ def evaluate_publication(
     if problem is not None or artifact is None:
         return Evaluation(stamp, "invalid", problem or "artifact_missing", facts)
 
-    artifact_info = artifact.stat()
+    artifact_info = folder.stat(artifact)
     facts["size_bytes"] = artifact_info.st_size
     facts["mtime_utc"] = utc_iso(datetime.fromtimestamp(artifact_info.st_mtime, tz=UTC))
     if artifact_info.st_size != size:
         return Evaluation(stamp, "invalid", "size_mismatch", facts, recovery_point)
     try:
-        observed = sha256_file(artifact)
+        with folder.open(artifact) as handle:
+            observed = _sha256_stream(handle)
     except PermissionError:
         return Evaluation(stamp, "unreadable", "artifact_unreadable", facts, recovery_point)
+    except _NotRegularAnymore:
+        return Evaluation(stamp, "invalid", "reference_outside_dir", facts, recovery_point)
     facts["sha256"] = observed
     if observed != digest:
         return Evaluation(stamp, "invalid", "digest_mismatch", facts, recovery_point)

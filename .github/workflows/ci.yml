@@ -157,7 +157,7 @@ jobs:
           if-no-files-found: error
 
       # OPS-2 (piloto fora do host), depois da publicação da OPS-1, que fica intocada.
-      # Os 13 testes POSIX com nome no log e a prova ponta a ponta: exportar → copiar →
+      # Os testes POSIX (OPS-2 e OPS-3) com nome no log e a prova ponta a ponta: exportar → copiar →
       # retirar a origem e o sinal → observar → restaurar só do destino → ler pela API →
       # limpar. Teste pulado ou prova faltando reprova; só sai um resumo sintético
       # conferido contra credencial, e a área do passo é removida no fim.
