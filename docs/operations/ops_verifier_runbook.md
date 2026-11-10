@@ -91,13 +91,30 @@ parte e nunca lido da cópia. O manifesto passa pela mesma validação do verifi
 `database` divergente recusa o ensaio antes de qualquer cluster (`database_mismatch`, sem
 nomes no relatório).
 
+**Modo cópia: registro conhecido (OPS-3).** O achado informado em `--expect-finding-id` /
+`--expect-finding-code` é lido pela API do destino, cuja identidade já foi comprovada.
+Registro inexistente — o 404 da própria aplicação — e registro com outro código reprovam
+com `record_mismatch` (`failure.record`: `absent` ou `different`). Qualquer outra resposta
+não prova nada sobre o registro e continua `unexpected_error` com `failure.error_class`:
+404 do roteador (rota inexistente, `{"detail": "Not Found"}`), 401/403, 5xx, conexão
+recusada e corpo que não é JSON. Corpo JSON que não é objeto é `api_unexpected_body`. Em
+todos os casos o destino é parado e a área removida, como em qualquer reprovação.
+
 **Bancada descartável, sempre:** cada cluster nasce num diretório criado pelo ensaio,
 escuta só em `127.0.0.1` numa porta livre, sem socket Unix, com `pg_hba` restrito a
 `127.0.0.1/32` e senha gerada. A identidade é **comprovada** antes de qualquer escrita
 (token plantado no diretório de dados e lido pelo próprio servidor, `cluster_name`, porta
 e `listen_addresses`); o banco de destino precisa carregar o marcador desta execução e
 estar vazio. `PGHOSTADDR`, `PGSERVICE`, `PGSERVICEFILE` e `PGOPTIONS` no ambiente recusam o
-ensaio; nenhuma `PG*` chega aos subprocessos.
+ensaio; nenhuma `PG*` nem `DATABASE_URL` chega aos subprocessos — desde a OPS-3 também às
+consultas auxiliares: versão das ferramentas e identidade da release. O `git` da release
+também não recebe as variáveis que apontam outro repositório (`GIT_DIR`, `GIT_WORK_TREE`,
+`GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_OBJECT_DIRECTORY`,
+`GIT_ALTERNATE_OBJECT_DIRECTORIES`, `GIT_NAMESPACE`): um `GIT_DIR` herdado (de um hook, por
+exemplo) faria o relatório citar o SHA de outro checkout. `GIT_CONFIG_*` segue (um
+`safe.directory` de quem roda num checkout de outro dono). Sem resposta do `git`,
+`release.git_sha` e `release.worktree_dirty` saem `null` — desconhecido, nunca "limpo". O
+ambiente do próprio processo não é alterado.
 
 **Limpeza só com parada confirmada.** O ensaio tenta parar **todos** os clusters da
 execução, mesmo que um falhe, e confirma cada parada por `pg_ctl status`; só então remove o

@@ -62,7 +62,10 @@ Três evidências separadas, que não se substituem:
 - Evidência disponível (relato): equipamento ainda sem acesso; data prevista no runbook
   privado.
 - Copiar `backup-<carimbo>.dump` e `.json` para o PC dedicado; conferir o SHA-256 contra o
-  manifesto na origem e no destino da cópia.
+  manifesto na origem e no destino da cópia. Pelo `app.ops.offsite`, o `--destination` é o
+  caminho canônico (sem link nem `..` em nenhum componente); conferir no relatório
+  `staging.leftovers` — sobra `unproven` só sai pela limpeza manual do
+  [guia do piloto](ops_offsite_pilot.md) §8.1.
 - Restaurar em destino isolado criado pelo próprio ensaio (loopback, credencial gerada,
   sem acesso à rede da serventia). O modo cópia só roda em Linux: no Windows é recusado
   antes de copiar (`copy_mode_unsupported_platform`). Se o PC dedicado for Windows, o
@@ -83,7 +86,9 @@ Três evidências separadas, que não se substituem:
 - Fecha quando: `verdict=passed`, banco do manifesto conferido
   (`artifact.database_matched`), revisão Alembic igual à da release, registro conhecido
   conferido pela API do destino, `cleanup.confirmed`, área em `0700`/`0600` (`isolation`),
-  relatório guardado com seu SHA-256.
+  relatório guardado com seu SHA-256. Id que não existe na cópia reprova com
+  `record_mismatch` (`failure.record=absent`): conferir o id antes de repetir; `unexpected_error`
+  é problema da bancada, não do registro.
 
 ### 4. Separado: partida após reboot do **host físico** (Proxmox) — PENDENTE
 
