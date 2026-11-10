@@ -78,6 +78,7 @@ Cada entrega tem três afirmações diferentes, que não se substituem:
 | Troca do banco ativo de homologação para PostgreSQL 18 (ADR-013) | ✅ [ADR-013](decisions/ADR-013-troca-banco-ativo-sqlite-postgresql.md) no Git (Aceito, só homologação) | ✅ ensaios de dump/restore e migração (relato) | ✅ executada em 07/11/2026 (relato) |
 | Rotina local de backup diário | ◧ contrato com parâmetros de laboratório em [ops_backup_routine.md](operations/ops_backup_routine.md); script e unidades seguem só na VM | ✅ disparo manual e falha induzida (relato) | ◧ dois disparos automáticos consecutivos observados (relato de 08/11); integridade do 2º par e restauração de cópia automática pendentes |
 | `CARTORIO-OPS-1` — verificador, alerta local, gate PostgreSQL, prova de recuperação | ✅ `main` = `b22e1b6` (PR #6); CI do PR e pós-merge verdes | ✅ bancada local e CI com PostgreSQL 18.6, dados sintéticos — ver [relatório](reports/RELATORIO_CARTORIO_OPS_1.md) | ◻ instalação e itens 1 a 5 da [janela](operations/ops_window_checklist.md) pendentes |
+| `CARTORIO-BACKUP-POLICY-1` — política de proteção do banco: RPO, retenção, destino e executor | ◧ [ADR-016](decisions/ADR-016-politica-de-protecao-do-banco.md) *Aceito* em 09/11/2026; documental, nenhum código muda | — (decisão, sem bancada) | ◻ aceite documental, sem implantação: PC, identidade, transporte, agenda, poda e restauração a partir do PC pendentes |
 
 `CARTORIO-OPS-1` em três afirmações separadas (08/11/2026):
 
