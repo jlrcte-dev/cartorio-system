@@ -97,12 +97,14 @@ def pg_binary(pg_bin: Path, name: str) -> Path:
 
 
 def tool_version(binary: Path) -> tuple[str, int]:
+    """Versão da ferramenta, com o mesmo ambiente filtrado dos demais filhos."""
     proc = subprocess.run(
         [str(binary), "--version"],
         capture_output=True,
         text=True,
         timeout=30,
         stdin=subprocess.DEVNULL,
+        env=subprocess_env(os.environ),
         check=False,
     )
     match = _VERSION.search(proc.stdout)

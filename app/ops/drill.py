@@ -83,6 +83,21 @@ _REVISION = re.compile(r"\b[0-9a-f]{12}\b")
 _ARCHIVE_CREATED = re.compile(r"Archive created at (.+)$", re.MULTILINE)
 _TOC_ENTRIES = re.compile(r"^;\s+TOC Entries:\s+(\d+)\s*$", re.MULTILINE)
 _EXIT = {"passed": 0, "failed": 1, "refused": 2}
+# ``detail`` do 404 que o roteador dá a uma rota inexistente (Starlette/FastAPI).
+_ROUTE_NOT_FOUND = "Not Found"
+_MAX_ERROR_BODY = 4096
+# Variáveis que fazem o git olhar outro repositório (ou outro índice/objetos dele).
+_GIT_LOCATORS = frozenset(
+    {
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_COMMON_DIR",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_NAMESPACE",
+    }
+)
 
 
 @dataclass
@@ -116,7 +131,22 @@ def _db_url(cluster: Cluster, dbname: str, password: str) -> str:
     return f"postgresql+psycopg://{APP_ROLE}:{password}@{host}:{cluster.port}/{dbname}"
 
 
+def _release_env() -> dict[str, str]:
+    """Ambiente do ``git`` que identifica a release: o filtro dos demais filhos (sem
+    ``PG*`` nem ``DATABASE_URL``) e sem as variáveis que apontam OUTRO repositório —
+    ``GIT_DIR`` ou ``GIT_WORK_TREE`` herdados (de um hook, por exemplo) fariam o relatório
+    citar o SHA de outro checkout. ``GIT_CONFIG_*`` fica (``safe.directory`` de quem roda
+    o ensaio num checkout de outro dono)."""
+    return {
+        key: value
+        for key, value in subprocess_env(os.environ).items()
+        if key.upper() not in _GIT_LOCATORS
+    }
+
+
 def _git_release() -> dict[str, Any]:
+    env = _release_env()
+
     def git(*args: str) -> str | None:
         try:
             proc = subprocess.run(
@@ -126,6 +156,7 @@ def _git_release() -> dict[str, Any]:
                 text=True,
                 timeout=20,
                 stdin=subprocess.DEVNULL,
+                env=env,
                 check=False,
             )
         except (OSError, subprocess.TimeoutExpired):
@@ -133,7 +164,9 @@ def _git_release() -> dict[str, Any]:
         return proc.stdout.strip() if proc.returncode == 0 else None
 
     status = git("status", "--porcelain", "--untracked-files=no")
-    return {"git_sha": git("rev-parse", "HEAD"), "worktree_dirty": bool(status)}
+    # Sem resposta do git o estado é desconhecido (None), nunca "limpo".
+    dirty = None if status is None else bool(status)
+    return {"git_sha": git("rev-parse", "HEAD"), "worktree_dirty": dirty}
 
 
 def _python_tool(ctx: Ctx, args: list[str], env: Mapping[str, str], log: Path) -> str:
@@ -249,6 +282,32 @@ class ApiProcess:
         if not isinstance(body, dict):
             raise DrillFailed("api_unexpected_body")
         return body
+
+
+def _fetch_record(api: ApiProcess, finding_id: int) -> dict[str, Any] | None:
+    """O achado esperado, lido pela API do destino. ``None`` só quando ESSA API — cuja
+    identidade já foi comprovada — responde que ele não existe: 404 com a resposta da
+    própria aplicação. Qualquer outro erro (rota ausente, autenticação, 5xx, conexão,
+    corpo inválido) sobe como está, porque não prova a ausência do registro."""
+    try:
+        return api.request("GET", f"/audit/findings/{finding_id}")
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404 and _application_not_found(exc):
+            return None
+        raise
+
+
+def _application_not_found(exc: urllib.error.HTTPError) -> bool:
+    """O 404 do roteador (rota inexistente) traz o ``detail`` padrão do framework; o da
+    aplicação (``CartorioException``) traz o próprio. Corpo ilegível não prova nada."""
+    try:
+        body = json.loads(exc.read(_MAX_ERROR_BODY))
+    except (OSError, ValueError):
+        return False
+    finally:
+        exc.close()
+    detail = body.get("detail") if isinstance(body, dict) else None
+    return isinstance(detail, str) and bool(detail) and detail != _ROUTE_NOT_FOUND
 
 
 def _new_cluster(ctx: Ctx, label: str) -> Cluster:
@@ -566,11 +625,13 @@ def _restore_phase(
     app_name = f"Cartorio System - ensaio destino {ctx.run_id}"
     with ApiProcess(ctx, url, app_name, "destino") as api:
         ctx.mark("api_ready")
-        fetched = api.request("GET", f"/audit/findings/{source['finding_id']}")
+        fetched = _fetch_record(api, source["finding_id"])
+        if fetched is None:
+            raise DrillFailed("record_mismatch", record="absent")
         if fetched.get("finding_code") != source["code"]:
-            raise DrillFailed("record_mismatch")
+            raise DrillFailed("record_mismatch", record="different")
         if "title" in source and fetched.get("title") != source["title"]:
-            raise DrillFailed("record_mismatch")
+            raise DrillFailed("record_mismatch", record="different")
         ctx.mark("queried")
         first_query = ctx.clock()
 
