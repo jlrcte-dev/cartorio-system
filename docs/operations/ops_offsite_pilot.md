@@ -190,9 +190,11 @@ com planejamento próprio.
 
 ## 8. Lista para o dia em que o PC estiver disponível
 
-A [ADR-016](../decisions/ADR-016-politica-de-protecao-do-banco.md) (*Proposto*) traz uma
-proposta para Transporte, Retenção, executor e Criptografia. Ela não substitui a decisão de
-cada linha abaixo.
+A [ADR-016](../decisions/ADR-016-politica-de-protecao-do-banco.md) (*Aceito* em 09/11/2026)
+decide o executor (o PC), o Transporte (puxado pelo PC, com identidade só do Cartório e só de
+leitura na origem) e a Retenção da homologação (as 14 gerações mais recentes). Criptografia
+para dado real segue sem decisão. A ADR não substitui a verificação de cada linha abaixo na
+janela, e nada dela foi implantado.
 
 | Item | O que verificar | Quem |
 |---|---|---|

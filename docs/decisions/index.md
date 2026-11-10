@@ -58,7 +58,7 @@ Arquivo: [`technical_decisions.md`](technical_decisions.md)
 | [ADR-013](ADR-013-troca-banco-ativo-sqlite-postgresql.md) | Troca do banco ativo de homologação de SQLite para PostgreSQL 18 — executada em 07/11/2026, só homologação e dados sintéticos; dado real da serventia exige decisão própria | Aceito |
 | [ADR-014](ADR-014-verificacao-operacional-e-prova-de-recuperacao.md) | Verificação operacional somente leitura e prova de recuperação em bancada — contrato `cartorio_system.ops.check` 1.0, saída 0/1/2, gate PostgreSQL próprio | Proposto |
 | [ADR-015](ADR-015-copia-verificada-e-observador-fora-do-host.md) | Cópia verificada e observador fora do host (piloto) — gerações promovidas por `rename`, banco esperado à parte, observador sem acesso a banco | Proposto |
-| [ADR-016](ADR-016-politica-de-protecao-do-banco.md) | Política de proteção do banco — RPO, retenção, destino e executor da cópia fora do host; a rotina diária é laboratório e não serve para dado real; só conta a cópia restaurada a partir do destino | Proposto |
+| [ADR-016](ADR-016-politica-de-protecao-do-banco.md) | Política de proteção do banco — RPO, retenção, destino e executor da cópia fora do host; a rotina diária é laboratório e não serve para dado real; só conta a cópia restaurada a partir do destino — aceite documental de 09/11/2026, sem implantação | Aceito |
 
 > **Nota factual (2026-11-08):** o ADR-013 ficou só como minuta local de 06 a 08/11/2026 e
 > entrou no Git nesta data, na versão publicável; caminhos, papéis e roteiro operacional
