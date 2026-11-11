@@ -73,6 +73,29 @@ serventia (incêndio, furto, inundação), que fica para planejamento próprio.
 4. **Fora deste piloto:** transporte de rede entre VM e destino, agenda definitiva, envio
    de alertas, retenção com exclusão, troca da rotina de backup, imagens de VM e Engegraph.
 
+### Adendo — endurecimento `CARTORIO-OPS-3` (2026-11-10)
+
+Achados de um ensaio de laboratório com dados sintéticos. A decisão acima continua valendo;
+o que muda é como ela é garantida:
+
+- **Caminho do destino.** Link em qualquer componente do caminho — não só na raiz e em
+  `geracoes/` — é recusado, e `..` também. No POSIX, a importação trabalha sobre os
+  diretórios já abertos (`openat`, `mkdirat`, `renameat`), e não pelo caminho: um
+  componente trocado por link no meio da execução não redireciona a escrita. O leitor e o
+  observador também não atravessam link em nenhum componente.
+- **Recusa × falha** pelo `errno`: permissão, sistema só de leitura e nome longo demais são
+  recusa (2); os demais erros do sistema de arquivos são falha (1).
+- **Preparo de execução interrompida.** "Falha ou interrupção removem só o preparo da
+  própria execução" segue valendo para o caminho automático. Além disso, cada execução
+  trava o próprio preparo e grava nele um marcador; toda importação relata as sobras de
+  `.preparo/`, e só remove, quando pedido explicitamente (`--remove-orphan-staging`), a que
+  prova ser órfã: marcador coerente, escrito nesta máquina neste boot, e trava livre. A
+  trava só vale dentro do mesmo kernel; por isso a máquina e o boot entram na prova. Nome e
+  idade nunca bastam.
+- O relatório `cartorio_system.ops.offsite_import` passa a 1.1 (campo
+  `staging.leftovers`). Detalhes e comparação 1.0 → 1.1 no
+  [guia do piloto](../operations/ops_offsite_pilot.md) §2.1, §2.2 e §4.
+
 ## Consequências positivas
 
 - A recuperação deixa de depender da VM estar de pé: o destino guarda pares verificados, e

@@ -135,7 +135,8 @@ Etapas 2–7 do módulo financeiro.
 
 | Entrega | Código (Git) | Evidência de bancada | Aceite real |
 |---|---|---|---|
-| Importação verificada para destino privado e observador fora do host — [ADR-015](decisions/ADR-015-copia-verificada-e-observador-fora-do-host.md) *Proposto* | ◧ branch `sprint/cartorio-ops-2`, sem push | ◧ lógica e cenários em bancada Windows; testes POSIX e demonstração em Linux com PostgreSQL 18 pendentes — ver [piloto](operations/ops_offsite_pilot.md) | ◻ PC dedicado sem inventário; transporte, agenda e canal por decidir |
+| Importação verificada para destino privado e observador fora do host — [ADR-015](decisions/ADR-015-copia-verificada-e-observador-fora-do-host.md) *Proposto* | ✅ em `main` (PR #8, merge `6059df2`) | ✅ CI do PR `42550415129` e de `main` `42550762900` verdes: testes POSIX nominais e ponta a ponta com PostgreSQL 18 — ver [piloto](operations/ops_offsite_pilot.md) | ◻ PC dedicado sem inventário; transporte, agenda e canal por decidir |
+| Endurecimento `CARTORIO-OPS-3`: caminho do destino sem link em nenhum componente e preso a descritores, recusa × falha por `errno`, sobras de `.preparo/` relatadas e removidas só com prova, `record_mismatch` para registro inexistente, ambiente filtrado nas consultas auxiliares | ◧ branch `fix/cartorio-ops-3-hardening`, sem merge | ◧ bancada Windows; provas POSIX só no CI Linux | ◻ repetir o ciclo do laboratório de recuperação no SHA novo |
 
 A recuperação a partir do destino é o item 3 do
 [checklist da janela da OPS-1](operations/ops_window_checklist.md); o reboot do host, que

@@ -1211,3 +1211,300 @@ def test_publish_dir_of_another_run_is_never_reused(
     assert json.loads(capsys.readouterr().out)["reasons"] == ["publish_dir_exists"]
     assert drill_runs == [] and list((tmp_path / "work").iterdir()) == []
     assert sorted(p.name for p in publish.iterdir()) == ["pg-gate-report.json"]
+
+
+# ---------------------------------------------------------------------------
+# OPS-3 (S3): registro conhecido inexistente é record_mismatch, não erro operacional
+# ---------------------------------------------------------------------------
+
+KNOWN_CODE = "DRILL-CONHECIDO"
+_ABSENT_BODY = '{"detail": "Achado de auditoria 1 não encontrado."}'.encode()
+# Resposta da API do destino ao GET do achado conhecido: (status, corpo).
+_API_ANSWERS: dict[str, tuple[int, bytes]] = {
+    "match": (200, json.dumps({"id": 1, "finding_code": KNOWN_CODE}).encode()),
+    "different": (200, json.dumps({"id": 1, "finding_code": "OUTRO"}).encode()),
+    "absent": (404, _ABSENT_BODY),
+    "route_missing": (404, b'{"detail": "Not Found"}'),
+    "unauthorized": (401, b'{"detail": "Not authenticated"}'),
+    "server_error": (500, b'{"detail": "Erro interno do servidor."}'),
+    "invalid_json": (200, b"<html>proxy</html>"),
+    "not_an_object": (200, b"[]"),
+}
+
+
+def _fake_api(case: str) -> type:
+    """A instância da API do destino sem subir processo: o cliente HTTP do ensaio é o real,
+    e só o transporte responde o caso dado."""
+    import io
+    import urllib.error
+
+    class Opener:
+        def open(self, request, timeout):
+            if case == "unreachable":
+                raise urllib.error.URLError(ConnectionRefusedError(111, "recusada"))
+            status, body = _API_ANSWERS[case]
+            if status != 200:
+                raise urllib.error.HTTPError(request.full_url, status, "x", None, io.BytesIO(body))
+            return io.BytesIO(body)
+
+    class FakeApi(drill.ApiProcess):
+        def __enter__(self):
+            self._opener = Opener()
+            return self
+
+        def __exit__(self, *exc):
+            return None
+
+    return FakeApi
+
+
+@pytest.fixture
+def copy_drill(tmp_path, monkeypatch, fake_pg, any_work_root):
+    """Ensaio no modo cópia, de ponta a ponta, sem PostgreSQL: clusters, ferramentas e
+    banco simulados; a cópia, a avaliação dela, a limpeza e o cliente HTTP são os reais."""
+    from datetime import UTC, datetime, timedelta
+
+    from app.ops.checks import release_heads
+    from tests.ops_support import write_publication
+
+    fake_pg(FakeTools())
+    heads, _ = release_heads(drill.REPO_ROOT)
+
+    def alembic(ctx, url, *args):
+        return "No new upgrade operations detected." if args[0] == "check" else " ".join(heads)
+
+    def observe(cluster, dbname):
+        marker = f"cartorio-ops-drill:{cluster.run_id}:destino"
+        return {"comment": marker, "owner": drill.APP_ROLE, "user_relations": 0}
+
+    def prove(self):
+        self.server_version, self.server_major = "18.0", 18
+
+    monkeypatch.setattr(drill, "copy_mode_supported", lambda platform=sys.platform: True)
+    monkeypatch.setattr(drill, "pg_binary", lambda pg_bin, name: Path(name))
+    monkeypatch.setattr(drill, "tool_version", lambda binary: ("18.0", 18))
+    monkeypatch.setattr(drill, "_list_archive", lambda ctx, artifact: (7, None))
+    monkeypatch.setattr(drill, "_create_app_database", lambda *args: None)
+    monkeypatch.setattr(drill, "_observe_target", observe)
+    monkeypatch.setattr(drill, "_pg_restore", lambda *args: None)
+    monkeypatch.setattr(drill, "_alembic", alembic)
+    monkeypatch.setattr(pgcluster.Cluster, "prove_identity", prove)
+    for name in ("PGHOSTADDR", "PGSERVICE", "PGSERVICEFILE", "PGOPTIONS"):
+        monkeypatch.delenv(name, raising=False)
+    _, manifest = write_publication(tmp_path / "copia", datetime.now(UTC) - timedelta(hours=1))
+
+    def run_case(case: str) -> tuple[int, dict]:
+        monkeypatch.setattr(drill, "ApiProcess", _fake_api(case))
+        argv = _drill_args(
+            tmp_path,
+            "--from-manifest",
+            str(manifest),
+            "--expect-finding-id",
+            "1",
+            "--expect-finding-code",
+            KNOWN_CODE,
+            "--expect-database",
+            "cartorio_lab",
+        )
+        code = drill.main(argv)
+        return code, json.loads((tmp_path / "drill.json").read_text(encoding="utf-8"))
+
+    return run_case
+
+
+@pytest.mark.parametrize(
+    ("case", "expected", "failure"),
+    [
+        ("match", (0, "passed", "ok"), None),
+        ("absent", (1, "failed", "record_mismatch"), {"record": "absent"}),
+        ("different", (1, "failed", "record_mismatch"), {"record": "different"}),
+        ("route_missing", (1, "failed", "unexpected_error"), {"error_class": "HTTPError"}),
+        ("unauthorized", (1, "failed", "unexpected_error"), {"error_class": "HTTPError"}),
+        ("server_error", (1, "failed", "unexpected_error"), {"error_class": "HTTPError"}),
+        ("unreachable", (1, "failed", "unexpected_error"), {"error_class": "URLError"}),
+        ("invalid_json", (1, "failed", "unexpected_error"), {"error_class": "JSONDecodeError"}),
+        ("not_an_object", (1, "failed", "api_unexpected_body"), None),
+    ],
+)
+def test_known_record_answer_is_classified_and_the_area_is_always_cleaned(
+    copy_drill, capsys, case, expected, failure
+) -> None:
+    """S3 (sonda P8b): só o 404 da própria aplicação vira ``record_mismatch``
+    (``record=absent``). Rota inexistente, autenticação, 5xx, conexão e corpo inválido
+    continuam o que eram. Em todos os casos o destino para e a área sai."""
+    code, report = copy_drill(case)
+    capsys.readouterr()
+
+    assert (code, report["verdict"], report["reason"]) == expected
+    assert report.get("failure") == failure
+    assert report["cleanup"]["clusters"] == {"destino": "stopped"}
+    assert (report["cleanup"]["confirmed"], report["cleanup"]["work_dir_removed"]) == (True, True)
+
+
+def test_absent_record_is_told_apart_from_a_missing_route_on_the_real_app(
+    tmp_path: Path, any_work_root
+) -> None:
+    """S3: a API real (SQLite) responde 404 ao achado inexistente com o ``detail`` da
+    aplicação, e 404 à rota inexistente com o ``detail`` do roteador. Só o primeiro prova
+    a ausência do registro — e este teste quebra se um dos dois mudar de forma."""
+    import os
+    import urllib.error
+
+    from tests.ops_support import migrate_sqlite
+
+    url = migrate_sqlite(tmp_path / "api.db")
+    ctx = drill.Ctx(
+        run_id="api-404",
+        pg_bin=tmp_path,
+        work=create_work_dir(tmp_path, "api-404"),
+        clock=lambda: None,
+        base_env=pgcluster.subprocess_env(os.environ),
+    )
+    with drill.ApiProcess(ctx, url, "Cartorio System - ensaio 404", "x") as api:
+        assert drill._fetch_record(api, 999_999) is None
+        with pytest.raises(urllib.error.HTTPError) as missing_route:
+            api.request("GET", "/audit/rota-que-nao-existe/1")
+    assert missing_route.value.code == 404
+    assert drill._application_not_found(missing_route.value) is False
+
+
+# ---------------------------------------------------------------------------
+# OPS-3 (S6): filhos auxiliares (versão das ferramentas, release) com ambiente filtrado
+# ---------------------------------------------------------------------------
+
+LIBPQ_VARIABLES = (
+    "PGHOST",
+    "PGHOSTADDR",
+    "PGPORT",
+    "PGDATABASE",
+    "PGUSER",
+    "PGPASSWORD",
+    "PGPASSFILE",
+    "PGSERVICE",
+    "PGSERVICEFILE",
+    "PGOPTIONS",
+    "PGSSLMODE",
+    "PGTARGETSESSIONATTRS",
+)
+
+
+@pytest.fixture
+def inherited_libpq(monkeypatch) -> dict[str, str]:
+    """Todas as variáveis de conexão da libpq, e a DSN da aplicação, herdadas."""
+    import os
+
+    for name in LIBPQ_VARIABLES:
+        monkeypatch.setenv(name, "herdado")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://herdado@db.invalid/x")
+    return dict(os.environ)
+
+
+def _version_probe(tmp_path: Path) -> Path:
+    """Executável que diz versão 18 só se não enxergar nenhuma variável de conexão."""
+    import os
+
+    names = (*LIBPQ_VARIABLES, "DATABASE_URL")
+    if os.name == "nt":
+        probe = tmp_path / "pg_probe.cmd"
+        lines = ["@echo off", *[f"if defined {name} goto herdou" for name in names]]
+        lines += ["echo probe (PostgreSQL) 18.0", "exit /b 0", ":herdou"]
+        lines += ["echo probe (PostgreSQL) 99.0"]
+        probe.write_text("\r\n".join(lines) + "\r\n", encoding="ascii")
+    else:
+        seen = "".join("${" + name + "}" for name in names)
+        probe = tmp_path / "pg_probe"
+        probe.write_text(
+            f'#!/bin/sh\nif [ -n "{seen}" ]; then echo "probe (PostgreSQL) 99.0"; '
+            'else echo "probe (PostgreSQL) 18.0"; fi\n',
+            encoding="ascii",
+        )
+        probe.chmod(0o755)
+    return probe
+
+
+def test_tool_version_child_never_sees_inherited_connection_variables(
+    tmp_path: Path, inherited_libpq
+) -> None:
+    import os
+
+    probe = _version_probe(tmp_path)
+    before = dict(os.environ)
+    assert {name: before[name] for name in LIBPQ_VARIABLES} == {
+        name: inherited_libpq[name] for name in LIBPQ_VARIABLES
+    }
+
+    assert pgcluster.tool_version(probe) == ("18.0", 18)
+    assert dict(os.environ) == before  # o ambiente do próprio processo não muda
+
+
+def test_tool_version_and_release_children_get_only_the_filtered_environment(
+    monkeypatch, inherited_libpq
+) -> None:
+    import os
+    import subprocess
+
+    monkeypatch.setenv("GIT_DIR", "/outro/repositorio/.git")
+    monkeypatch.setenv("GIT_WORK_TREE", "/outro/repositorio")
+    monkeypatch.setenv("GIT_INDEX_FILE", "/outro/repositorio/.git/index")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/config/com/safe-directory")
+    seen: list[dict[str, str] | None] = []
+
+    def capture(cmd, **kwargs):
+        seen.append(kwargs.get("env"))
+        return subprocess.CompletedProcess(cmd, 0, stdout="x (PostgreSQL) 18.6\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", capture)
+    pgcluster.tool_version(Path("pg_ctl"))
+    drill._git_release()
+
+    assert len(seen) == 3 and all(env is not None for env in seen)
+    for env in seen:
+        assert not [key for key in env if key.upper().startswith("PG")]
+        assert "DATABASE_URL" not in env
+        assert env.get("PATH") == os.environ.get("PATH")
+    tool_env, *git_envs = seen
+    assert "GIT_DIR" in tool_env  # o filtro de GIT_* é só do git, que identifica a release
+    for env in git_envs:
+        assert not {"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"} & set(env)
+        # Configuração do git (safe.directory de quem roda num checkout alheio) continua.
+        assert env.get("GIT_CONFIG_GLOBAL") == "/config/com/safe-directory"
+
+
+def test_release_without_an_answer_from_git_is_unknown_not_clean(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr(drill, "REPO_ROOT", tmp_path)  # fora de qualquer checkout
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+
+    assert drill._git_release() == {"git_sha": None, "worktree_dirty": None}
+
+
+def test_release_identity_is_the_checkout_even_with_git_dir_inherited(
+    tmp_path: Path, monkeypatch, inherited_libpq
+) -> None:
+    """S6: ``GIT_DIR``/``GIT_WORK_TREE`` herdados (de um hook, por exemplo) fariam o
+    relatório citar o SHA de outro repositório."""
+    import os
+    import subprocess
+
+    plain = {k: v for k, v in os.environ.items() if not k.upper().startswith("GIT_")}
+    other = tmp_path / "outro"
+    identity = ["-c", "user.name=ensaio", "-c", "user.email=ensaio@example.invalid"]
+    subprocess.run(["git", "init", "-q", str(other)], env=plain, check=True)
+    subprocess.run(
+        ["git", "-C", str(other), *identity, "commit", "-q", "--allow-empty", "-m", "x"],
+        env=plain,
+        check=True,
+    )
+    expected = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=drill.REPO_ROOT,
+        env=plain,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(other))
+
+    assert drill._git_release()["git_sha"] == expected

@@ -461,6 +461,20 @@ def test_linked_copy_layout_is_never_followed(tmp_path, fresh_signal, part):
     assert result["last_valid_copy"] is None
 
 
+@POSIX_ONLY
+def test_ancestor_link_in_the_copies_path_is_never_followed(tmp_path, fresh_signal):
+    """OPS-3 (S1): o leitor também não atravessa link num ancestral da raiz das cópias,
+    mesmo com uma cópia válida e recente do outro lado."""
+    real = tmp_path / "real"
+    publish(real / "copias", RECENT)
+    (tmp_path / "atalho").symlink_to(real, target_is_directory=True)
+
+    result = look(fresh_signal, tmp_path / "atalho" / "copias")
+
+    assert summary(result) == ("fail", "copies_layout_invalid", 1)
+    assert result["last_valid_copy"] is None
+
+
 def test_copy_imported_by_the_pilot_is_what_the_observer_sees(tmp_path, fresh_signal):
     source = tmp_path / "origem"
     write_publication(source, NOW - timedelta(hours=1))

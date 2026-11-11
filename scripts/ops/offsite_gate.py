@@ -4,8 +4,9 @@ Passo próprio, depois do gate da OPS-1, que fica intocado (comando, testes e os
 relatórios publicados). Reaproveita o PostgreSQL 18 instalado e cria só clusters
 próprios, em loopback, com credencial gerada e descartada pelo ``app.ops.drill``.
 
-1. **POSIX:** os 13 testes de modos e links do piloto rodam com ``-rA``; reprova se não
-   forem exatamente 13 aprovados, com nenhum pulado.
+1. **POSIX:** os testes de modos, links e travas do piloto (13 da OPS-2 e 19 da OPS-3)
+   rodam com ``-rA``; reprova se não forem exatamente ``POSIX_EXPECTED`` aprovados, com
+   nenhum pulado.
 2. **Ponta a ponta**, numa área marcada deste passo:
    ensaio sintético exporta dump + manifesto → ``app.ops.offsite`` importa para um destino
    privado (SHA-256 e modos conferidos) → observador saudável → a origem sai do fluxo e o
@@ -60,8 +61,10 @@ POSIX_FILES = ("tests/test_ops_offsite.py", "tests/test_ops_observer.py")
 POSIX_SELECTION = (
     "umask_022 or writable_by_others or linked_destination or links_in_the_source"
     " or linked_generation or linked_copy_layout"
+    # OPS-3: link em ancestral (S1), destino inutilizável (S2), sobras de .preparo (S4).
+    " or ancestor or unusable_destination or staging_leftover"
 )
-POSIX_EXPECTED = 13
+POSIX_EXPECTED = 32
 # O que o próprio passo cria na área dele (ver _end_to_end e _gate); o resto é sobra.
 _STEP_DIRS = frozenset({"bruto", "origem", "destino", "sinal"})
 # Nome que pgcluster.create_work_dir dá à área de cada ensaio filho.
