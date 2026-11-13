@@ -4,18 +4,32 @@
 > implementada salvo indicação explícita.
 
 Última atualização: 2026-05-04 · atualização parcial em 2026-11-07 (§3.4, §3.5 e §6,
-sprint `CARTORIO-OPS-1`) e em 2026-11-08 (§3.4 e §6, fechamento da `CARTORIO-OPS-1`)
+sprint `CARTORIO-OPS-1`), em 2026-11-08 (§3.4 e §6, fechamento da `CARTORIO-OPS-1`) e em
+2026-11-12 (§1, §6 e §8, checkpoint `DOC-INFRA-01`)
+
+> **Estado consolidado:** o estado atual do host de homologação, das VMs 100, 101 e 102, da
+> origem Engegraph, do backup e do hardware está em
+> [`infrastructure_state.md`](infrastructure_state.md) (checkpoint de 12/11/2026). Este
+> documento continua sendo o plano. As frentes abertas estão no §8.
 
 ---
 
 ## 1. Situação atual
 
+> Levantamento de maio/2026 da operação da serventia (servidor físico Windows), mantido como
+> base histórica. As linhas marcadas com *(11/11/2026)* foram corrigidas pelo inventário
+> preliminar da origem, cujo resumo está no §6 de
+> [`infrastructure_state.md`](infrastructure_state.md). As demais linhas não foram
+> reverificadas; em particular, a linha "Disco de backup" pede reavaliação com os dados do
+> inventário de 11/11 (no relatório privado).
+
 | Componente | Estado | Risco |
 |-----------|--------|-------|
 | Servidor físico Windows | Em operação | Host único — ponto único de falha |
 | Engegraph (ERP) | Operacional | Sem contingência documentada |
-| Banco Engegraph | Provavelmente SQL Server | Backup sem dump confirmado |
+| Banco Engegraph | SQL Server 2022 Express, no mesmo computador da aplicação *(11/11/2026)*; local e tamanho dos bancos a confirmar | Backup sem dump confirmado; recuperação consistente não comprovada |
 | Backup (Cobian Gravity) | Ativo, cópia de arquivos | Sem dump transacional; sem off-site |
+| Cópia do fornecedor (Cofre Digital) *(11/11/2026)* | Fornece cópia mediante solicitação, segundo o operador; a restauração é manual, feita pela Engegraph | Contingência dependente de dois fornecedores; recuperação conjunta de base, GED e configuração não comprovada |
 | Disco de dados | Espaço crítico | Risco de esgotamento |
 | Disco de backup | Estado crítico | Risco de esgotamento |
 | Rede | Sem segmentação | Wi-Fi clientes pode acessar rede admin |
@@ -276,8 +290,9 @@ Prioridade: serviços que mais se beneficiam do isolamento e que são mais fáce
 2. `VM-CartorioSystem` — novo sistema, não há migração de dados legados complexa
 3. `VM-Backup-Monitor` — agente de backup centralizado
 
-**Estado de execução da Fase 1 (2026-11-08).** Separado por fonte — Git e CI, relato
-operacional (runbook privado, fora do Git), bancada e aceite real:
+**Estado de execução da Fase 1 (2026-11-12).** Separado por fonte — Git e CI, relato
+operacional (runbook e relatórios privados, fora do Git), bancada e aceite real. Detalhe por
+VM em [`infrastructure_state.md`](infrastructure_state.md):
 
 | Item | Situação | Fonte |
 |---|---|---|
@@ -289,8 +304,10 @@ operacional (runbook privado, fora do Git), bancada e aceite real:
 | Verificador operacional — implantação | Não instalado na VM; release ativa anterior a `app/ops` (leitura de 08/11) | Relato |
 | Verificador operacional — aceite real | Pendente: itens 1 a 5 do [checklist](../operations/ops_window_checklist.md) | — |
 | Partida após reboot (convidado e host), cópia no PC dedicado, restauração dela | Pendentes de janela | — |
-| Cópia verificada fora do host e observador externo (piloto `CARTORIO-OPS-2`, [ADR-015](../decisions/ADR-015-copia-verificada-e-observador-fora-do-host.md)) | Piloto em `main` (PR #8, merge `6059df2`), CI verde; endurecimento `CARTORIO-OPS-3` em branch, sem merge; PC dedicado sem inventário | Git e CI + bancada |
-| `VM-TestRestore`, `VM-Backup-Monitor` | Não iniciados | — |
+| Cópia verificada fora do host e observador externo (piloto `CARTORIO-OPS-2`, [ADR-015](../decisions/ADR-015-copia-verificada-e-observador-fora-do-host.md)) | Piloto em `main` (PR #8, merge `6059df2`), CI verde; endurecimento `CARTORIO-OPS-3` em `main` (PR #11, merge `cb9fec9`, 11/11/2026; CI pós-merge `42949087241` verde), sem implantação; computador candidato a PC dedicado com inventário preliminar (11/11), não homologado | Git e CI + bancada + relato |
+| `VM-TestRestore` (VM 101), laboratório sintético de recuperação | Em operação. Ciclo `CARTORIO-TESTRESTORE-1` homologado com ressalva (10/11). Isolamento de rede não provado: a janela da `CARTORIO-TESTRESTORE-2` não foi executada e está bloqueada desde a etapa R5 (13/11), por critério de aceite pendente de decisão. Ciclo da OPS-3 no SHA novo sem registro de execução | Relato |
+| Laboratório Windows isolado (VM 102), preparação da Fase 3 | Concluído e homologado (`INFRA-VM102`, 12/11). Desligado, sem Engegraph e sem dado real. Revalidação depois do reboot do host pendente | Relato |
+| `VM-Backup-Monitor` | Não iniciado. A ADR-015 e a ADR-016 preferem destino e observador fora do host | — |
 
 ### Fase 2 — FileServer e identidade (120 a 180 dias)
 
@@ -301,6 +318,13 @@ operacional (runbook privado, fora do Git), bancada e aceite real:
 
 6. `VM-Engegraph-DB` — somente após confirmação com fornecedor e testes em lab
 7. `VM-Engegraph-App` — após banco migrado e validado
+
+> **Nota de 2026-11-12 (`DOC-INFRA-01`).** O inventário preliminar da origem mostrou
+> aplicação e SQL Server 2022 Express no mesmo computador. Por isso, a primeira avaliação de
+> laboratório deve verificar se aplicação e motor SQL podem ser reproduzidos **numa única VM
+> Windows isolada**, com dados sintéticos. Isso não é decisão de produção: a separação dos
+> itens 6 e 7 continua como alvo, dependente do fornecedor. Nenhuma etapa da investigação
+> começou. As etapas propostas (`ENGEGRAPH-LAB`, E0 a E4) estão no §8.
 
 **Rollback em cada fase:**
 - Servidor físico original continua operacional durante toda a migração
@@ -326,3 +350,47 @@ Para cada componente implementado, gerar evidências:
 | Configuração de auditoria Windows | Screenshot | `_VISTORIA/auditoria/` |
 | Configuração MFA | Screenshot (sem credenciais) | `_VISTORIA/acesso/` |
 | Hash SHA-256 dos documentos críticos | Arquivo .sha256 | `_VISTORIA/hashes/` |
+
+---
+
+## 8. Frentes de infraestrutura (checkpoint de 2026-11-12)
+
+> Acrescentado na sprint documental `DOC-INFRA-01`. O estado de cada item e as pendências com
+> ID estão em [`infrastructure_state.md`](infrastructure_state.md), que os §9 e §10 detalham.
+> Nenhuma frente abaixo foi iniciada ou autorizada por este registro.
+
+### 8.1 Concluídas
+
+| Frente | Encerramento | Observação |
+|---|---|---|
+| Implantação e homologação da VM 102 (laboratório Windows isolado, `INFRA-VM102`) | 12/11/2026 (G5-A e G5-B) | Windows 10 Pro 22H2, sem Engegraph e sem dado real |
+| Proteção e testes reais de isolamento da VM 102 | 12/11/2026 | Persistência depois do reboot do host não comprovada (P15) |
+| Checkpoint do inventário preliminar da origem Engegraph | 11/11/2026 (vistoria) e 12/11/2026 (este registro) | Preliminar. O relatório-fonte não tem marca de aprovação formal. Local e tamanho dos bancos, build efetiva e confirmações do fornecedor pendentes |
+
+### 8.2 Em andamento ou pendentes
+
+| Frente | Situação | Depende de |
+|---|---|---|
+| Evolução OPS do Cartório System: instalação do verificador, itens 1 a 5 do [checklist](../operations/ops_window_checklist.md), homologação da OPS-3 na VM 101 | Código em `main` até a OPS-3. Nenhuma implantação registrada desde a leitura de 08/11 | Janelas e autorizações próprias; liberação da VM 101 |
+| Revalidação depois do reboot do host (P15 e item 4 do checklist) | Pendente. Kernel novo instalado, aguardando o boot | Janela de reboot autorizada |
+| Qualificação do computador candidato a backup | Inventário preliminar; **não homologado**. Seu uso para backups do Engegraph **não está autorizado** (BKP-2: a ADR-016, vigente, o restringe ao Cartório System; mudança de escopo exige nova decisão arquitetural). Nenhum mecanismo de backup recorrente do Engegraph foi aprovado | Bancada (partida, memória, discos, rede, energia, recuperação sintética) |
+| Isolamento da VM 101 (`CARTORIO-TESTRESTORE-2`) | Janela bloqueada na etapa R5 (13/11); não autorizada nem executada | Decisão do operador sobre o critério de aceite; depois, autorização da janela |
+| Achado de rede na bridge interna da VM 101 (P10) | Mudança mínima proposta, não executada. Enquanto existir, o isolamento só fecha com ressalva | Mudança própria autorizada, com janela e acesso pelo console |
+| Levantamento de requisitos do Engegraph | Não iniciado; é a E0 abaixo | Fornecedor e operador |
+| Política de licenciamento (P2) e de entrada de mídias (P20) | Pendentes | Decisão do operador |
+| Plano de recuperação consistente do Engegraph (base SQL, GED e configuração) | Não comprovado | Fornecedor (procedimento e ponto consistente); fonte de referência definida |
+
+### 8.3 Próxima frente proposta: `ENGEGRAPH-LAB`
+
+Cada etapa exige autorização própria. Concluir uma etapa não autoriza a seguinte.
+
+| Etapa | Escopo | Toca a infraestrutura? |
+|---|---|---|
+| **E0. Levantamento documental e matriz de requisitos** | Perguntas ao fornecedor e ao operador: versão, Windows homologado, runtimes, versão do SQL suportada e tamanho da base, licenciamento (chave, dongle, servidor ou ativação online), hardware, periféricos, privilégios, dados de teste, horário e portas | Não |
+| **E1. Análise de compatibilidade** | Conflitos com o isolamento, capacidade do nó (o dimensionamento preliminar não está aprovado), versão do Windows. Parecer go/no-go | Não (leitura, se necessário) |
+| **E2. Preparação autorizada** | Procedimento de entrada de mídias, dados sintéticos, snapshot de base (frente independente), relógio e licença, conforme a E1 | Só o autorizado |
+| **E3. Instalação controlada** | Instalação no laboratório isolado, registrando o que o instalador muda | Sim, só no laboratório |
+| **E4. Homologação funcional** | Testes com dados sintéticos e nova verificação do isolamento | Leitura e testes |
+
+Pré-condições comuns a todas as etapas: [`infrastructure_state.md`](infrastructure_state.md)
+§10. Backup e recuperação da origem ficam **fora** desta frente.

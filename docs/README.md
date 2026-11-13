@@ -22,7 +22,8 @@
 | Documento | Descrição |
 |-----------|-----------|
 | [`architecture.md`](architecture.md) | Visão geral, stack, camadas e princípios de design |
-| [`infrastructure/infrastructure_roadmap.md`](infrastructure/infrastructure_roadmap.md) | Situação atual de infraestrutura, VMs, VLANs e plano de migração |
+| [`infrastructure/infrastructure_state.md`](infrastructure/infrastructure_state.md) | **Estado atual da infraestrutura** (checkpoint 2026-11-12): host Proxmox, VMs 100/101/102, origem Engegraph, backup, hardware, pendências e pré-condições do laboratório Engegraph |
+| [`infrastructure/infrastructure_roadmap.md`](infrastructure/infrastructure_roadmap.md) | Plano de infraestrutura: VMs, VLANs, backup, migração e frentes abertas (§8); situação da serventia levantada em maio/2026 |
 | [`infrastructure/target_infrastructure.md`](infrastructure/target_infrastructure.md) | Arquitetura-alvo: VMs, segmentação de rede e plano de restauração |
 
 ---

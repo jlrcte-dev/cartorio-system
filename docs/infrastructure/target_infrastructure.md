@@ -2,8 +2,15 @@
 
 > Documento de proposta técnica. Nenhuma das configurações aqui descritas
 > está implementada. Este documento serve como referência de decisão e planejamento.
+>
+> **Nota de 2026-11-12 (`DOC-INFRA-01`).** A frase acima continua valendo para a operação da
+> serventia, que segue no servidor físico. Em **homologação**, com dados sintéticos, parte do
+> alvo já existe num host Proxmox: `VM-CartorioSystem` (VM 100), `VM-TestRestore` (VM 101) e
+> um laboratório Windows isolado para a futura avaliação do Engegraph (VM 102). Nada disso é
+> produção. Estado em [`infrastructure_state.md`](infrastructure_state.md); frentes no §8 do
+> [roadmap de infraestrutura](infrastructure_roadmap.md).
 
-Última atualização: 2026-05-04
+Última atualização: 2026-05-04 · nota de estado em 2026-11-12
 
 ---
 
@@ -100,6 +107,11 @@ as viabiliza tecnicamente.
 | Portas | A confirmar com fornecedor |
 | Acesso | Apenas via VLAN 20 |
 | Prioridade | Média — depende de confirmação do fornecedor |
+
+> **Nota de 2026-11-12.** Na origem, o inventário preliminar de 11/11/2026 encontrou aplicação
+> e banco (SQL Server 2022 Express) **no mesmo computador**. A primeira avaliação de
+> laboratório verifica uma VM única com os dois, com dados sintéticos. A separação abaixo
+> continua como alvo, a confirmar com o fornecedor.
 
 ### VM-Engegraph-DB
 
@@ -233,3 +245,10 @@ as viabiliza tecnicamente.
 | Versão compatível do Windows Server | Engegraph (fornecedor) | 30 dias |
 | Licenciamento em VM | Engegraph + fornecedor Windows | 45 dias |
 | Portas de rede utilizadas | Engegraph (fornecedor) | 30 dias |
+
+> **Nota de 2026-11-12.** Os prazos acima, contados de maio/2026, venceram sem resposta
+> registrada. As seis perguntas continuam abertas e passam à etapa E0 (levantamento
+> documental) da frente `ENGEGRAPH-LAB`, no §8 do
+> [roadmap de infraestrutura](infrastructure_roadmap.md). O motor do banco foi identificado no
+> inventário preliminar (SQL Server 2022 Express). Ainda faltam a versão suportada, o
+> procedimento de ponto consistente e o restante das respostas.
