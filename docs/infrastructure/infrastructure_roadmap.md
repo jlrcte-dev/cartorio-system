@@ -357,7 +357,8 @@ Para cada componente implementado, gerar evidências:
 
 > Acrescentado na sprint documental `DOC-INFRA-01`. O estado de cada item e as pendências com
 > ID estão em [`infrastructure_state.md`](infrastructure_state.md), que os §9 e §10 detalham.
-> Nenhuma frente abaixo foi iniciada ou autorizada por este registro.
+> Este checkpoint apenas registra o estado das frentes apresentadas. Sua inclusão no roadmap não
+> constitui autorização para executar novas etapas.
 
 ### 8.1 Concluídas
 

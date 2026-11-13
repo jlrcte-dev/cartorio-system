@@ -1,5 +1,11 @@
 # Estado da infraestrutura: checkpoint de 12/11/2026
 
+> **Data de referência:** checkpoint de infraestrutura com corte principal em 12/11/2026 e
+> atualização complementar de 13/11/2026 referente à `CARTORIO-TESTRESTORE-2`. Nessa atualização
+> (etapa R5), a janela está `TR2_WINDOW_BLOCKED`: **não foi autorizada nem executada**, o
+> critério de aceite (emenda A1) está pendente de decisão do operador e o isolamento da VM 101
+> **não está comprovado**.
+>
 > **Natureza:** registro do estado conhecido. Não é plano nem decisão. O plano está no
 > [roadmap de infraestrutura](infrastructure_roadmap.md) (§8 traz as frentes) e a
 > arquitetura-alvo em [`target_infrastructure.md`](target_infrastructure.md).
