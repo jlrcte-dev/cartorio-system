@@ -135,12 +135,28 @@ Etapas 2–7 do módulo financeiro.
 
 | Entrega | Código (Git) | Evidência de bancada | Aceite real |
 |---|---|---|---|
-| Importação verificada para destino privado e observador fora do host — [ADR-015](decisions/ADR-015-copia-verificada-e-observador-fora-do-host.md) *Proposto* | ✅ em `main` (PR #8, merge `6059df2`) | ✅ CI do PR `42550415129` e de `main` `42550762900` verdes: testes POSIX nominais e ponta a ponta com PostgreSQL 18 — ver [piloto](operations/ops_offsite_pilot.md) | ◻ PC dedicado sem inventário; transporte, agenda e canal por decidir |
-| Endurecimento `CARTORIO-OPS-3`: caminho do destino sem link em nenhum componente e preso a descritores, recusa × falha por `errno`, sobras de `.preparo/` relatadas e removidas só com prova, `record_mismatch` para registro inexistente, ambiente filtrado nas consultas auxiliares | ◧ branch `fix/cartorio-ops-3-hardening`, sem merge | ◧ bancada Windows; provas POSIX só no CI Linux | ◻ repetir o ciclo do laboratório de recuperação no SHA novo |
+| Importação verificada para destino privado e observador fora do host — [ADR-015](decisions/ADR-015-copia-verificada-e-observador-fora-do-host.md) *Proposto* | ✅ em `main` (PR #8, merge `6059df2`) | ✅ CI do PR `42550415129` e de `main` `42550762900` verdes: testes POSIX nominais e ponta a ponta com PostgreSQL 18 — ver [piloto](operations/ops_offsite_pilot.md) | ◻ computador candidato a PC dedicado com inventário preliminar (11/11/2026), não homologado; uso para backups do Engegraph não autorizado (BKP-2: a ADR-016, vigente, restringe o PC ao Cartório System; mudança de escopo exige nova decisão arquitetural); transporte, agenda e canal por decidir |
+| Endurecimento `CARTORIO-OPS-3`: caminho do destino sem link em nenhum componente e preso a descritores, recusa × falha por `errno`, sobras de `.preparo/` relatadas e removidas só com prova, `record_mismatch` para registro inexistente, ambiente filtrado nas consultas auxiliares | ✅ em `main` (PR #11, merge `cb9fec9`, 11/11/2026) | ✅ CI do PR `42942255608` e de `main` `42949087241` verdes; provas POSIX só no CI Linux | ◻ repetir o ciclo do laboratório de recuperação no SHA novo — sem registro de execução; depende da liberação da VM de recuperação (§ 2.3) |
 
 A recuperação a partir do destino é o item 3 do
 [checklist da janela da OPS-1](operations/ops_window_checklist.md); o reboot do host, que
 a cópia fora dele precisa sobreviver, é o item 4.
+
+### 2.3 Frente paralela — laboratórios de homologação e origem Engegraph (checkpoint `DOC-INFRA-01`)
+
+> Seção acrescentada em 2026-11-12 pela sprint documental `DOC-INFRA-01`. Registra frentes de
+> infraestrutura conduzidas fora do Git, com relatórios privados. Nenhuma delas muda código, e
+> a seção não muda a prioridade dos horizontes. O estado completo e as pendências com ID estão
+> em [`infrastructure/infrastructure_state.md`](infrastructure/infrastructure_state.md); as
+> frentes, no § 8 do [roadmap de infraestrutura](infrastructure/infrastructure_roadmap.md).
+
+| Frente | Situação | Fonte |
+|---|---|---|
+| `INFRA-VM102` — laboratório Windows isolado (VM 102) | ✅ concluída e homologada em 12/11/2026; desligada, sem Engegraph e sem dado real; revalidação depois do reboot do host pendente | relatórios privados G5-A/G5-B |
+| `CARTORIO-TESTRESTORE-1` — laboratório sintético de recuperação (VM 101) | ◧ homologado com ressalva em 10/11/2026 (inferência do firewall pendente de decisão); achados S1, S2, S3, S4 e S6 corrigidos pela OPS-3 | dossiê privado; PR #11 |
+| `CARTORIO-TESTRESTORE-2` — isolamento de rede da VM 101 | ◧ janela não autorizada nem executada; bloqueada na etapa R5 (13/11/2026) por critério de aceite pendente de decisão; isolamento não provado | dossiê e relatórios privados |
+| Inventário preliminar da origem Engegraph | ✅ registrado como checkpoint preliminar (vistoria de 11/11/2026); relatório-fonte sem marca de aprovação formal; confirmações do fornecedor pendentes | relatório privado de vistoria |
+| `ENGEGRAPH-LAB` (E0 a E4) — investigação do Engegraph em laboratório | ◻ proposta; nenhuma etapa iniciada ou autorizada | — |
 
 ---
 

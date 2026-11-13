@@ -372,6 +372,15 @@ Criar um ambiente virtualizado no servidor atual (ou em hardware dedicado) que p
 5. Garantir hardware suficiente (RAM, CPU, storage)
 6. Ter backup válido e testado do ambiente atual antes de migrar
 
+> **Estado em 2026-11-12 (`DOC-INFRA-01`), sem efeito de conformidade.** Para homologação, com
+> dados sintéticos, foi adotado um host Proxmox com `VM-CartorioSystem`, `VM-TestRestore` e um
+> laboratório Windows isolado (item 4, só no escopo de homologação). Os itens 1, 2, 3 e 6
+> continuam abertos. O banco do Engegraph foi identificado como SQL Server 2022 Express, mas o
+> licenciamento e a viabilidade em VM ainda dependem do fornecedor. Quanto ao item 5, a
+> capacidade do host para o laboratório do Engegraph não está comprovada, e o dimensionamento
+> preliminar não cabe nele sem mudança. Estado em
+> [`../../infrastructure/infrastructure_state.md`](../../infrastructure/infrastructure_state.md).
+
 ### VMs sugeridas
 
 | VM | Função | Observação |
